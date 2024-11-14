@@ -1,3 +1,3 @@
-# project-other-world-editor
+# world-godot
 
-https://nightly.link/V-Sekai/world-editor/workflows/build.yaml/main?preview
+https://nightly.link/V-Sekai/world-godot/workflows/build.yaml/main?preview
