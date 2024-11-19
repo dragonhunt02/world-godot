@@ -51,7 +51,6 @@ public:
 	};
 
 private:
-	Ref<Material> default_material;
 	Operation operation = OPERATION_UNION;
 	CSGShape3D *parent_shape = nullptr;
 
@@ -114,7 +113,6 @@ private:
 	void _update_debug_collision_shape();
 	void _clear_debug_collision_shape();
 	void _on_transform_changed();
-	Vector<Vector3> _get_brush_collision_faces();
 
 protected:
 	void _notification(int p_what);
@@ -163,10 +161,6 @@ public:
 	bool is_calculating_tangents() const;
 
 	bool is_root_shape() const;
-
-	Ref<ArrayMesh> bake_static_mesh();
-	Ref<ConcavePolygonShape3D> bake_collision_shape();
-
 	CSGShape3D();
 	~CSGShape3D();
 };

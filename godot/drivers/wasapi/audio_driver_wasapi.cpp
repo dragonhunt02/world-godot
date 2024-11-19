@@ -39,9 +39,6 @@
 
 #include <functiondiscoverykeys.h>
 
-#include <wrl/client.h>
-using Microsoft::WRL::ComPtr;
-
 // Define IAudioClient3 if not already defined by MinGW headers
 #if defined __MINGW32__ || defined __MINGW64__
 
@@ -85,14 +82,14 @@ public:
 			_In_ const WAVEFORMATEX *pFormat,
 			/* [annotation][in] */
 			_In_opt_ LPCGUID AudioSessionGuid) = 0;
-}
+};
 __CRT_UUID_DECL(IAudioClient3, 0x7ED4EE07, 0x8E67, 0x4CD4, 0x8C, 0x1A, 0x2B, 0x7A, 0x59, 0x87, 0xAD, 0x42)
 
 #endif // __IAudioClient3_INTERFACE_DEFINED__
 
 #endif // __MINGW32__ || __MINGW64__
 
-#ifndef PKEY_Device_FriendlyNameGodot
+#ifndef PKEY_Device_FriendlyName
 
 #undef DEFINE_PROPERTYKEY
 /* clang-format off */
@@ -100,7 +97,7 @@ __CRT_UUID_DECL(IAudioClient3, 0x7ED4EE07, 0x8E67, 0x4CD4, 0x8C, 0x1A, 0x2B, 0x7
 	const PROPERTYKEY id = { { a, b, c, { d, e, f, g, h, i, j, k, } }, l };
 /* clang-format on */
 
-DEFINE_PROPERTYKEY(PKEY_Device_FriendlyNameGodot, 0xa45c254e, 0xdf1c, 0x4efd, 0x80, 0x20, 0x67, 0xd1, 0x46, 0xa8, 0x50, 0xe0, 14);
+DEFINE_PROPERTYKEY(PKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80, 0x20, 0x67, 0xd1, 0x46, 0xa8, 0x50, 0xe0, 14);
 #endif
 
 const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
@@ -109,12 +106,6 @@ const IID IID_IAudioClient = __uuidof(IAudioClient);
 const IID IID_IAudioClient3 = __uuidof(IAudioClient3);
 const IID IID_IAudioRenderClient = __uuidof(IAudioRenderClient);
 const IID IID_IAudioCaptureClient = __uuidof(IAudioCaptureClient);
-
-#define SAFE_RELEASE(memory)   \
-	if ((memory) != nullptr) { \
-		(memory)->Release();   \
-		(memory) = nullptr;    \
-	}
 
 #define REFTIMES_PER_SEC 10000000
 #define REFTIMES_PER_MILLISEC 10000
@@ -234,7 +225,7 @@ Error AudioDriverWASAPI::audio_device_init(AudioDeviceWASAPI *p_device, bool p_i
 			PROPVARIANT propvar;
 			PropVariantInit(&propvar);
 
-			hr = props->GetValue(PKEY_Device_FriendlyNameGodot, &propvar);
+			hr = props->GetValue(PKEY_Device_FriendlyName, &propvar);
 			ERR_BREAK(hr != S_OK);
 
 			if (p_device->device_name == String(propvar.pwszVal)) {
@@ -311,7 +302,7 @@ Error AudioDriverWASAPI::audio_device_init(AudioDeviceWASAPI *p_device, bool p_i
 		audioProps.bIsOffload = FALSE;
 		audioProps.eCategory = AudioCategory_GameEffects;
 
-		hr = ((IAudioClient3 *)p_device->audio_client)->SetClientProperties(&audioProps);
+		hr = ((IAudioClient3 *)p_device->audio_client.Get())->SetClientProperties(&audioProps);
 		ERR_FAIL_COND_V_MSG(hr != S_OK, ERR_CANT_OPEN, "WASAPI: SetClientProperties failed with error 0x" + String::num_uint64(hr, 16) + ".");
 	}
 
@@ -394,7 +385,7 @@ Error AudioDriverWASAPI::audio_device_init(AudioDeviceWASAPI *p_device, bool p_i
 		}
 
 	} else {
-		IAudioClient3 *device_audio_client_3 = (IAudioClient3 *)p_device->audio_client;
+		IAudioClient3 *device_audio_client_3 = (IAudioClient3 *)p_device->audio_client.Get();
 
 		// AUDCLNT_STREAMFLAGS_RATEADJUST is an invalid flag with IAudioClient3, therefore we have to use
 		// the closest supported mix rate supported by the audio driver.
@@ -525,9 +516,9 @@ Error AudioDriverWASAPI::audio_device_finish(AudioDeviceWASAPI *p_device) {
 		p_device->active.clear();
 	}
 
-	SAFE_RELEASE(p_device->audio_client)
-	SAFE_RELEASE(p_device->render_client)
-	SAFE_RELEASE(p_device->capture_client)
+	p_device->audio_client.Reset();
+	p_device->render_client.Reset();
+	p_device->capture_client.Reset();
 
 	return OK;
 }
@@ -597,7 +588,7 @@ PackedStringArray AudioDriverWASAPI::audio_device_get_list(bool p_input) {
 		PROPVARIANT propvar;
 		PropVariantInit(&propvar);
 
-		hr = props->GetValue(PKEY_Device_FriendlyNameGodot, &propvar);
+		hr = props->GetValue(PKEY_Device_FriendlyName, &propvar);
 		ERR_BREAK(hr != S_OK);
 
 		list.push_back(String(propvar.pwszVal));
