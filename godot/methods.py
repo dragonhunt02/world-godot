@@ -8,7 +8,7 @@ from collections import OrderedDict
 from enum import Enum
 from io import StringIO, TextIOWrapper
 from pathlib import Path
-from typing import Generator, List, Optional, Union
+from typing import Generator, Optional
 
 # Get the "Godot" folder name ahead of time
 base_folder_path = str(os.path.abspath(Path(__file__).parent)) + "/"
@@ -73,13 +73,21 @@ def print_error(*values: object) -> None:
 
 def add_source_files_orig(self, sources, files, allow_gen=False):
     # Convert string to list of absolute paths (including expanding wildcard)
-    if isinstance(files, str):
-        # Exclude .gen.cpp files from globbing, to avoid including obsolete ones.
-        # They should instead be added manually.
-        skip_gen_cpp = "*" in files
-        files = self.Glob(files)
-        if skip_gen_cpp and not allow_gen:
-            files = [f for f in files if not str(f).endswith(".gen.cpp")]
+    if isinstance(files, (str, bytes)):
+        # Keep SCons project-absolute path as they are (no wildcard support)
+        if files.startswith("#"):
+            if "*" in files:
+                print_error("Wildcards can't be expanded in SCons project-absolute path: '{}'".format(files))
+                return
+            files = [files]
+        else:
+            # Exclude .gen.cpp files from globbing, to avoid including obsolete ones.
+            # They should instead be added manually.
+            skip_gen_cpp = "*" in files
+            dir_path = self.Dir(".").abspath
+            files = sorted(glob.glob(dir_path + "/" + files))
+            if skip_gen_cpp and not allow_gen:
+                files = [f for f in files if not f.endswith(".gen.cpp")]
 
     # Add each path as compiled Object following environment (self) configuration
     for path in files:
@@ -90,6 +98,35 @@ def add_source_files_orig(self, sources, files, allow_gen=False):
         sources.append(obj)
 
 
+# The section name is used for checking
+# the hash table to see whether the folder
+# is included in the SCU build.
+# It will be something like "core/math".
+def _find_scu_section_name(subdir):
+    section_path = os.path.abspath(subdir) + "/"
+
+    folders = []
+    folder = ""
+
+    for i in range(8):
+        folder = os.path.dirname(section_path)
+        folder = os.path.basename(folder)
+        if folder == base_folder_only:
+            break
+        folders += [folder]
+        section_path += "../"
+        section_path = os.path.abspath(section_path) + "/"
+
+    section_name = ""
+    for n in range(len(folders)):
+        # section_name += folders[len(folders) - n - 1] + " "
+        section_name += folders[len(folders) - n - 1]
+        if n != (len(folders) - 1):
+            section_name += "/"
+
+    return section_name
+
+
 def add_source_files_scu(self, sources, files, allow_gen=False):
     if self["scu_build"] and isinstance(files, str):
         if "*." not in files:
@@ -98,8 +135,10 @@ def add_source_files_scu(self, sources, files, allow_gen=False):
         # If the files are in a subdirectory, we want to create the scu gen
         # files inside this subdirectory.
         subdir = os.path.dirname(files)
-        subdir = subdir if subdir == "" else subdir + "/"
-        section_name = self.Dir(subdir).tpath
+        if subdir != "":
+            subdir += "/"
+
+        section_name = _find_scu_section_name(subdir)
         # if the section name is in the hash table?
         # i.e. is it part of the SCU build?
         global _scu_folders
@@ -124,7 +163,7 @@ def add_source_files(self, sources, files, allow_gen=False):
 
 def disable_warnings(self):
     # 'self' is the environment
-    if self.msvc and not using_clang(self):
+    if self.msvc:
         # We have to remove existing warning level defines before appending /w,
         # otherwise we get: "warning D9025 : overriding '/W3' with '/w'"
         self["CCFLAGS"] = [x for x in self["CCFLAGS"] if not (x.startswith("/W") or x.startswith("/w"))]
@@ -238,6 +277,34 @@ def get_version_info(module_version_string="", silent=False):
     return version_info
 
 
+def parse_cg_file(fname, uniforms, sizes, conditionals):
+    with open(fname, "r", encoding="utf-8") as fs:
+        line = fs.readline()
+
+        while line:
+            if re.match(r"^\s*uniform", line):
+                res = re.match(r"uniform ([\d\w]*) ([\d\w]*)")
+                type = res.groups(1)
+                name = res.groups(2)
+
+                uniforms.append(name)
+
+                if type.find("texobj") != -1:
+                    sizes.append(1)
+                else:
+                    t = re.match(r"float(\d)x(\d)", type)
+                    if t:
+                        sizes.append(int(t.groups(1)) * int(t.groups(2)))
+                    else:
+                        t = re.match(r"float(\d)", type)
+                        sizes.append(int(t.groups(1)))
+
+                if line.find("[branch]") != -1:
+                    conditionals.append(name)
+
+            line = fs.readline()
+
+
 def get_cmdline_bool(option, default):
     """We use `ARGUMENTS.get()` to check if options were manually overridden on the command line,
     and SCons' _text2bool helper to convert them to booleans, otherwise they're handled as strings.
@@ -337,6 +404,10 @@ def convert_custom_modules_path(path):
     return path
 
 
+def disable_module(self):
+    self.disabled_modules.append(self.current_module)
+
+
 def module_add_dependencies(self, module, dependencies, optional=False):
     """
     Adds dependencies for a given module.
@@ -357,21 +428,19 @@ def module_check_dependencies(self, module):
     Meant to be used in module `can_build` methods.
     Returns a boolean (True if dependencies are satisfied).
     """
-    missing_deps = set()
+    missing_deps = []
     required_deps = self.module_dependencies[module][0] if module in self.module_dependencies else []
     for dep in required_deps:
         opt = "module_{}_enabled".format(dep)
-        if opt not in self or not self[opt] or not module_check_dependencies(self, dep):
-            missing_deps.add(dep)
+        if opt not in self or not self[opt]:
+            missing_deps.append(dep)
 
-    if missing_deps:
-        if module not in self.disabled_modules:
-            print_warning(
-                "Disabling '{}' module as the following dependencies are not satisfied: {}".format(
-                    module, ", ".join(missing_deps)
-                )
+    if missing_deps != []:
+        print_warning(
+            "Disabling '{}' module as the following dependencies are not satisfied: {}".format(
+                module, ", ".join(missing_deps)
             )
-            self.disabled_modules.add(module)
+        )
         return False
     else:
         return True
@@ -398,6 +467,16 @@ def use_windows_spawn_fix(self, platform=None):
     if os.name != "nt":
         return  # not needed, only for windows
 
+    # On Windows, due to the limited command line length, when creating a static library
+    # from a very high number of objects SCons will invoke "ar" once per object file;
+    # that makes object files with same names to be overwritten so the last wins and
+    # the library loses symbols defined by overwritten objects.
+    # By enabling quick append instead of the default mode (replacing), libraries will
+    # got built correctly regardless the invocation strategy.
+    # Furthermore, since SCons will rebuild the library from scratch when an object file
+    # changes, no multiple versions of the same object file will be present.
+    self.Replace(ARFLAGS="q")
+
     def mySubProcess(cmdline, env):
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
@@ -409,28 +488,29 @@ def use_windows_spawn_fix(self, platform=None):
             "shell": False,
             "env": env,
         }
-        popen_args["text"] = True
+        if sys.version_info >= (3, 7, 0):
+            popen_args["text"] = True
         proc = subprocess.Popen(cmdline, **popen_args)
         _, err = proc.communicate()
         rv = proc.wait()
         if rv:
             print_error(err)
-        elif len(err) > 0 and not err.isspace():
-            print(err)
         return rv
 
     def mySpawn(sh, escape, cmd, args, env):
-        # Used by TEMPFILE.
-        if cmd == "del":
-            os.remove(args[1])
-            return 0
-
         newargs = " ".join(args[1:])
         cmdline = cmd + " " + newargs
 
         rv = 0
         env = {str(key): str(value) for key, value in iter(env.items())}
-        rv = mySubProcess(cmdline, env)
+        if len(cmdline) > 32000 and cmd.endswith("ar"):
+            cmdline = cmd + " " + args[1] + " " + args[2] + " "
+            for i in range(3, len(args)):
+                rv = mySubProcess(cmdline + args[i], env)
+                if rv:
+                    break
+        else:
+            rv = mySubProcess(cmdline, env)
 
         return rv
 
@@ -495,7 +575,40 @@ def detect_visual_c_compiler_version(tools_env):
     vc_chosen_compiler_index = -1
     vc_chosen_compiler_str = ""
 
-    # VS 2017 and newer should set VCTOOLSINSTALLDIR
+    # Start with Pre VS 2017 checks which uses VCINSTALLDIR:
+    if "VCINSTALLDIR" in tools_env:
+        # print("Checking VCINSTALLDIR")
+
+        # find() works with -1 so big ifs below are needed... the simplest solution, in fact
+        # First test if amd64 and amd64_x86 compilers are present in the path
+        vc_amd64_compiler_detection_index = tools_env["PATH"].find(tools_env["VCINSTALLDIR"] + "BIN\\amd64;")
+        if vc_amd64_compiler_detection_index > -1:
+            vc_chosen_compiler_index = vc_amd64_compiler_detection_index
+            vc_chosen_compiler_str = "amd64"
+
+        vc_amd64_x86_compiler_detection_index = tools_env["PATH"].find(tools_env["VCINSTALLDIR"] + "BIN\\amd64_x86;")
+        if vc_amd64_x86_compiler_detection_index > -1 and (
+            vc_chosen_compiler_index == -1 or vc_chosen_compiler_index > vc_amd64_x86_compiler_detection_index
+        ):
+            vc_chosen_compiler_index = vc_amd64_x86_compiler_detection_index
+            vc_chosen_compiler_str = "amd64_x86"
+
+        # Now check the 32 bit compilers
+        vc_x86_compiler_detection_index = tools_env["PATH"].find(tools_env["VCINSTALLDIR"] + "BIN;")
+        if vc_x86_compiler_detection_index > -1 and (
+            vc_chosen_compiler_index == -1 or vc_chosen_compiler_index > vc_x86_compiler_detection_index
+        ):
+            vc_chosen_compiler_index = vc_x86_compiler_detection_index
+            vc_chosen_compiler_str = "x86"
+
+        vc_x86_amd64_compiler_detection_index = tools_env["PATH"].find(tools_env["VCINSTALLDIR"] + "BIN\\x86_amd64;")
+        if vc_x86_amd64_compiler_detection_index > -1 and (
+            vc_chosen_compiler_index == -1 or vc_chosen_compiler_index > vc_x86_amd64_compiler_detection_index
+        ):
+            vc_chosen_compiler_index = vc_x86_amd64_compiler_detection_index
+            vc_chosen_compiler_str = "x86_amd64"
+
+    # and for VS 2017 and newer we check VCTOOLSINSTALLDIR:
     if "VCTOOLSINSTALLDIR" in tools_env:
         # Newer versions have a different path available
         vc_amd64_compiler_detection_index = (
@@ -592,6 +705,23 @@ def glob_recursive(pattern, node="."):
     return results
 
 
+def add_to_vs_project(env, sources):
+    for x in sources:
+        fname = env.File(x).path if isinstance(x, str) else env.File(x)[0].path
+        pieces = fname.split(".")
+        if len(pieces) > 0:
+            basename = pieces[0]
+            basename = basename.replace("\\\\", "/")
+            if os.path.isfile(basename + ".h"):
+                env.vs_incs += [basename + ".h"]
+            elif os.path.isfile(basename + ".hpp"):
+                env.vs_incs += [basename + ".hpp"]
+            if os.path.isfile(basename + ".c"):
+                env.vs_srcs += [basename + ".c"]
+            elif os.path.isfile(basename + ".cpp"):
+                env.vs_srcs += [basename + ".cpp"]
+
+
 def precious_program(env, program, sources, **args):
     program = env.ProgramOriginal(program, sources, **args)
     env.Precious(program)
@@ -675,9 +805,9 @@ def get_compiler_version(env):
         "major": -1,
         "minor": -1,
         "patch": -1,
-        "metadata1": "",
-        "metadata2": "",
-        "date": "",
+        "metadata1": None,
+        "metadata2": None,
+        "date": None,
         "apple_major": -1,
         "apple_minor": -1,
         "apple_patch1": -1,
@@ -685,48 +815,21 @@ def get_compiler_version(env):
         "apple_patch3": -1,
     }
 
-    if env.msvc and not using_clang(env):
+    if not env.msvc:
+        # Not using -dumpversion as some GCC distros only return major, and
+        # Clang used to return hardcoded 4.2.1: # https://reviews.llvm.org/D56803
         try:
-            # FIXME: `-latest` works for most cases, but there are edge-cases where this would
-            # benefit from a more nuanced search.
-            # https://github.com/godotengine/godot/pull/91069#issuecomment-2358956731
-            # https://github.com/godotengine/godot/pull/91069#issuecomment-2380836341
-            args = [
-                env["VSWHERE"],
-                "-latest",
-                "-prerelease",
-                "-products",
-                "*",
-                "-requires",
-                "Microsoft.Component.MSBuild",
-                "-utf8",
-            ]
-            version = subprocess.check_output(args, encoding="utf-8").strip()
-            for line in version.splitlines():
-                split = line.split(":", 1)
-                if split[0] == "catalog_productDisplayVersion":
-                    sem_ver = split[1].split(".")
-                    ret["major"] = int(sem_ver[0])
-                    ret["minor"] = int(sem_ver[1])
-                    ret["patch"] = int(sem_ver[2].split()[0])
-                # Could potentially add section for determining preview version, but
-                # that can wait until metadata is actually used for something.
-                if split[0] == "catalog_buildVersion":
-                    ret["metadata1"] = split[1]
+            version = (
+                subprocess.check_output([env.subst(env["CXX"]), "--version"], shell=(os.name == "nt"))
+                .strip()
+                .decode("utf-8")
+            )
         except (subprocess.CalledProcessError, OSError):
-            print_warning("Couldn't find vswhere to determine compiler version.")
+            print_warning("Couldn't parse CXX environment variable to infer compiler version.")
+            return ret
+    else:
+        # TODO: Implement for MSVC
         return ret
-
-    # Not using -dumpversion as some GCC distros only return major, and
-    # Clang used to return hardcoded 4.2.1: # https://reviews.llvm.org/D56803
-    try:
-        version = subprocess.check_output(
-            [env.subst(env["CXX"]), "--version"], shell=(os.name == "nt"), encoding="utf-8"
-        ).strip()
-    except (subprocess.CalledProcessError, OSError):
-        print_warning("Couldn't parse CXX environment variable to infer compiler version.")
-        return ret
-
     match = re.search(
         r"(?:(?<=version )|(?<=\) )|(?<=^))"
         r"(?P<major>\d+)"
@@ -802,18 +905,21 @@ def show_progress(env):
     node_count_fname = str(env.Dir("#")) + "/.scons_node_count"
 
     import math
+    import time
 
     class cache_progress:
-        # The default is 1 GB cache
-        def __init__(self, path=None, limit=pow(1024, 3)):
+        # The default is 1 GB cache and 12 hours half life
+        def __init__(self, path=None, limit=1073741824, half_life=43200):
             self.path = path
             self.limit = limit
+            self.exponent_scale = math.log(2) / half_life
             if env["verbose"] and path is not None:
                 screen.write(
                     "Current cache limit is {} (used: {})\n".format(
                         self.convert_size(limit), self.convert_size(self.get_size(path))
                     )
                 )
+            self.delete(self.file_list())
 
         def __call__(self, node, *args, **kw):
             nonlocal node_count, node_count_max, node_count_interval, node_count_fname, show_progress
@@ -830,66 +936,12 @@ def show_progress(env):
                     screen.write("\r[Initial build] ")
                     screen.flush()
 
-        def convert_size(self, size_bytes):
-            if size_bytes == 0:
-                return "0 bytes"
-            size_name = ("bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
-            i = int(math.floor(math.log(size_bytes, 1024)))
-            p = math.pow(1024, i)
-            s = round(size_bytes / p, 2)
-            return "%s %s" % (int(s) if i == 0 else s, size_name[i])
-
-        def get_size(self, start_path="."):
-            total_size = 0
-            for dirpath, dirnames, filenames in os.walk(start_path):
-                for f in filenames:
-                    fp = os.path.join(dirpath, f)
-                    total_size += os.path.getsize(fp)
-            return total_size
-
-    def progress_finish(target, source, env):
-        nonlocal node_count, progressor
-        try:
-            with open(node_count_fname, "w", encoding="utf-8", newline="\n") as f:
-                f.write("%d\n" % node_count)
-        except Exception:
-            pass
-
-    try:
-        with open(node_count_fname, "r", encoding="utf-8") as f:
-            node_count_max = int(f.readline())
-    except Exception:
-        pass
-
-    cache_directory = os.environ.get("SCONS_CACHE")
-    # Simple cache pruning, attached to SCons' progress callback. Trim the
-    # cache directory to a size not larger than cache_limit.
-    cache_limit = float(os.getenv("SCONS_CACHE_LIMIT", 1024)) * 1024 * 1024
-    progressor = cache_progress(cache_directory, cache_limit)
-    Progress(progressor, interval=node_count_interval)
-
-    progress_finish_command = Command("progress_finish", [], progress_finish)
-    AlwaysBuild(progress_finish_command)
-
-
-def clean_cache(env):
-    import atexit
-    import time
-
-    class cache_clean:
-        def __init__(self, path=None, limit=pow(1024, 3)):
-            self.path = path
-            self.limit = limit
-
-        def clean(self):
-            self.delete(self.file_list())
-
         def delete(self, files):
             if len(files) == 0:
                 return
             if env["verbose"]:
                 # Utter something
-                print("Purging %d %s from cache..." % (len(files), "files" if len(files) > 1 else "file"))
+                screen.write("\rPurging %d %s from cache...\n" % (len(files), len(files) > 1 and "files" or "file"))
             [os.remove(f) for f in files]
 
         def file_list(self):
@@ -923,20 +975,47 @@ def clean_cache(env):
             else:
                 return [x[0] for x in file_stat[mark:]]
 
-    def cache_finally():
-        nonlocal cleaner
+        def convert_size(self, size_bytes):
+            if size_bytes == 0:
+                return "0 bytes"
+            size_name = ("bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+            i = int(math.floor(math.log(size_bytes, 1024)))
+            p = math.pow(1024, i)
+            s = round(size_bytes / p, 2)
+            return "%s %s" % (int(s) if i == 0 else s, size_name[i])
+
+        def get_size(self, start_path="."):
+            total_size = 0
+            for dirpath, dirnames, filenames in os.walk(start_path):
+                for f in filenames:
+                    fp = os.path.join(dirpath, f)
+                    total_size += os.path.getsize(fp)
+            return total_size
+
+    def progress_finish(target, source, env):
+        nonlocal node_count, progressor
         try:
-            cleaner.clean()
+            with open(node_count_fname, "w", encoding="utf-8", newline="\n") as f:
+                f.write("%d\n" % node_count)
+            progressor.delete(progressor.file_list())
         except Exception:
             pass
+
+    try:
+        with open(node_count_fname, "r", encoding="utf-8") as f:
+            node_count_max = int(f.readline())
+    except Exception:
+        pass
 
     cache_directory = os.environ.get("SCONS_CACHE")
     # Simple cache pruning, attached to SCons' progress callback. Trim the
     # cache directory to a size not larger than cache_limit.
     cache_limit = float(os.getenv("SCONS_CACHE_LIMIT", 1024)) * 1024 * 1024
-    cleaner = cache_clean(cache_directory, cache_limit)
+    progressor = cache_progress(cache_directory, cache_limit)
+    Progress(progressor, interval=node_count_interval)
 
-    atexit.register(cache_finally)
+    progress_finish_command = Command("progress_finish", [], progress_finish)
+    AlwaysBuild(progress_finish_command)
 
 
 def dump(env):
@@ -1094,7 +1173,9 @@ def generate_vs_project(env, original_args, project_name="godot"):
     import json
 
     md5 = hashlib.md5(
-        json.dumps(sorted(headers + headers_dirs + sources + sources_dirs + others + others_dirs)).encode("utf-8")
+        json.dumps(headers + headers_dirs + sources + sources_dirs + others + others_dirs, sort_keys=True).encode(
+            "utf-8"
+        )
     ).hexdigest()
 
     if os.path.exists(f"{project_name}.vcxproj.filters"):
@@ -1560,43 +1641,3 @@ def generated_wrapper(
             file.write(f"\n\n#endif // {header_guard}")
 
         file.write("\n")
-
-
-def to_raw_cstring(value: Union[str, List[str]]) -> str:
-    MAX_LITERAL = 16 * 1024
-
-    if isinstance(value, list):
-        value = "\n".join(value) + "\n"
-
-    split: List[bytes] = []
-    offset = 0
-    encoded = value.encode()
-
-    while offset <= len(encoded):
-        segment = encoded[offset : offset + MAX_LITERAL]
-        offset += MAX_LITERAL
-        if len(segment) == MAX_LITERAL:
-            # Try to segment raw strings at double newlines to keep readable.
-            pretty_break = segment.rfind(b"\n\n")
-            if pretty_break != -1:
-                segment = segment[: pretty_break + 1]
-                offset -= MAX_LITERAL - pretty_break - 1
-            # If none found, ensure we end with valid utf8.
-            # https://github.com/halloleo/unicut/blob/master/truncate.py
-            elif segment[-1] & 0b10000000:
-                last_11xxxxxx_index = [i for i in range(-1, -5, -1) if segment[i] & 0b11000000 == 0b11000000][0]
-                last_11xxxxxx = segment[last_11xxxxxx_index]
-                if not last_11xxxxxx & 0b00100000:
-                    last_char_length = 2
-                elif not last_11xxxxxx & 0b0010000:
-                    last_char_length = 3
-                elif not last_11xxxxxx & 0b0001000:
-                    last_char_length = 4
-
-                if last_char_length > -last_11xxxxxx_index:
-                    segment = segment[:last_11xxxxxx_index]
-                    offset += last_11xxxxxx_index
-
-        split += [segment]
-
-    return " ".join(f'R"<!>({x.decode()})<!>"' for x in split)

@@ -38,8 +38,6 @@ class AnimationNodeAnimation : public AnimationRootNode {
 
 	StringName animation;
 
-	bool advance_on_start = false;
-
 	bool use_custom_timeline = false;
 	double timeline_length = 1.0;
 	Animation::LoopMode loop_mode = Animation::LOOP_NONE;
@@ -73,9 +71,6 @@ public:
 
 	void set_backward(bool p_backward);
 	bool is_backward() const;
-
-	void set_advance_on_start(bool p_advance_on_start);
-	bool is_advance_on_start() const;
 
 	void set_use_custom_timeline(bool p_use_custom_timeline);
 	bool is_using_custom_timeline() const;
@@ -205,6 +200,9 @@ class AnimationNodeAdd2 : public AnimationNodeSync {
 
 	StringName add_amount = PNAME("add_amount");
 
+protected:
+	static void _bind_methods();
+
 public:
 	void get_parameter_list(List<PropertyInfo> *r_list) const override;
 	virtual Variant get_parameter_default_value(const StringName &p_parameter) const override;
@@ -221,6 +219,9 @@ class AnimationNodeAdd3 : public AnimationNodeSync {
 	GDCLASS(AnimationNodeAdd3, AnimationNodeSync);
 
 	StringName add_amount = PNAME("add_amount");
+
+protected:
+	static void _bind_methods();
 
 public:
 	void get_parameter_list(List<PropertyInfo> *r_list) const override;
@@ -239,6 +240,9 @@ class AnimationNodeBlend2 : public AnimationNodeSync {
 
 	StringName blend_amount = PNAME("blend_amount");
 
+protected:
+	static void _bind_methods();
+
 public:
 	virtual void get_parameter_list(List<PropertyInfo> *r_list) const override;
 	virtual Variant get_parameter_default_value(const StringName &p_parameter) const override;
@@ -255,6 +259,9 @@ class AnimationNodeBlend3 : public AnimationNodeSync {
 
 	StringName blend_amount = PNAME("blend_amount");
 
+protected:
+	static void _bind_methods();
+
 public:
 	virtual void get_parameter_list(List<PropertyInfo> *r_list) const override;
 	virtual Variant get_parameter_default_value(const StringName &p_parameter) const override;
@@ -269,6 +276,9 @@ class AnimationNodeSub2 : public AnimationNodeSync {
 	GDCLASS(AnimationNodeSub2, AnimationNodeSync);
 
 	StringName sub_amount = PNAME("sub_amount");
+
+protected:
+	static void _bind_methods();
 
 public:
 	void get_parameter_list(List<PropertyInfo> *r_list) const override;
@@ -287,6 +297,9 @@ class AnimationNodeTimeScale : public AnimationNode {
 
 	StringName scale = PNAME("scale");
 
+protected:
+	static void _bind_methods();
+
 public:
 	virtual void get_parameter_list(List<PropertyInfo> *r_list) const override;
 	virtual Variant get_parameter_default_value(const StringName &p_parameter) const override;
@@ -302,6 +315,9 @@ class AnimationNodeTimeSeek : public AnimationNode {
 	GDCLASS(AnimationNodeTimeSeek, AnimationNode);
 
 	StringName seek_pos_request = PNAME("seek_request");
+
+protected:
+	static void _bind_methods();
 
 public:
 	virtual void get_parameter_list(List<PropertyInfo> *r_list) const override;
