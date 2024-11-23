@@ -917,7 +917,7 @@ void AnimationNodeStateMachineEditor::_state_machine_draw() {
 	}
 
 	if (state_machine_draw->has_focus()) {
-		state_machine_draw->draw_rect(Rect2(Point2(), state_machine_draw->get_size()), theme_cache.highlight_color, false);
+		state_machine_draw->draw_rect(Rect2(Point2(), state_machine_draw->get_size()), theme_cache.focus_color, false);
 	}
 	int sep = 3 * EDSCALE;
 
@@ -1271,18 +1271,18 @@ void AnimationNodeStateMachineEditor::_notification(int p_what) {
 			error_panel->add_theme_style_override(SceneStringName(panel), theme_cache.error_panel_style);
 			error_label->add_theme_color_override(SceneStringName(font_color), theme_cache.error_color);
 
-			tool_select->set_icon(theme_cache.tool_icon_select);
-			tool_create->set_icon(theme_cache.tool_icon_create);
-			tool_connect->set_icon(theme_cache.tool_icon_connect);
+			tool_select->set_button_icon(theme_cache.tool_icon_select);
+			tool_create->set_button_icon(theme_cache.tool_icon_create);
+			tool_connect->set_button_icon(theme_cache.tool_icon_connect);
 
 			switch_mode->clear();
 			switch_mode->add_icon_item(theme_cache.transition_icon_immediate, TTR("Immediate"));
 			switch_mode->add_icon_item(theme_cache.transition_icon_sync, TTR("Sync"));
 			switch_mode->add_icon_item(theme_cache.transition_icon_end, TTR("At End"));
 
-			auto_advance->set_icon(theme_cache.play_icon_auto);
+			auto_advance->set_button_icon(theme_cache.play_icon_auto);
 
-			tool_erase->set_icon(theme_cache.tool_icon_erase);
+			tool_erase->set_button_icon(theme_cache.tool_icon_erase);
 
 			play_mode->clear();
 			play_mode->add_icon_item(theme_cache.play_icon_travel, TTR("Travel"));
@@ -1642,6 +1642,7 @@ void AnimationNodeStateMachineEditor::_bind_methods() {
 	BIND_THEME_ITEM_EXT(Theme::DATA_TYPE_COLOR, AnimationNodeStateMachineEditor, transition_icon_disabled_color, "transition_icon_disabled_color", "GraphStateMachine");
 	BIND_THEME_ITEM_EXT(Theme::DATA_TYPE_COLOR, AnimationNodeStateMachineEditor, highlight_color, "highlight_color", "GraphStateMachine");
 	BIND_THEME_ITEM_EXT(Theme::DATA_TYPE_COLOR, AnimationNodeStateMachineEditor, highlight_disabled_color, "highlight_disabled_color", "GraphStateMachine");
+	BIND_THEME_ITEM_EXT(Theme::DATA_TYPE_COLOR, AnimationNodeStateMachineEditor, focus_color, "focus_color", "GraphStateMachine");
 	BIND_THEME_ITEM_EXT(Theme::DATA_TYPE_COLOR, AnimationNodeStateMachineEditor, guideline_color, "guideline_color", "GraphStateMachine");
 
 	BIND_THEME_ITEM_EXT(Theme::DATA_TYPE_ICON, AnimationNodeStateMachineEditor, transition_icons[0], "TransitionImmediateBig", "EditorIcons");
