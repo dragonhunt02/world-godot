@@ -111,7 +111,7 @@ Files extracted from upstream source:
 ## clipper2
 
 - Upstream: https://github.com/AngusJohnson/Clipper2
-- Version: 1.3.0 (98db5662e8dd1808a5a7b50c5605a2289bb390e8, 2023)
+- Version: 1.4.0 (736ddb0b53d97fd5f65dd3d9bbf8a0993eaf387c, 2024)
 - License: BSL 1.0
 
 Files extracted from upstream source:
@@ -624,13 +624,14 @@ in the MSVC debugger.
 ## manifold
 
 - Upstream: https://github.com/elalish/manifold
-- Version: master (12b43f50c44988cf3bc650df9fda180c8cc06163, 2024)
+- Version: 3.0.0 (5d127e57fbfb89225a8e905d0d914ccc86c139c8, 2024)
 - License: Apache 2.0
 
 File extracted from upstream source:
 
 - `src/`
 - `AUTHORS`, `LICENSE`
+
 
 ## mbedtls
 

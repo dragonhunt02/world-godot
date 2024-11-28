@@ -31,8 +31,7 @@
 #include "csg_shape.h"
 
 #include "core/math/geometry_2d.h"
-#include "manifold/common.h"
-#include "manifold/manifold.h"
+#include <manifold/manifold.h>
 
 void CSGShape3D::set_use_collision(bool p_enable) {
 	if (use_collision == p_enable) {
@@ -199,12 +198,9 @@ static void _unpack_manifold(
 			material = p_mesh_materials[original_id];
 		}
 		// Find or reserve a material ID in the brush.
-		int run_material = 0;
 		int32_t material_id = r_mesh_merge->materials.find(material);
-		if (material_id != -1) {
-			run_material = material_id;
-		} else {
-			run_material = r_mesh_merge->materials.size();
+		if (material_id == -1) {
+			material_id = r_mesh_merge->materials.size();
 			r_mesh_merge->materials.push_back(material);
 		}
 
@@ -212,21 +208,18 @@ static void _unpack_manifold(
 		size_t end = mesh.runIndex[run_i + 1];
 		for (size_t vert_i = begin; vert_i < end; vert_i += 3) {
 			CSGBrush::Face face;
-			face.material = run_material;
+			face.material = material_id;
 			int32_t first_property_index = mesh.triVerts[vert_i + order[0]];
 			face.smooth = mesh.vertProperties[first_property_index * mesh.numProp + MANIFOLD_PROPERTY_SMOOTH_GROUP] > 0.5f;
 			face.invert = mesh.vertProperties[first_property_index * mesh.numProp + MANIFOLD_PROPERTY_INVERT] > 0.5f;
 
 			for (int32_t tri_order_i = 0; tri_order_i < 3; tri_order_i++) {
 				int32_t property_i = mesh.triVerts[vert_i + order[tri_order_i]];
-
 				ERR_FAIL_COND_MSG(property_i * mesh.numProp >= mesh.vertProperties.size(), "Invalid index into vertex properties");
-
 				face.vertices[tri_order_i] = Vector3(
 						mesh.vertProperties[property_i * mesh.numProp + MANIFOLD_PROPERTY_POSITION_X],
 						mesh.vertProperties[property_i * mesh.numProp + MANIFOLD_PROPERTY_POSITION_Y],
 						mesh.vertProperties[property_i * mesh.numProp + MANIFOLD_PROPERTY_POSITION_Z]);
-
 				face.uvs[tri_order_i] = Vector2(
 						mesh.vertProperties[property_i * mesh.numProp + MANIFOLD_PROPERTY_UV_X_0],
 						mesh.vertProperties[property_i * mesh.numProp + MANIFOLD_PROPERTY_UV_Y_0]);
@@ -242,7 +235,6 @@ static void _pack_manifold(
 		const CSGBrush *const p_mesh_merge,
 		manifold::Manifold &r_manifold,
 		HashMap<int32_t, Ref<Material>> &p_mesh_materials,
-		Ref<Material> p_default_material,
 		float p_snap) {
 	ERR_FAIL_NULL_MSG(p_mesh_merge, "p_mesh_merge is null");
 
@@ -273,10 +265,6 @@ static void _pack_manifold(
 			material = p_mesh_merge->materials[material_id];
 		}
 
-		if (material.is_null()) {
-			material = p_default_material;
-		}
-
 		p_mesh_materials.insert(reserved_id, material);
 		for (const CSGBrush::Face &face : faces) {
 			for (int32_t tri_order_i = 0; tri_order_i < 3; tri_order_i++) {
@@ -303,24 +291,7 @@ static void _pack_manifold(
 	// runIndex needs an explicit end value.
 	mesh.runIndex.push_back(mesh.triVerts.size());
 	ERR_FAIL_COND_MSG(mesh.vertProperties.size() % mesh.numProp != 0, "Invalid vertex properties size.");
-	/**
-	 * MeshGL64::merge(): updates the mergeFromVert and mergeToVert vectors in order to create a
-	 * manifold solid. If the MeshGL64 is already manifold, no change will occur, and
-	 * the function will return false.
-	 */
-	if (mesh.Merge()) {
-		std::vector<int32_t> index_map(mesh.vertProperties.size() / MANIFOLD_PROPERTY_MAX, -1);
-		const size_t vertices_count = mesh.mergeFromVert.size();
-		for (size_t i = 0; i < vertices_count; ++i) {
-			index_map[mesh.mergeFromVert[i]] = mesh.mergeToVert[i];
-		}
-		const size_t indices_count = mesh.triVerts.size();
-		for (size_t i = 0; i < indices_count; ++i) {
-			if (index_map[i] > -1) {
-				mesh.triVerts[i] = index_map[i];
-			}
-		}
-	}
+	mesh.Merge();
 	r_manifold = manifold::Manifold(mesh);
 	manifold::Manifold::Error err = r_manifold.Status();
 	if (err != manifold::Manifold::Error::NoError) {
@@ -358,7 +329,7 @@ CSGBrush *CSGShape3D::_get_brush() {
 	CSGBrush *n = _build_brush();
 	HashMap<int32_t, Ref<Material>> mesh_materials;
 	manifold::Manifold root_manifold;
-	_pack_manifold(n, root_manifold, mesh_materials, default_material, get_snap());
+	_pack_manifold(n, root_manifold, mesh_materials, get_snap());
 	manifold::OpType current_op = ManifoldOperation::convert_csg_op(get_operation());
 	std::vector<manifold::Manifold> manifolds;
 	manifolds.push_back(root_manifold);
@@ -374,7 +345,7 @@ CSGBrush *CSGShape3D::_get_brush() {
 		CSGBrush transformed_brush;
 		transformed_brush.copy_from(*child_brush, child->get_transform());
 		manifold::Manifold child_manifold;
-		_pack_manifold(&transformed_brush, child_manifold, mesh_materials, default_material, get_snap());
+		_pack_manifold(&transformed_brush, child_manifold, mesh_materials, get_snap());
 		manifold::OpType child_operation = ManifoldOperation::convert_csg_op(child->get_operation());
 		if (child_operation != current_op) {
 			manifold::Manifold result = manifold::Manifold::BatchBoolean(manifolds, current_op);
@@ -908,7 +879,6 @@ void CSGShape3D::_bind_methods() {
 
 CSGShape3D::CSGShape3D() {
 	set_notify_local_transform(true);
-	default_material.instantiate();
 }
 
 CSGShape3D::~CSGShape3D() {

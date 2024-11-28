@@ -14,21 +14,20 @@ thirdparty_obj = []
 
 thirdparty_dir = "#thirdparty/manifold/"
 thirdparty_sources = [
-    "src/cross_section/cross_section.cpp",
+    "src/boolean_result.cpp",
+    "src/boolean3.cpp",
     "src/constructors.cpp",
-    "src/polygon.cpp",
+    "src/csg_tree.cpp",
     "src/edge_op.cpp",
     "src/face_op.cpp",
     "src/impl.cpp",
-    "src/boolean_result.cpp",
-    "src/boolean3.cpp",
     "src/manifold.cpp",
+    "src/polygon.cpp",
     "src/properties.cpp",
+    "src/quickhull.cpp",
     "src/smoothing.cpp",
     "src/sort.cpp",
-    "src/csg_tree.cpp",
     "src/subdivision.cpp",
-    "src/quickhull.cpp",
 ]
 
 thirdparty_sources = [thirdparty_dir + file for file in thirdparty_sources]

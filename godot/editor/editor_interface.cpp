@@ -103,7 +103,7 @@ EditorUndoRedoManager *EditorInterface::get_editor_undo_redo() const {
 	return EditorUndoRedoManager::get_singleton();
 }
 
-AABB EditorInterface::_calculate_aabb_for_scene(Node *p_node, AABB &scene_aabb) {
+AABB EditorInterface::_calculate_aabb_for_scene(Node *p_node, AABB &p_scene_aabb) {
 	MeshInstance3D *mesh_node = Object::cast_to<MeshInstance3D>(p_node);
 	if (mesh_node && mesh_node->get_mesh().is_valid()) {
 		Transform3D accum_xform;
@@ -114,14 +114,14 @@ AABB EditorInterface::_calculate_aabb_for_scene(Node *p_node, AABB &scene_aabb) 
 		}
 
 		AABB aabb = accum_xform.xform(mesh_node->get_mesh()->get_aabb());
-		scene_aabb.merge_with(aabb);
+		p_scene_aabb.merge_with(aabb);
 	}
 
 	for (int i = 0; i < p_node->get_child_count(); i++) {
-		scene_aabb = _calculate_aabb_for_scene(p_node->get_child(i), scene_aabb);
+		p_scene_aabb = _calculate_aabb_for_scene(p_node->get_child(i), p_scene_aabb);
 	}
 
-	return scene_aabb;
+	return p_scene_aabb;
 }
 
 TypedArray<Texture2D> EditorInterface::_make_mesh_previews(const TypedArray<Mesh> &p_meshes, int p_preview_size) {
@@ -230,7 +230,7 @@ Vector<Ref<Texture2D>> EditorInterface::make_mesh_previews(const Vector<Ref<Mesh
 }
 
 void EditorInterface::make_scene_preview(const String &p_path, Node *p_scene, int p_preview_size) {
-	ERR_FAIL_COND_MSG(!p_scene, "The provided scene is null.");
+	ERR_FAIL_NULL_MSG(p_scene, "The provided scene is null.");
 	ERR_FAIL_COND_MSG(p_scene->is_inside_tree(), "The scene must not be inside the tree.");
 	ERR_FAIL_COND_MSG(!Engine::get_singleton()->is_editor_hint(), "This function can only be called from the editor.");
 
@@ -314,10 +314,11 @@ void EditorInterface::make_scene_preview(const String &p_path, Node *p_scene, in
 
 	// Cleanup the viewport.
 	if (sub_viewport_node) {
-		sub_viewport_node->queue_free();
 		if (sub_viewport_node->get_parent()) {
 			sub_viewport_node->get_parent()->remove_child(sub_viewport_node);
 		}
+		sub_viewport_node->queue_free();
+		sub_viewport_node = nullptr;
 	}
 
 	// Now generate the cache image.

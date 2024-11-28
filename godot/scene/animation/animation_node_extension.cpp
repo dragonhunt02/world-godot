@@ -30,9 +30,6 @@
 
 #include "animation_node_extension.h"
 
-AnimationNodeExtension::AnimationNodeExtension() {
-}
-
 AnimationNode::NodeTimeInfo AnimationNodeExtension::_process(const AnimationMixer::PlaybackInfo p_playback_info, bool p_test_only) {
 	PackedFloat32Array r_ret;
 
@@ -45,23 +42,17 @@ AnimationNode::NodeTimeInfo AnimationNodeExtension::_process(const AnimationMixe
 	return _array_to_node_time_info(r_ret);
 }
 
-AnimationTree *AnimationNodeExtension::get_process_tree() const {
-	ERR_FAIL_NULL_V(process_state, nullptr);
-	return process_state->tree;
-}
-
 bool AnimationNodeExtension::is_looping(const PackedFloat32Array &p_node_info) {
 	return _array_to_node_time_info(p_node_info).is_looping();
 }
 
-double AnimationNodeExtension::get_remain(const PackedFloat32Array &p_node_info, bool p_break_loop) {
+double AnimationNodeExtension::get_remaining_time(const PackedFloat32Array &p_node_info, bool p_break_loop) {
 	return _array_to_node_time_info(p_node_info).get_remain(p_break_loop);
 }
 
 void AnimationNodeExtension::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("get_process_tree"), &AnimationNodeExtension::get_process_tree);
 	ClassDB::bind_static_method("AnimationNodeExtension", D_METHOD("is_looping", "node_info"), &AnimationNodeExtension::is_looping);
-	ClassDB::bind_static_method("AnimationNodeExtension", D_METHOD("get_remain", "node_info", "break_loop"), &AnimationNodeExtension::get_remain);
+	ClassDB::bind_static_method("AnimationNodeExtension", D_METHOD("get_remaining_time", "node_info", "break_loop"), &AnimationNodeExtension::get_remaining_time);
 	GDVIRTUAL_BIND(_process, "playback_info", "test_only");
 }
 
