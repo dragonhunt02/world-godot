@@ -37,20 +37,15 @@ class AnimationNodeExtension : public AnimationRootNode {
 	GDCLASS(AnimationNodeExtension, AnimationRootNode);
 
 public:
-	AnimationNodeExtension();
-	virtual ~AnimationNodeExtension() = default;
-
 	virtual NodeTimeInfo _process(const AnimationMixer::PlaybackInfo p_playback_info, bool p_test_only = false) override;
 
-	AnimationTree *get_process_tree() const;
-
 	static bool is_looping(const PackedFloat32Array &p_node_info);
-	static double get_remain(const PackedFloat32Array &p_node_info, bool p_break_loop = false);
+	static double get_remaining_time(const PackedFloat32Array &p_node_info, bool p_break_loop = false);
 
 protected:
 	static void _bind_methods();
 
-	GDVIRTUAL2R(PackedFloat32Array, _process, PackedFloat64Array, bool);
+	GDVIRTUAL2R_REQUIRED(PackedFloat32Array, _process, PackedFloat64Array, bool);
 
 private:
 	static AnimationNode::NodeTimeInfo _array_to_node_time_info(const PackedFloat32Array &p_array);
