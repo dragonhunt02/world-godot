@@ -363,28 +363,24 @@ window.addEventListener('load', () => {
 		btn.style.display = '';
 	}
 	if ('serviceWorker' in navigator) {
-		try {
-			navigator.serviceWorker.register('service.worker.js').then(function (reg) {
-				if (reg.waiting) {
-					notifyUpdate(reg.waiting);
-				}
-				reg.addEventListener('updatefound', function () {
-					const update = reg.installing;
-					update.addEventListener('statechange', function () {
-						if (update.state === 'installed') {
-							// It's a new install, claim and perform aggressive caching.
-							if (!reg.active) {
-								update.postMessage('claim');
-							} else {
-								notifyUpdate(update);
-							}
+		navigator.serviceWorker.register('service.worker.js').then(function (reg) {
+			if (reg.waiting) {
+				notifyUpdate(reg.waiting);
+			}
+			reg.addEventListener('updatefound', function () {
+				const update = reg.installing;
+				update.addEventListener('statechange', function () {
+					if (update.state === 'installed') {
+						// It's a new install, claim and perform aggressive caching.
+						if (!reg.active) {
+							update.postMessage('claim');
+						} else {
+							notifyUpdate(update);
 						}
-					});
+					}
 				});
 			});
-		} catch (e) {
-			console.error('Error while registering service worker:', e);
-		}
+		});
 	}
 
 	const missing = Engine.getMissingFeatures({

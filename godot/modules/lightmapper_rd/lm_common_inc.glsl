@@ -1,3 +1,4 @@
+
 /* SET 0, static data that does not change between any call */
 
 layout(set = 0, binding = 0) uniform BakeParameters {

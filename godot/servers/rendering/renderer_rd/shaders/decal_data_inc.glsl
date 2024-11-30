@@ -1,3 +1,4 @@
+
 struct DecalData {
 	highp mat4 xform; //to decal transform
 	highp vec3 inv_extents;

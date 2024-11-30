@@ -36,8 +36,7 @@
 
 #include "extensions/openxr_eye_gaze_interaction.h"
 #include "extensions/openxr_hand_interaction_extension.h"
-
-#include <openxr/openxr.h>
+#include "thirdparty/openxr/include/openxr/openxr.h"
 
 void OpenXRInterface::_bind_methods() {
 	// lifecycle signals
@@ -160,11 +159,11 @@ void OpenXRInterface::_bind_methods() {
 
 StringName OpenXRInterface::get_name() const {
 	return StringName("OpenXR");
-}
+};
 
 uint32_t OpenXRInterface::get_capabilities() const {
 	return XRInterface::XR_VR + XRInterface::XR_STEREO;
-}
+};
 
 PackedStringArray OpenXRInterface::get_suggested_tracker_names() const {
 	// These are hardcoded in OpenXR, note that they will only be available if added to our action map
@@ -300,7 +299,10 @@ void OpenXRInterface::_load_action_map() {
 						continue;
 					}
 
-					openxr_api->interaction_profile_add_binding(ip, action->action_rid, xr_binding->get_binding_path());
+					PackedStringArray paths = xr_binding->get_paths();
+					for (int k = 0; k < paths.size(); k++) {
+						openxr_api->interaction_profile_add_binding(ip, action->action_rid, paths[k]);
+					}
 				}
 
 				// Now submit our suggestions
@@ -611,7 +613,7 @@ bool OpenXRInterface::initialize_on_startup() const {
 
 bool OpenXRInterface::is_initialized() const {
 	return initialized;
-}
+};
 
 bool OpenXRInterface::initialize() {
 	XRServer *xr_server = XRServer::get_singleton();
@@ -1134,12 +1136,6 @@ void OpenXRInterface::process() {
 	if (head.is_valid()) {
 		head->set_pose("default", head_transform, head_linear_velocity, head_angular_velocity, head_confidence);
 	}
-
-	if (reference_stage_changing) {
-		// Now that we have updated tracking information in our updated reference space, trigger our pose recentered signal.
-		emit_signal(SNAME("pose_recentered"));
-		reference_stage_changing = false;
-	}
 }
 
 void OpenXRInterface::pre_render() {
@@ -1321,8 +1317,8 @@ void OpenXRInterface::on_state_exiting() {
 	emit_signal(SNAME("instance_exiting"));
 }
 
-void OpenXRInterface::on_reference_space_change_pending() {
-	reference_stage_changing = true;
+void OpenXRInterface::on_pose_recentered() {
+	emit_signal(SNAME("pose_recentered"));
 }
 
 void OpenXRInterface::on_refresh_rate_changes(float p_new_rate) {

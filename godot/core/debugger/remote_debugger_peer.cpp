@@ -144,8 +144,9 @@ void RemoteDebuggerPeerTCP::_read_in() {
 			Error err = decode_variant(var, buf, in_pos, &read);
 			ERR_CONTINUE(read != in_pos || err != OK);
 			ERR_CONTINUE_MSG(var.get_type() != Variant::ARRAY, "Malformed packet received, not an Array.");
-			MutexLock lock(mutex);
+			mutex.lock();
 			in_queue.push_back(var);
+			mutex.unlock();
 		}
 	}
 }
@@ -178,7 +179,7 @@ Error RemoteDebuggerPeerTCP::connect_to_host(const String &p_host, uint16_t p_po
 	}
 
 	if (tcp_client->get_status() != StreamPeerTCP::STATUS_CONNECTED) {
-		ERR_PRINT(vformat("Remote Debugger: Unable to connect. Status: %s.", String::num(tcp_client->get_status())));
+		ERR_PRINT("Remote Debugger: Unable to connect. Status: " + String::num(tcp_client->get_status()) + ".");
 		return FAILED;
 	}
 	connected = true;
@@ -224,7 +225,7 @@ RemoteDebuggerPeer *RemoteDebuggerPeerTCP::create(const String &p_uri) {
 	uint16_t debug_port = 6007;
 
 	if (debug_host.contains(":")) {
-		int sep_pos = debug_host.rfind_char(':');
+		int sep_pos = debug_host.rfind(":");
 		debug_port = debug_host.substr(sep_pos + 1).to_int();
 		debug_host = debug_host.substr(0, sep_pos);
 	}
