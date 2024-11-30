@@ -235,7 +235,6 @@ static FfxErrorCode create_resource_rd(FfxFsr2Interface *p_backend_interface, co
 	texture_format.height = res_desc.height;
 	texture_format.depth = res_desc.depth;
 	texture_format.mipmaps = res_desc.mipCount;
-	texture_format.is_discardable = true;
 
 	RID texture = rd->texture_create(texture_format, RD::TextureView(), initial_data);
 	ERR_FAIL_COND_V(texture.is_null(), FFX_ERROR_BACKEND_API_ERROR);
@@ -801,6 +800,9 @@ FSR2Effect::~FSR2Effect() {
 	RD::get_singleton()->free(device.linear_clamp_sampler);
 
 	for (uint32_t i = 0; i < FFX_FSR2_PASS_COUNT; i++) {
+		if (device.passes[i].pipeline.pipeline_rid.is_valid()) {
+			RD::get_singleton()->free(device.passes[i].pipeline.pipeline_rid);
+		}
 		device.passes[i].shader->version_free(device.passes[i].shader_version);
 	}
 }

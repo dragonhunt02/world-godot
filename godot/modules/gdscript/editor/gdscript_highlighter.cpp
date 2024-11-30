@@ -163,7 +163,7 @@ Dictionary GDScriptSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_l
 							}
 							if (from + end_key_length > line_length) {
 								// If it's key length and there is a '\', dont skip to highlight esc chars.
-								if (str.find_char('\\', from) >= 0) {
+								if (str.find("\\", from) >= 0) {
 									break;
 								}
 							}
@@ -236,7 +236,7 @@ Dictionary GDScriptSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_l
 						for (; from < line_length; from++) {
 							if (line_length - from < end_key_length) {
 								// Don't break if '\' to highlight esc chars.
-								if (str.find_char('\\', from) < 0) {
+								if (str.find("\\", from) < 0) {
 									break;
 								}
 							}
@@ -701,9 +701,7 @@ void GDScriptSyntaxHighlighter::_update_cache() {
 	List<StringName> types;
 	ClassDB::get_class_list(&types);
 	for (const StringName &E : types) {
-		if (ClassDB::is_class_exposed(E)) {
-			class_names[E] = types_color;
-		}
+		class_names[E] = types_color;
 	}
 
 	/* User types. */
@@ -854,7 +852,6 @@ void GDScriptSyntaxHighlighter::_update_cache() {
 		comment_marker_colors[COMMENT_MARKER_NOTICE] = Color(0.24, 0.54, 0.09);
 	}
 
-	// TODO: Move to editor_settings.cpp
 	EDITOR_DEF("text_editor/theme/highlighting/gdscript/function_definition_color", function_definition_color);
 	EDITOR_DEF("text_editor/theme/highlighting/gdscript/global_function_color", global_function_color);
 	EDITOR_DEF("text_editor/theme/highlighting/gdscript/node_path_color", node_path_color);

@@ -54,27 +54,29 @@ class RasterizerCanvasGLES3 : public RendererCanvasRender {
 	_FORCE_INLINE_ void _update_transform_to_mat4(const Transform3D &p_transform, float *p_mat4);
 
 	enum {
-		INSTANCE_FLAGS_LIGHT_COUNT_SHIFT = 0, // 4 bits for light count.
 
-		INSTANCE_FLAGS_CLIP_RECT_UV = (1 << 4),
-		INSTANCE_FLAGS_TRANSPOSE_RECT = (1 << 5),
-		INSTANCE_FLAGS_USE_MSDF = (1 << 6),
-		INSTANCE_FLAGS_USE_LCD = (1 << 7),
+		FLAGS_INSTANCING_MASK = 0x7F,
+		FLAGS_INSTANCING_HAS_COLORS = (1 << 7),
+		FLAGS_INSTANCING_HAS_CUSTOM_DATA = (1 << 8),
 
-		INSTANCE_FLAGS_NINEPACH_DRAW_CENTER = (1 << 8),
-		INSTANCE_FLAGS_NINEPATCH_H_MODE_SHIFT = 9,
-		INSTANCE_FLAGS_NINEPATCH_V_MODE_SHIFT = 11,
+		FLAGS_CLIP_RECT_UV = (1 << 9),
+		FLAGS_TRANSPOSE_RECT = (1 << 10),
 
-		INSTANCE_FLAGS_SHADOW_MASKED_SHIFT = 13, // 16 bits.
-	};
+		FLAGS_NINEPACH_DRAW_CENTER = (1 << 12),
 
-	enum {
-		BATCH_FLAGS_INSTANCING_MASK = 0x7F,
-		BATCH_FLAGS_INSTANCING_HAS_COLORS = (1 << 7),
-		BATCH_FLAGS_INSTANCING_HAS_CUSTOM_DATA = (1 << 8),
+		FLAGS_USE_SKELETON = (1 << 15),
+		FLAGS_NINEPATCH_H_MODE_SHIFT = 16,
+		FLAGS_NINEPATCH_V_MODE_SHIFT = 18,
+		FLAGS_LIGHT_COUNT_SHIFT = 20,
 
-		BATCH_FLAGS_DEFAULT_NORMAL_MAP_USED = (1 << 9),
-		BATCH_FLAGS_DEFAULT_SPECULAR_MAP_USED = (1 << 10),
+		FLAGS_DEFAULT_NORMAL_MAP_USED = (1 << 26),
+		FLAGS_DEFAULT_SPECULAR_MAP_USED = (1 << 27),
+
+		FLAGS_USE_MSDF = (1 << 28),
+		FLAGS_USE_LCD = (1 << 29),
+
+		FLAGS_FLIP_H = (1 << 30),
+		FLAGS_FLIP_V = (1 << 31),
 	};
 
 	enum {
@@ -271,14 +273,14 @@ public:
 
 		RID material;
 		GLES3::CanvasMaterialData *material_data = nullptr;
+		CanvasShaderGLES3::ShaderVariant shader_variant = CanvasShaderGLES3::MODE_QUAD;
 		uint64_t vertex_input_mask = RS::ARRAY_FORMAT_VERTEX | RS::ARRAY_FORMAT_COLOR | RS::ARRAY_FORMAT_TEX_UV;
-		uint64_t specialization = 0;
 
 		const Item::Command *command = nullptr;
 		Item::Command::Type command_type = Item::Command::TYPE_ANIMATION_SLICE; // Can default to any type that doesn't form a batch.
 		uint32_t primitive_points = 0;
 
-		uint32_t flags = 0;
+		bool lights_disabled = false;
 	};
 
 	// DataBuffer contains our per-frame data. I.e. the resources that are updated each frame.
@@ -333,7 +335,7 @@ public:
 
 	typedef void Texture;
 
-	void canvas_begin(RID p_to_render_target, bool p_to_backbuffer, bool p_backbuffer_has_mipmaps);
+	void canvas_begin(RID p_to_render_target, bool p_to_backbuffer);
 
 	//virtual void draw_window_margins(int *black_margin, RID *black_image) override;
 	void draw_lens_distortion_rect(const Rect2 &p_rect, float p_k1, float p_k2, const Vector2 &p_eye_center, float p_oversample);
@@ -359,8 +361,8 @@ public:
 	void _prepare_canvas_texture(RID p_texture, RS::CanvasItemTextureFilter p_base_filter, RS::CanvasItemTextureRepeat p_base_repeat, uint32_t &r_index, Size2 &r_texpixel_size);
 
 	void canvas_render_items(RID p_to_render_target, Item *p_item_list, const Color &p_modulate, Light *p_light_list, Light *p_directional_list, const Transform2D &p_canvas_transform, RS::CanvasItemTextureFilter p_default_filter, RS::CanvasItemTextureRepeat p_default_repeat, bool p_snap_2d_vertices_to_pixel, bool &r_sdf_used, RenderingMethod::RenderInfo *r_render_info = nullptr) override;
-	void _render_items(RID p_to_render_target, int p_item_count, const Transform2D &p_canvas_transform_inverse, Light *p_lights, bool &r_sdf_used, bool p_to_backbuffer = false, RenderingMethod::RenderInfo *r_render_info = nullptr, bool p_backbuffer_has_mipmaps = false);
-	void _record_item_commands(const Item *p_item, RID p_render_target, const Transform2D &p_canvas_transform_inverse, Item *&current_clip, GLES3::CanvasShaderData::BlendMode p_blend_mode, Light *p_lights, uint32_t &r_index, bool &r_break_batch, bool &r_sdf_used, const Point2 &p_repeat_offset);
+	void _render_items(RID p_to_render_target, int p_item_count, const Transform2D &p_canvas_transform_inverse, Light *p_lights, bool &r_sdf_used, bool p_to_backbuffer = false, RenderingMethod::RenderInfo *r_render_info = nullptr);
+	void _record_item_commands(const Item *p_item, RID p_render_target, const Transform2D &p_canvas_transform_inverse, Item *&current_clip, GLES3::CanvasShaderData::BlendMode p_blend_mode, Light *p_lights, uint32_t &r_index, bool &r_break_batch, bool &r_sdf_used, const Point2 &p_offset);
 	void _render_batch(Light *p_lights, uint32_t p_index, RenderingMethod::RenderInfo *r_render_info = nullptr);
 	bool _bind_material(GLES3::CanvasMaterialData *p_material_data, CanvasShaderGLES3::ShaderVariant p_variant, uint64_t p_specialization);
 	void _new_batch(bool &r_batch_broken);
@@ -376,8 +378,6 @@ public:
 			WARN_PRINT_ONCE("Debug CanvasItem Redraw is not available yet when using the GL Compatibility backend.");
 		}
 	}
-
-	virtual uint32_t get_pipeline_compilations(RS::PipelineSource p_source) override { return 0; }
 
 	static RasterizerCanvasGLES3 *get_singleton();
 	RasterizerCanvasGLES3();

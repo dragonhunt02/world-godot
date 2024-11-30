@@ -608,10 +608,11 @@ int TextureProgressBar::get_fill_mode() {
 }
 
 void TextureProgressBar::set_radial_initial_angle(float p_angle) {
-	ERR_FAIL_COND_MSG(!Math::is_finite(p_angle), "Angle is non-finite.");
-
-	if (p_angle < 0.0 || p_angle > 360.0) {
-		p_angle = Math::fposmodp(p_angle, 360.0f);
+	while (p_angle > 360) {
+		p_angle -= 360;
+	}
+	while (p_angle < 0) {
+		p_angle += 360;
 	}
 
 	if (rad_init_angle == p_angle) {

@@ -479,9 +479,6 @@ void Curve::set_bake_resolution(int p_resolution) {
 }
 
 real_t Curve::sample_baked(real_t p_offset) const {
-	// Make sure that p_offset is finite.
-	ERR_FAIL_COND_V_MSG(!Math::is_finite(p_offset), 0, "Offset is non-finite");
-
 	if (_baked_cache_dirty) {
 		// Last-second bake if not done already
 		const_cast<Curve *>(this)->bake();
@@ -984,9 +981,6 @@ Transform2D Curve2D::_sample_posture(Interval p_interval) const {
 }
 
 Vector2 Curve2D::sample_baked(real_t p_offset, bool p_cubic) const {
-	// Make sure that p_offset is finite.
-	ERR_FAIL_COND_V_MSG(!Math::is_finite(p_offset), Vector2(), "Offset is non-finite");
-
 	if (baked_cache_dirty) {
 		_bake();
 	}
@@ -1006,9 +1000,6 @@ Vector2 Curve2D::sample_baked(real_t p_offset, bool p_cubic) const {
 }
 
 Transform2D Curve2D::sample_baked_with_rotation(real_t p_offset, bool p_cubic) const {
-	// Make sure that p_offset is finite.
-	ERR_FAIL_COND_V_MSG(!Math::is_finite(p_offset), Transform2D(), "Offset is non-finite");
-
 	if (baked_cache_dirty) {
 		_bake();
 	}
@@ -1463,9 +1454,6 @@ void Curve3D::_remove_point(int p_index) {
 
 void Curve3D::remove_point(int p_index) {
 	_remove_point(p_index);
-	if (closed && points.size() < 2) {
-		set_closed(false);
-	}
 	notify_property_list_changed();
 }
 
@@ -1482,25 +1470,15 @@ Vector3 Curve3D::sample(int p_index, real_t p_offset) const {
 	ERR_FAIL_COND_V(pc == 0, Vector3());
 
 	if (p_index >= pc - 1) {
-		if (!closed) {
-			return points[pc - 1].position;
-		} else {
-			p_index = pc - 1;
-		}
+		return points[pc - 1].position;
 	} else if (p_index < 0) {
 		return points[0].position;
 	}
 
 	Vector3 p0 = points[p_index].position;
 	Vector3 p1 = p0 + points[p_index].out;
-	Vector3 p3, p2;
-	if (!closed || p_index < pc - 1) {
-		p3 = points[p_index + 1].position;
-		p2 = p3 + points[p_index + 1].in;
-	} else {
-		p3 = points[0].position;
-		p2 = p3 + points[0].in;
-	}
+	Vector3 p3 = points[p_index + 1].position;
+	Vector3 p2 = p3 + points[p_index + 1].in;
 
 	return p0.bezier_interpolate(p1, p2, p3, p_offset);
 }
@@ -1618,16 +1596,13 @@ void Curve3D::_bake() const {
 	{
 		Vector<RBMap<real_t, Vector3>> midpoints = _tessellate_even_length(10, bake_interval);
 
-		const int num_intervals = closed ? points.size() : points.size() - 1;
-
 #ifdef TOOLS_ENABLED
-		points_in_cache.resize(closed ? (points.size() + 1) : points.size());
+		points_in_cache.resize(points.size());
 		points_in_cache.set(0, 0);
 #endif
 
-		// Point Count: Begins at 1 to account for the last point.
 		int pc = 1;
-		for (int i = 0; i < num_intervals; i++) {
+		for (int i = 0; i < points.size() - 1; i++) {
 			pc++;
 			pc += midpoints[i].size();
 #ifdef TOOLS_ENABLED
@@ -1650,29 +1625,18 @@ void Curve3D::_bake() const {
 		btw[0] = points[0].tilt;
 		int pidx = 0;
 
-		for (int i = 0; i < num_intervals; i++) {
+		for (int i = 0; i < points.size() - 1; i++) {
 			for (const KeyValue<real_t, Vector3> &E : midpoints[i]) {
 				pidx++;
 				bpw[pidx] = E.value;
-				if (!closed || i < num_intervals - 1) {
-					bfw[pidx] = _calculate_tangent(points[i].position, points[i].position + points[i].out, points[i + 1].position + points[i + 1].in, points[i + 1].position, E.key);
-					btw[pidx] = Math::lerp(points[i].tilt, points[i + 1].tilt, E.key);
-				} else {
-					bfw[pidx] = _calculate_tangent(points[i].position, points[i].position + points[i].out, points[0].position + points[0].in, points[0].position, E.key);
-					btw[pidx] = Math::lerp(points[i].tilt, points[0].tilt, E.key);
-				}
+				bfw[pidx] = _calculate_tangent(points[i].position, points[i].position + points[i].out, points[i + 1].position + points[i + 1].in, points[i + 1].position, E.key);
+				btw[pidx] = Math::lerp(points[i].tilt, points[i + 1].tilt, E.key);
 			}
 
 			pidx++;
-			if (!closed || i < num_intervals - 1) {
-				bpw[pidx] = points[i + 1].position;
-				bfw[pidx] = _calculate_tangent(points[i].position, points[i].position + points[i].out, points[i + 1].position + points[i + 1].in, points[i + 1].position, 1.0);
-				btw[pidx] = points[i + 1].tilt;
-			} else {
-				bpw[pidx] = points[0].position;
-				bfw[pidx] = _calculate_tangent(points[i].position, points[i].position + points[i].out, points[0].position + points[0].in, points[0].position, 1.0);
-				btw[pidx] = points[0].tilt;
-			}
+			bpw[pidx] = points[i + 1].position;
+			bfw[pidx] = _calculate_tangent(points[i].position, points[i].position + points[i].out, points[i + 1].position + points[i + 1].in, points[i + 1].position, 1.0);
+			btw[pidx] = points[i + 1].tilt;
 		}
 
 		// Recalculate the baked distances.
@@ -1917,9 +1881,6 @@ Basis Curve3D::get_point_baked_posture(int p_index, bool p_apply_tilt) const {
 #endif
 
 Vector3 Curve3D::sample_baked(real_t p_offset, bool p_cubic) const {
-	// Make sure that p_offset is finite.
-	ERR_FAIL_COND_V_MSG(!Math::is_finite(p_offset), Vector3(), "Offset is non-finite");
-
 	if (baked_cache_dirty) {
 		_bake();
 	}
@@ -1939,9 +1900,6 @@ Vector3 Curve3D::sample_baked(real_t p_offset, bool p_cubic) const {
 }
 
 Transform3D Curve3D::sample_baked_with_rotation(real_t p_offset, bool p_cubic, bool p_apply_tilt) const {
-	// Make sure that p_offset is finite.
-	ERR_FAIL_COND_V_MSG(!Math::is_finite(p_offset), Transform3D(), "Offset is non-finite");
-
 	if (baked_cache_dirty) {
 		_bake();
 	}
@@ -1971,9 +1929,6 @@ Transform3D Curve3D::sample_baked_with_rotation(real_t p_offset, bool p_cubic, b
 }
 
 real_t Curve3D::sample_baked_tilt(real_t p_offset) const {
-	// Make sure that p_offset is finite.
-	ERR_FAIL_COND_V_MSG(!Math::is_finite(p_offset), 0, "Offset is non-finite");
-
 	if (baked_cache_dirty) {
 		_bake();
 	}
@@ -1993,9 +1948,6 @@ real_t Curve3D::sample_baked_tilt(real_t p_offset) const {
 }
 
 Vector3 Curve3D::sample_baked_up_vector(real_t p_offset, bool p_apply_tilt) const {
-	// Make sure that p_offset is finite.
-	ERR_FAIL_COND_V_MSG(!Math::is_finite(p_offset), Vector3(0, 1, 0), "Offset is non-finite");
-
 	if (baked_cache_dirty) {
 		_bake();
 	}
@@ -2123,20 +2075,6 @@ real_t Curve3D::get_closest_offset(const Vector3 &p_to_point) const {
 	return nearest;
 }
 
-void Curve3D::set_closed(bool p_closed) {
-	if (closed == p_closed) {
-		return;
-	}
-
-	closed = p_closed;
-	mark_dirty();
-	notify_property_list_changed();
-}
-
-bool Curve3D::is_closed() const {
-	return closed;
-}
-
 void Curve3D::set_bake_interval(real_t p_tolerance) {
 	bake_interval = p_tolerance;
 	mark_dirty();
@@ -2215,17 +2153,11 @@ PackedVector3Array Curve3D::tessellate(int p_max_stages, real_t p_tolerance) con
 	}
 	Vector<RBMap<real_t, Vector3>> midpoints;
 
-	const int num_intervals = closed ? points.size() : points.size() - 1;
-	midpoints.resize(num_intervals);
+	midpoints.resize(points.size() - 1);
 
-	// Point Count: Begins at 1 to account for the last point.
 	int pc = 1;
-	for (int i = 0; i < num_intervals; i++) {
-		if (!closed || i < num_intervals - 1) {
-			_bake_segment3d(midpoints.write[i], 0, 1, points[i].position, points[i].out, points[i + 1].position, points[i + 1].in, 0, p_max_stages, p_tolerance);
-		} else {
-			_bake_segment3d(midpoints.write[i], 0, 1, points[i].position, points[i].out, points[0].position, points[0].in, 0, p_max_stages, p_tolerance);
-		}
+	for (int i = 0; i < points.size() - 1; i++) {
+		_bake_segment3d(midpoints.write[i], 0, 1, points[i].position, points[i].out, points[i + 1].position, points[i + 1].in, 0, p_max_stages, p_tolerance);
 		pc++;
 		pc += midpoints[i].size();
 	}
@@ -2235,18 +2167,14 @@ PackedVector3Array Curve3D::tessellate(int p_max_stages, real_t p_tolerance) con
 	bpw[0] = points[0].position;
 	int pidx = 0;
 
-	for (int i = 0; i < num_intervals; i++) {
+	for (int i = 0; i < points.size() - 1; i++) {
 		for (const KeyValue<real_t, Vector3> &E : midpoints[i]) {
 			pidx++;
 			bpw[pidx] = E.value;
 		}
 
 		pidx++;
-		if (!closed || i < num_intervals - 1) {
-			bpw[pidx] = points[i + 1].position;
-		} else {
-			bpw[pidx] = points[0].position;
-		}
+		bpw[pidx] = points[i + 1].position;
 	}
 
 	return tess;
@@ -2256,15 +2184,10 @@ Vector<RBMap<real_t, Vector3>> Curve3D::_tessellate_even_length(int p_max_stages
 	Vector<RBMap<real_t, Vector3>> midpoints;
 	ERR_FAIL_COND_V_MSG(points.size() < 2, midpoints, "Curve must have at least 2 control point");
 
-	const int num_intervals = closed ? points.size() : points.size() - 1;
-	midpoints.resize(num_intervals);
+	midpoints.resize(points.size() - 1);
 
-	for (int i = 0; i < num_intervals; i++) {
-		if (!closed || i < num_intervals - 1) {
-			_bake_segment3d_even_length(midpoints.write[i], 0, 1, points[i].position, points[i].out, points[i + 1].position, points[i + 1].in, 0, p_max_stages, p_length);
-		} else {
-			_bake_segment3d_even_length(midpoints.write[i], 0, 1, points[i].position, points[i].out, points[0].position, points[0].in, 0, p_max_stages, p_length);
-		}
+	for (int i = 0; i < points.size() - 1; i++) {
+		_bake_segment3d_even_length(midpoints.write[i], 0, 1, points[i].position, points[i].out, points[i + 1].position, points[i + 1].in, 0, p_max_stages, p_length);
 	}
 	return midpoints;
 }
@@ -2277,10 +2200,8 @@ PackedVector3Array Curve3D::tessellate_even_length(int p_max_stages, real_t p_le
 		return tess;
 	}
 
-	const int num_intervals = closed ? points.size() : points.size() - 1;
-	// Point Count: Begins at 1 to account for the last point.
 	int pc = 1;
-	for (int i = 0; i < num_intervals; i++) {
+	for (int i = 0; i < points.size() - 1; i++) {
 		pc++;
 		pc += midpoints[i].size();
 	}
@@ -2290,18 +2211,14 @@ PackedVector3Array Curve3D::tessellate_even_length(int p_max_stages, real_t p_le
 	bpw[0] = points[0].position;
 	int pidx = 0;
 
-	for (int i = 0; i < num_intervals; i++) {
+	for (int i = 0; i < points.size() - 1; i++) {
 		for (const KeyValue<real_t, Vector3> &E : midpoints[i]) {
 			pidx++;
 			bpw[pidx] = E.value;
 		}
 
 		pidx++;
-		if (!closed || i < num_intervals - 1) {
-			bpw[pidx] = points[i + 1].position;
-		} else {
-			bpw[pidx] = points[0].position;
-		}
+		bpw[pidx] = points[i + 1].position;
 	}
 
 	return tess;
@@ -2357,13 +2274,13 @@ void Curve3D::_get_property_list(List<PropertyInfo> *p_list) const {
 		pi.usage &= ~PROPERTY_USAGE_STORAGE;
 		p_list->push_back(pi);
 
-		if (closed || i != 0) {
+		if (i != 0) {
 			pi = PropertyInfo(Variant::VECTOR3, vformat("point_%d/in", i));
 			pi.usage &= ~PROPERTY_USAGE_STORAGE;
 			p_list->push_back(pi);
 		}
 
-		if (closed || i != points.size() - 1) {
+		if (i != points.size() - 1) {
 			pi = PropertyInfo(Variant::VECTOR3, vformat("point_%d/out", i));
 			pi.usage &= ~PROPERTY_USAGE_STORAGE;
 			p_list->push_back(pi);
@@ -2391,8 +2308,6 @@ void Curve3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("clear_points"), &Curve3D::clear_points);
 	ClassDB::bind_method(D_METHOD("sample", "idx", "t"), &Curve3D::sample);
 	ClassDB::bind_method(D_METHOD("samplef", "fofs"), &Curve3D::samplef);
-	ClassDB::bind_method(D_METHOD("set_closed", "closed"), &Curve3D::set_closed);
-	ClassDB::bind_method(D_METHOD("is_closed"), &Curve3D::is_closed);
 	//ClassDB::bind_method(D_METHOD("bake","subdivs"),&Curve3D::bake,DEFVAL(10));
 	ClassDB::bind_method(D_METHOD("set_bake_interval", "distance"), &Curve3D::set_bake_interval);
 	ClassDB::bind_method(D_METHOD("get_bake_interval"), &Curve3D::get_bake_interval);
@@ -2413,8 +2328,6 @@ void Curve3D::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("_get_data"), &Curve3D::_get_data);
 	ClassDB::bind_method(D_METHOD("_set_data", "data"), &Curve3D::_set_data);
-
-	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "closed"), "set_closed", "is_closed");
 
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "bake_interval", PROPERTY_HINT_RANGE, "0.01,512,0.01"), "set_bake_interval", "get_bake_interval");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "_data", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR | PROPERTY_USAGE_INTERNAL), "_set_data", "_get_data");

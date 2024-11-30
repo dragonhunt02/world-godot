@@ -178,18 +178,6 @@ void StreamPeer::put_64(int64_t p_val) {
 	put_data(buf, 8);
 }
 
-void StreamPeer::put_half(float p_val) {
-	uint8_t buf[2];
-
-	encode_half(p_val, buf);
-	uint16_t *p16 = (uint16_t *)buf;
-	if (big_endian) {
-		*p16 = BSWAP16(*p16);
-	}
-
-	put_data(buf, 2);
-}
-
 void StreamPeer::put_float(float p_val) {
 	uint8_t buf[4];
 
@@ -235,13 +223,13 @@ void StreamPeer::put_var(const Variant &p_variant, bool p_full_objects) {
 }
 
 uint8_t StreamPeer::get_u8() {
-	uint8_t buf[1] = {};
+	uint8_t buf[1];
 	get_data(buf, 1);
 	return buf[0];
 }
 
 int8_t StreamPeer::get_8() {
-	uint8_t buf[1] = {};
+	uint8_t buf[1];
 	get_data(buf, 1);
 	return buf[0];
 }
@@ -304,18 +292,6 @@ int64_t StreamPeer::get_64() {
 		r = BSWAP64(r);
 	}
 	return r;
-}
-
-float StreamPeer::get_half() {
-	uint8_t buf[2];
-	get_data(buf, 2);
-
-	uint16_t *p16 = (uint16_t *)buf;
-	if (big_endian) {
-		*p16 = BSWAP16(*p16);
-	}
-
-	return decode_half(buf);
 }
 
 float StreamPeer::get_float() {
@@ -409,7 +385,6 @@ void StreamPeer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("put_u32", "value"), &StreamPeer::put_u32);
 	ClassDB::bind_method(D_METHOD("put_64", "value"), &StreamPeer::put_64);
 	ClassDB::bind_method(D_METHOD("put_u64", "value"), &StreamPeer::put_u64);
-	ClassDB::bind_method(D_METHOD("put_half", "value"), &StreamPeer::put_half);
 	ClassDB::bind_method(D_METHOD("put_float", "value"), &StreamPeer::put_float);
 	ClassDB::bind_method(D_METHOD("put_double", "value"), &StreamPeer::put_double);
 	ClassDB::bind_method(D_METHOD("put_string", "value"), &StreamPeer::put_string);
@@ -424,7 +399,6 @@ void StreamPeer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_u32"), &StreamPeer::get_u32);
 	ClassDB::bind_method(D_METHOD("get_64"), &StreamPeer::get_64);
 	ClassDB::bind_method(D_METHOD("get_u64"), &StreamPeer::get_u64);
-	ClassDB::bind_method(D_METHOD("get_half"), &StreamPeer::get_half);
 	ClassDB::bind_method(D_METHOD("get_float"), &StreamPeer::get_float);
 	ClassDB::bind_method(D_METHOD("get_double"), &StreamPeer::get_double);
 	ClassDB::bind_method(D_METHOD("get_string", "bytes"), &StreamPeer::get_string, DEFVAL(-1));

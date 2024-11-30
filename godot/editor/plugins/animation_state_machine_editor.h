@@ -117,7 +117,6 @@ class AnimationNodeStateMachineEditor : public AnimationTreeNodeEditorPlugin {
 		Color transition_icon_disabled_color;
 		Color highlight_color;
 		Color highlight_disabled_color;
-		Color focus_color;
 		Color guideline_color;
 
 		Ref<Texture2D> transition_icons[6]{};
@@ -323,7 +322,7 @@ protected:
 public:
 	void add_transition(const StringName &p_from, const StringName &p_to, Ref<AnimationNodeStateMachineTransition> p_transition);
 
-	EditorAnimationMultiTransitionEdit() {}
+	EditorAnimationMultiTransitionEdit(){};
 };
 
 #endif // ANIMATION_STATE_MACHINE_EDITOR_H

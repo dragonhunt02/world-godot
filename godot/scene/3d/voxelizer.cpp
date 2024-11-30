@@ -382,24 +382,8 @@ Voxelizer::MaterialCache Voxelizer::_get_material_cache(Ref<Material> p_material
 	return mc;
 }
 
-int Voxelizer::get_bake_steps(Ref<Mesh> &p_mesh) const {
-	int bake_total = 0;
-	for (int i = 0; i < p_mesh->get_surface_count(); i++) {
-		if (p_mesh->surface_get_primitive_type(i) != Mesh::PRIMITIVE_TRIANGLES) {
-			continue; // Only triangles.
-		}
-		Array a = p_mesh->surface_get_arrays(i);
-		Vector<Vector3> vertices = a[Mesh::ARRAY_VERTEX];
-		Vector<int> index = a[Mesh::ARRAY_INDEX];
-		bake_total += (index.size() > 0 ? index.size() : vertices.size()) / 3;
-	}
-	return bake_total;
-}
-
-Voxelizer::BakeResult Voxelizer::plot_mesh(const Transform3D &p_xform, Ref<Mesh> &p_mesh, const Vector<Ref<Material>> &p_materials, const Ref<Material> &p_override_material, BakeStepFunc p_bake_step_func) {
-	ERR_FAIL_COND_V_MSG(!p_xform.is_finite(), BAKE_RESULT_INVALID_PARAMETER, "Invalid mesh bake transform.");
-
-	int bake_total = get_bake_steps(p_mesh), bake_current = 0;
+void Voxelizer::plot_mesh(const Transform3D &p_xform, Ref<Mesh> &p_mesh, const Vector<Ref<Material>> &p_materials, const Ref<Material> &p_override_material) {
+	ERR_FAIL_COND_MSG(!p_xform.is_finite(), "Invalid mesh bake transform.");
 
 	for (int i = 0; i < p_mesh->get_surface_count(); i++) {
 		if (p_mesh->surface_get_primitive_type(i) != Mesh::PRIMITIVE_TRIANGLES) {
@@ -444,13 +428,6 @@ Voxelizer::BakeResult Voxelizer::plot_mesh(const Transform3D &p_xform, Ref<Mesh>
 				Vector2 uvs[3];
 				Vector3 normal[3];
 
-				bake_current++;
-				if (p_bake_step_func != nullptr && (bake_current & 2047) == 1) {
-					if (p_bake_step_func(bake_current, bake_total)) {
-						return BAKE_RESULT_CANCELLED;
-					}
-				}
-
 				for (int k = 0; k < 3; k++) {
 					vtxs[k] = p_xform.xform(vr[ir[j * 3 + k]]);
 				}
@@ -483,13 +460,6 @@ Voxelizer::BakeResult Voxelizer::plot_mesh(const Transform3D &p_xform, Ref<Mesh>
 				Vector2 uvs[3];
 				Vector3 normal[3];
 
-				bake_current++;
-				if (p_bake_step_func != nullptr && (bake_current & 2047) == 1) {
-					if (p_bake_step_func(bake_current, bake_total)) {
-						return BAKE_RESULT_CANCELLED;
-					}
-				}
-
 				for (int k = 0; k < 3; k++) {
 					vtxs[k] = p_xform.xform(vr[j * 3 + k]);
 				}
@@ -517,8 +487,6 @@ Voxelizer::BakeResult Voxelizer::plot_mesh(const Transform3D &p_xform, Ref<Mesh>
 	}
 
 	max_original_cells = bake_cells.size();
-
-	return BAKE_RESULT_OK;
 }
 
 void Voxelizer::_sort() {
@@ -853,7 +821,7 @@ static void edt(float *f, int stride, int n) {
 
 #undef square
 
-Voxelizer::BakeResult Voxelizer::get_sdf_3d_image(Vector<uint8_t> &r_image, BakeStepFunc p_bake_step_function) const {
+Vector<uint8_t> Voxelizer::get_sdf_3d_image() const {
 	Vector3i octree_size = get_voxel_gi_octree_size();
 
 	uint32_t float_count = octree_size.x * octree_size.y * octree_size.z;
@@ -881,17 +849,9 @@ Voxelizer::BakeResult Voxelizer::get_sdf_3d_image(Vector<uint8_t> &r_image, Bake
 
 	//process in each direction
 
-	int bake_total = octree_size.x * 2 + octree_size.y, bake_current = 0;
-
 	//xy->z
 
-	for (int i = 0; i < octree_size.x; i++, bake_current++) {
-		if (p_bake_step_function) {
-			if (p_bake_step_function(bake_current, bake_total)) {
-				memdelete_arr(work_memory);
-				return BAKE_RESULT_CANCELLED;
-			}
-		}
+	for (int i = 0; i < octree_size.x; i++) {
 		for (int j = 0; j < octree_size.y; j++) {
 			edt(&work_memory[i + j * y_mult], z_mult, octree_size.z);
 		}
@@ -899,34 +859,23 @@ Voxelizer::BakeResult Voxelizer::get_sdf_3d_image(Vector<uint8_t> &r_image, Bake
 
 	//xz->y
 
-	for (int i = 0; i < octree_size.x; i++, bake_current++) {
-		if (p_bake_step_function) {
-			if (p_bake_step_function(bake_current, bake_total)) {
-				memdelete_arr(work_memory);
-				return BAKE_RESULT_CANCELLED;
-			}
-		}
+	for (int i = 0; i < octree_size.x; i++) {
 		for (int j = 0; j < octree_size.z; j++) {
 			edt(&work_memory[i + j * z_mult], y_mult, octree_size.y);
 		}
 	}
 
 	//yz->x
-	for (int i = 0; i < octree_size.y; i++, bake_current++) {
-		if (p_bake_step_function) {
-			if (p_bake_step_function(bake_current, bake_total)) {
-				memdelete_arr(work_memory);
-				return BAKE_RESULT_CANCELLED;
-			}
-		}
+	for (int i = 0; i < octree_size.y; i++) {
 		for (int j = 0; j < octree_size.z; j++) {
 			edt(&work_memory[i * y_mult + j * z_mult], 1, octree_size.x);
 		}
 	}
 
-	r_image.resize(float_count);
+	Vector<uint8_t> image3d;
+	image3d.resize(float_count);
 	{
-		uint8_t *w = r_image.ptrw();
+		uint8_t *w = image3d.ptrw();
 		for (uint32_t i = 0; i < float_count; i++) {
 			uint32_t d = uint32_t(Math::sqrt(work_memory[i]));
 			if (d == 0) {
@@ -939,7 +888,7 @@ Voxelizer::BakeResult Voxelizer::get_sdf_3d_image(Vector<uint8_t> &r_image, Bake
 
 	memdelete_arr(work_memory);
 
-	return BAKE_RESULT_OK;
+	return image3d;
 }
 
 #undef INF

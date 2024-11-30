@@ -482,7 +482,6 @@ private:
 
 	HorizontalAlignment default_alignment = HORIZONTAL_ALIGNMENT_LEFT;
 	BitField<TextServer::JustificationFlag> default_jst_flags = TextServer::JUSTIFICATION_WORD_BOUND | TextServer::JUSTIFICATION_KASHIDA | TextServer::JUSTIFICATION_SKIP_LAST_LINE | TextServer::JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE;
-	PackedFloat32Array default_tab_stops;
 
 	ItemMeta *meta_hovering = nullptr;
 	Variant current_meta;
@@ -614,10 +613,6 @@ private:
 
 	String _get_prefix(Item *p_item, const Vector<int> &p_list_index, const Vector<ItemList *> &p_list_items);
 
-	static int _find_unquoted(const String &p_src, char32_t p_chr, int p_from);
-	static Vector<String> _split_unquoted(const String &p_src, char32_t p_splitter);
-	static String _get_tag_value(const String &p_tag);
-
 #ifndef DISABLE_DEPRECATED
 	// Kept for compatibility from 3.x to 4.0.
 	bool _set(const StringName &p_name, const Variant &p_value);
@@ -625,9 +620,6 @@ private:
 	bool use_bbcode = false;
 	String text;
 	void _apply_translation();
-
-	bool internal_stack_editing = false;
-	bool stack_externally_modified = false;
 
 	bool fit_content = false;
 
@@ -793,7 +785,7 @@ public:
 	void deselect();
 
 	int get_pending_paragraphs() const;
-	bool is_finished() const;
+	bool is_ready() const;
 	bool is_updating() const;
 
 	void set_threaded(bool p_threaded);
@@ -815,15 +807,6 @@ public:
 
 	void set_text(const String &p_bbcode);
 	String get_text() const;
-
-	void set_horizontal_alignment(HorizontalAlignment p_alignment);
-	HorizontalAlignment get_horizontal_alignment() const;
-
-	void set_justification_flags(BitField<TextServer::JustificationFlag> p_flags);
-	BitField<TextServer::JustificationFlag> get_justification_flags() const;
-
-	void set_tab_stops(const PackedFloat32Array &p_tab_stops);
-	PackedFloat32Array get_tab_stops() const;
 
 	void set_text_direction(TextDirection p_text_direction);
 	TextDirection get_text_direction() const;
