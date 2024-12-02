@@ -75,21 +75,26 @@ private:
 		String filename;
 	};
 
-	HashMap<String, String> font_aliases;
-	List<FontInfo> fonts;
-	HashSet<String> font_names;
-	bool font_config_loaded = false;
+	mutable HashMap<String, String> font_aliases;
+	mutable List<FontInfo> fonts;
+	mutable HashSet<String> font_names;
+	mutable bool font_config_loaded = false;
 
 	GodotJavaWrapper *godot_java = nullptr;
 	GodotIOJavaWrapper *godot_io_java = nullptr;
 
-	void _load_system_font_config();
+	void _load_system_font_config() const;
 	String get_system_property(const char *key) const;
 
 public:
 	static const char *ANDROID_EXEC_PATH;
 	static const int DEFAULT_WINDOW_WIDTH = 800;
 	static const int DEFAULT_WINDOW_HEIGHT = 600;
+
+#ifdef TOOLS_ENABLED
+	Error sign_apk(const String &p_input_path, const String &p_output_path, const String &p_keystore_path, const String &p_keystore_user, const String &p_keystore_password);
+	Error verify_apk(const String &p_apk_path);
+#endif
 
 	virtual void initialize_core() override;
 	virtual void initialize() override;
