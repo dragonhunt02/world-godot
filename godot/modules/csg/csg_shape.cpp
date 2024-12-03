@@ -232,6 +232,38 @@ static void _unpack_manifold(
 	r_mesh_merge->_regen_face_aabbs();
 }
 
+// Errors matching `thirdparty/manifold/include/manifold/manifold.h`.
+static std::string manifold_error_to_string(const manifold::Manifold::Error& p_error) {
+  switch (p_error) {
+    case manifold::Manifold::Error::NoError:
+      return "No Error";
+    case manifold::Manifold::Error::NonFiniteVertex:
+      return "Non Finite Vertex";
+    case manifold::Manifold::Error::NotManifold:
+      return "Not Manifold";
+    case manifold::Manifold::Error::VertexOutOfBounds:
+      return "Vertex Out Of Bounds";
+    case manifold::Manifold::Error::PropertiesWrongLength:
+      return "Properties Wrong Length";
+    case manifold::Manifold::Error::MissingPositionProperties:
+      return "Missing Position Properties";
+    case manifold::Manifold::Error::MergeVectorsDifferentLengths:
+      return "Merge Vectors Different Lengths";
+    case manifold::Manifold::Error::MergeIndexOutOfBounds:
+      return "Merge Index Out Of Bounds";
+    case manifold::Manifold::Error::TransformWrongLength:
+      return "Transform Wrong Length";
+    case manifold::Manifold::Error::RunIndexWrongLength:
+      return "Run Index Wrong Length";
+    case manifold::Manifold::Error::FaceIDWrongLength:
+      return "Face ID Wrong Length";
+    case manifold::Manifold::Error::InvalidConstruction:
+      return "Invalid Construction";
+    default:
+      return "Unknown Error";
+  };
+}
+
 static void _pack_manifold(
 		const CSGBrush *const p_mesh_merge,
 		manifold::Manifold &r_manifold,
@@ -291,11 +323,15 @@ static void _pack_manifold(
 	// runIndex needs an explicit end value.
 	mesh.runIndex.push_back(mesh.triVerts.size());
 	ERR_FAIL_COND_MSG(mesh.vertProperties.size() % mesh.numProp != 0, "Invalid vertex properties size.");
-	mesh.Merge();
-	r_manifold = manifold::Manifold(mesh);
+	if (mesh.Merge()) {
+		r_manifold = manifold::Manifold(mesh);
+	} else {
+		r_manifold = manifold::Manifold();
+		print_error("Manifold merge failed.");
+	}
 	manifold::Manifold::Error err = r_manifold.Status();
 	if (err != manifold::Manifold::Error::NoError) {
-		print_error(String("Manifold creation from mesh failed:" + itos((int)err)));
+		print_error(vformat("Manifold creation from mesh failed: %s",  manifold_error_to_string(err).c_str()));
 	}
 }
 
