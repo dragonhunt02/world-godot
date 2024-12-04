@@ -37,7 +37,6 @@
 #include "scene/animation/animation_blend_space_2d.h"
 #include "scene/animation/animation_blend_tree.h"
 #include "scene/animation/animation_mixer.h"
-#include "scene/animation/animation_node_extension.h"
 #include "scene/animation/animation_node_state_machine.h"
 #include "scene/animation/animation_player.h"
 #include "scene/animation/animation_tree.h"
@@ -514,7 +513,6 @@ void register_scene_types() {
 	GDREGISTER_CLASS(AnimationNodeBlendSpace2D);
 	GDREGISTER_CLASS(AnimationNodeStateMachine);
 	GDREGISTER_CLASS(AnimationNodeStateMachinePlayback);
-	GDREGISTER_VIRTUAL_CLASS(AnimationNodeExtension);
 
 	GDREGISTER_INTERNAL_CLASS(AnimationNodeStartState);
 	GDREGISTER_INTERNAL_CLASS(AnimationNodeEndState);

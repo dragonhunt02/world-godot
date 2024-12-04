@@ -5,8 +5,8 @@
 ;
 [subrepo]
 	remote = https://github.com/V-Sekai/godot.git
-	branch = vsk-csg-error-and-ctd
-	commit = 5fd4b8ac506787691c2d9de9ac8bccf2113d8408
-	parent = 0ea543a2b660ac25d64ea86d6bee8bbd0991f544
+	branch = groups-4.3
+	commit = 6cf1d3c13e4ecc0f50f689e9001be954b7ae6eff
+	parent = 5fa5e7dde85aa0c052a3f6bf8cac2f6483070b13
 	method = merge
 	cmdver = 0.4.9
