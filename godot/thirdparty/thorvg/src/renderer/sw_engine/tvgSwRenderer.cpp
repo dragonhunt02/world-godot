@@ -603,6 +603,8 @@ RenderCompositor* SwRenderer::target(const RenderRegion& region, ColorSpace cs)
     if (x + w > sw) w = (sw - x);
     if (y + h > sh) h = (sh - y);
 
+    if (w == 0 || h == 0) return nullptr;
+
     cmp->compositor->recoverSfc = surface;
     cmp->compositor->recoverCmp = surface->compositor;
     cmp->compositor->valid = false;
@@ -647,19 +649,32 @@ bool SwRenderer::endComposite(RenderCompositor* cmp)
 bool SwRenderer::prepare(RenderEffect* effect)
 {
     switch (effect->type) {
-        case SceneEffect::GaussianBlur: return effectGaussianPrepare(static_cast<RenderEffectGaussian*>(effect));
+        case SceneEffect::GaussianBlur: return effectGaussianBlurPrepare(static_cast<RenderEffectGaussianBlur*>(effect));
+        case SceneEffect::DropShadow: return effectDropShadowPrepare(static_cast<RenderEffectDropShadow*>(effect));
         default: return false;
     }
 }
 
 
-bool SwRenderer::effect(RenderCompositor* cmp, const RenderEffect* effect)
+bool SwRenderer::effect(RenderCompositor* cmp, const RenderEffect* effect, uint8_t opacity, bool direct)
 {
+    if (effect->invalid) return false;
+
     auto p = static_cast<SwCompositor*>(cmp);
-    auto& buffer = request(surface->channelSize)->compositor->image;
 
     switch (effect->type) {
-        case SceneEffect::GaussianBlur: return effectGaussianBlur(p->image, buffer, p->bbox, static_cast<const RenderEffectGaussian*>(effect));
+        case SceneEffect::GaussianBlur: {
+            return effectGaussianBlur(p, request(surface->channelSize), static_cast<const RenderEffectGaussianBlur*>(effect));
+        }
+        case SceneEffect::DropShadow: {
+            auto cmp1 = request(surface->channelSize);
+            cmp1->compositor->valid = false;
+            auto cmp2 = request(surface->channelSize);
+            SwSurface* surfaces[] = {cmp1, cmp2};
+            auto ret = effectDropShadow(p, surfaces, static_cast<const RenderEffectDropShadow*>(effect), opacity, direct);
+            cmp1->compositor->valid = true;
+            return ret;
+        }
         default: return false;
     }
 }

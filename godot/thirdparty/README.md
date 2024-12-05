@@ -257,10 +257,6 @@ Files extracted from upstream source:
   * Upstream: https://github.com/JetBrains/JetBrainsMono
   * Version: 2.304 (cd5227bd1f61dff3bbd6c814ceaf7ffd95e947d9, 2023)
   * License: OFL-1.1
-- `NotoNaskhArabicUI*.woff2`:
-  * Upstream: https://github.com/notofonts/arabic
-  * Version: 2.014 (133ccaebf922ca080a7eef22998611ac3c242df9, 2022)
-  * License: OFL-1.1
 - `NotoSans*.woff2`:
   * Upstream: https://github.com/notofonts/latin-greek-cyrillic
   * Version: 2.012 (9ea0c8d37bff0c0067b03777f40aa04f2bf78f99, 2023)
@@ -309,6 +305,10 @@ Files extracted from upstream source:
   * Upstream: https://fonts.google.com/specimen/Open+Sans
   * Version: 1.10 (downloaded from Google Fonts in February 2021)
   * License: Apache 2.0
+- `Vazirmatn*.woff2`:
+  * Upstream: https://github.com/rastikerdar/vazirmatn
+  * Version: 33.003 (83629f877e8f084cc07b47030b5d3a0ff06c76ec, 2022)
+  * License: OFL-1.1
 
 All fonts are converted from the unhinted `.ttf` sources using the
 `https://github.com/google/woff2` tool.
@@ -468,81 +468,6 @@ Files extracted from upstream source:
 - `*.{c,h}` files for Windows platform
 - `LICENSE`
 
-
-## libdatachannel
-
-- Upstream: https://github.com/paullouisageneau/libdatachannel
-- Version: 0.19.1 (c59cea8973fe5a182feb3159638af338752efa9b, 2023)
-- License: MPL 2.0
-
-File extracted from upstream release tarball:
-
-- All `*.h` and `*.hpp` from `include/rtc/` to `thirdparty/libdatachannel/include/rtc/`.
-- All `*.cpp` from `src/impl/` to `thirdparty/libdatachannel/src/impl/` except for
-    - cpp files starting with `poll`,
-    - cpp files starting with `ws`,
-    - cpp files starting with `websocket`,
-    - cpp files starting with `tcp`,
-    - cpp files starting with `http`,
-    - `dtlssrtpransport.cpp`,
-    - `tlstransport.cpp`,
-    - `verifiedtlstransport.cpp`,
-    - `sha.cpp`
-    tcp|grep -v srtptransport|grep -v http|grep -v poll|grep -v sha.cpp
-- All `*.cpp` from `src/` to `thirdparty/libdatachannel/src/` except for
-    - cpp files containing `packet`,
-    - cpp files containing `nalunit`,
-    - cpp files containing `rtcp`,
-    - cpp files containing `handler`,
-    - cpp files containing `websocket`,
-    - `capi.cpp`
-- The entire folder `deps/plog/include/plog/` to `thirdparty/libdatachannel/deps/plog/include/plog/`. No other files in deps/plog are needed.
-- The entire folder `deps/usrsctp/usrsctplib/` to `thirdparty/libdatachannel/deps/usrsctp/usrsctplib/`
-- All `*.c` and `*.h` files in `deps/libjuice/src/` to `thirdparty/libdatachannel/deps/libjuice/src/`
-- `juice.h` from `deps/libjuice/include/juice/` to `thirdparty/libdatachannel/deps/libjuice/include/juice/`
-- The `LICENSE` file.
-- The `deps/plog/LICENSE` file.
-- The `deps/usrsctp/LICENSE.md` file.
-- The `deps/libjuice/LICENSE` file.
-- Added 2 files `include/rtc/exception_wrapper_godot.hpp` and `src/exception_wrapper_godot.cpp`
-  providing try/catch exception wrappers around rtc functions.
-- Apply `thirdparty/libdatachannel/patches/virtual_destructor.patch` to add missing virtual destructors.
-- Apply `thirdparty/libdatachannel/patches/fix_mingw.patch` to add a couple mingw compiler fixes.
-- Apply `thirdparty/libdatachannel/patches/mbedtls_optional_apis.patch` to avoid usage of mbedtls APIs that are compiled out.
-- Apply `thirdparty/libdatachannel/patches/disable_logging.patch` to compile out logging in release templates.
-
-
-## libdatachannel Submodules:
-
-### libjuice
-
-- Upstream: https://github.com/paullouisageneau/libjuice
-- Version: 1.3.1 (7d7a66d439b2e3e55e3f2494ff1176d527335674, 2023)
-- License: MPL 2.0
-
-Module location:
-
-- thirdparty/libdatachannel/deps/libjuice
-
-### plog
-
-- Upstream: https://github.com/SergiusTheBest/plog
-- Version: 1.1.10 (e21baecd4753f14da64ede979c5a19302618b752, 2023)
-- License: MIT
-
-Module location:
-
-- thirdparty/libdatachannel/deps/plog
-
-### usrsctp
-
-- Upstream: https://github.com/sctplab/usrsctp
-- Version: git (5ca29ac7d8055802c7657191325c06386640ac24, 2023)
-- License: BSD-3-Clause
-
-Module location:
-
-- thirdparty/libdatachannel/deps/usrsctp
 
 ## libktx
 
@@ -803,8 +728,8 @@ Collection of single-file libraries used in Godot components.
   * License: MIT
 - `qoa.h`
   * Upstream: https://github.com/phoboslab/qoa
-  * Version: git (e0c69447d4d3945c3c92ac1751e4cdc9803a8303, 2024)
-  * Modifications: Added a few modifiers to comply with C++ nature.
+  * Version: git (a2d927f8ce78a85e903676a33e0f956e53b89f7d, 2024)
+  * Modifications: Added implementation through `qoa.c`.
   * License: MIT
 - `r128.{c,h}`
   * Upstream: https://github.com/fahickman/r128
@@ -1003,7 +928,7 @@ instead of `miniz.h` as an external dependency.
 ## thorvg
 
 - Upstream: https://github.com/thorvg/thorvg
-- Version: 0.15.3 (2207c8ce5e28f566d90ad0ba74afa3fb0ff49f5d, 2024)
+- Version: 0.15.5 (89ab573acb253567975b2494069c7ee9abc9267c, 2024)
 - License: MIT
 
 Files extracted from upstream source:
@@ -1015,7 +940,7 @@ number and run the script.
 ## ufbx
 
 - Upstream: https://github.com/ufbx/ufbx
-- Version: 0.14.3 (19bdb7e7ef02eb914d5e7211a3685f50ee6d27e3, 2024)
+- Version: 0.15.0 (24eea6f40929fe0f679b7950def378edb003afdb, 2024)
 - License: MIT
 
 Files extracted from upstream source:
