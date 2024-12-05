@@ -43,7 +43,6 @@
 #include "jolt_physics_direct_space_state_3d.h"
 #include "jolt_temp_allocator.h"
 
-#include "core/error/error_macros.h"
 #include "core/io/file_access.h"
 #include "core/os/time.h"
 #include "core/string/print_string.h"
@@ -342,7 +341,7 @@ void JoltSpace3D::map_from_object_layer(JPH::ObjectLayer p_object_layer, JPH::Br
 }
 
 JoltReadableBody3D JoltSpace3D::read_body(const JPH::BodyID &p_body_id) const {
-	return { *this, p_body_id };
+	return JoltReadableBody3D(*this, p_body_id);
 }
 
 JoltReadableBody3D JoltSpace3D::read_body(const JoltObject3D &p_object) const {
@@ -350,7 +349,7 @@ JoltReadableBody3D JoltSpace3D::read_body(const JoltObject3D &p_object) const {
 }
 
 JoltWritableBody3D JoltSpace3D::write_body(const JPH::BodyID &p_body_id) const {
-	return { *this, p_body_id };
+	return JoltWritableBody3D(*this, p_body_id);
 }
 
 JoltWritableBody3D JoltSpace3D::write_body(const JoltObject3D &p_object) const {
@@ -358,11 +357,11 @@ JoltWritableBody3D JoltSpace3D::write_body(const JoltObject3D &p_object) const {
 }
 
 JoltReadableBodies3D JoltSpace3D::read_bodies(const JPH::BodyID *p_body_ids, int p_body_count) const {
-	return { *this, p_body_ids, p_body_count };
+	return JoltReadableBodies3D(*this, p_body_ids, p_body_count);
 }
 
 JoltWritableBodies3D JoltSpace3D::write_bodies(const JPH::BodyID *p_body_ids, int p_body_count) const {
-	return { *this, p_body_ids, p_body_count };
+	return JoltWritableBodies3D(*this, p_body_ids, p_body_count);
 }
 
 JoltPhysicsDirectSpaceState3D *JoltSpace3D::get_direct_state() {
@@ -391,7 +390,15 @@ void JoltSpace3D::set_default_area(JoltArea3D *p_area) {
 
 JPH::BodyID JoltSpace3D::add_rigid_body(const JoltObject3D &p_object, const JPH::BodyCreationSettings &p_settings, bool p_sleeping) {
 	const JPH::BodyID body_id = get_body_iface().CreateAndAddBody(p_settings, p_sleeping ? JPH::EActivation::DontActivate : JPH::EActivation::Activate);
-	ERR_FAIL_COND_V_MSG(body_id.IsInvalid(), JPH::BodyID(), vformat("Failed to create underlying Jolt Physics body for '%s'. Consider increasing maximum number of bodies in project settings. Maximum number of bodies is currently set to %d.", p_object.to_string(), JoltProjectSettings::get_max_bodies()));
+
+	if (unlikely(body_id.IsInvalid())) {
+		ERR_PRINT_ONCE(vformat("Failed to create underlying Jolt Physics body for '%s'. "
+							   "Consider increasing maximum number of bodies in project settings. "
+							   "Maximum number of bodies is currently set to %d.",
+				p_object.to_string(), JoltProjectSettings::get_max_bodies()));
+
+		return JPH::BodyID();
+	}
 
 	bodies_added_since_optimizing += 1;
 
@@ -400,7 +407,15 @@ JPH::BodyID JoltSpace3D::add_rigid_body(const JoltObject3D &p_object, const JPH:
 
 JPH::BodyID JoltSpace3D::add_soft_body(const JoltObject3D &p_object, const JPH::SoftBodyCreationSettings &p_settings, bool p_sleeping) {
 	const JPH::BodyID body_id = get_body_iface().CreateAndAddSoftBody(p_settings, p_sleeping ? JPH::EActivation::DontActivate : JPH::EActivation::Activate);
-	ERR_FAIL_COND_V_MSG(body_id.IsInvalid(), JPH::BodyID(), vformat("Failed to create underlying Jolt Physics body for '%s'. Consider increasing maximum number of bodies in project settings. Maximum number of bodies is currently set to %d.", p_object.to_string(), JoltProjectSettings::get_max_bodies()));
+
+	if (unlikely(body_id.IsInvalid())) {
+		ERR_PRINT_ONCE(vformat("Failed to create underlying Jolt Physics body for '%s'. "
+							   "Consider increasing maximum number of bodies in project settings. "
+							   "Maximum number of bodies is currently set to %d.",
+				p_object.to_string(), JoltProjectSettings::get_max_bodies()));
+
+		return JPH::BodyID();
+	}
 
 	bodies_added_since_optimizing += 1;
 
