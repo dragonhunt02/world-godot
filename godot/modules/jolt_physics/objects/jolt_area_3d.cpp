@@ -39,8 +39,6 @@
 #include "jolt_group_filter.h"
 #include "jolt_soft_body_3d.h"
 
-#include "core/error/error_macros.h"
-
 namespace {
 
 constexpr double DEFAULT_WIND_FORCE_MAGNITUDE = 0.0;
@@ -152,19 +150,20 @@ void JoltArea3D::_flush_events(OverlapsById &p_objects, const Callable &p_callba
 void JoltArea3D::_report_event(const Callable &p_callback, PhysicsServer3D::AreaBodyStatus p_status, const RID &p_other_rid, ObjectID p_other_instance_id, int p_other_shape_index, int p_self_shape_index) const {
 	ERR_FAIL_COND(!p_callback.is_valid());
 
-	static thread_local Array arguments = []() {
-		Array array;
-		array.resize(5);
-		return array;
-	}();
+	const Variant arg1 = p_status;
+	const Variant arg2 = p_other_rid;
+	const Variant arg3 = p_other_instance_id;
+	const Variant arg4 = p_other_shape_index;
+	const Variant arg5 = p_self_shape_index;
+	const Variant *args[5] = { &arg1, &arg2, &arg3, &arg4, &arg5 };
 
-	arguments[0] = p_status;
-	arguments[1] = p_other_rid;
-	arguments[2] = p_other_instance_id;
-	arguments[3] = p_other_shape_index;
-	arguments[4] = p_self_shape_index;
+	Callable::CallError ce;
+	Variant ret;
+	p_callback.callp(args, 5, ret, ce);
 
-	p_callback.callv(arguments);
+	if (unlikely(ce.error != Callable::CallError::CALL_OK)) {
+		ERR_PRINT_ONCE(vformat("Failed to call area monitor callback for '%s'. It returned the following error: '%s'.", to_string(), Variant::get_callable_error_text(p_callback, args, 5, ce)));
+	}
 }
 
 void JoltArea3D::_notify_body_entered(const JPH::BodyID &p_body_id) {
@@ -190,19 +189,24 @@ void JoltArea3D::_notify_body_exited(const JPH::BodyID &p_body_id) {
 }
 
 void JoltArea3D::_force_bodies_entered() {
-	for (auto &[id, body] : bodies_by_id) {
-		for (const auto &[id_pair, index_pair] : body.shape_pairs) {
-			body.pending_removed.erase(index_pair);
-			body.pending_added.push_back(index_pair);
+	for (KeyValue<JPH::BodyID, Overlap> &E : bodies_by_id) {
+		Overlap &body = E.value;
+
+		for (const KeyValue<ShapeIDPair, ShapeIndexPair> &P : body.shape_pairs) {
+			body.pending_removed.erase(P.value);
+			body.pending_added.push_back(P.value);
 		}
 	}
 }
 
 void JoltArea3D::_force_bodies_exited(bool p_remove) {
-	for (auto &[id, body] : bodies_by_id) {
-		for (const auto &[id_pair, index_pair] : body.shape_pairs) {
-			body.pending_added.erase(index_pair);
-			body.pending_removed.push_back(index_pair);
+	for (KeyValue<JPH::BodyID, Overlap> &E : bodies_by_id) {
+		const JPH::BodyID &id = E.key;
+		Overlap &body = E.value;
+
+		for (const KeyValue<ShapeIDPair, ShapeIndexPair> &P : body.shape_pairs) {
+			body.pending_added.erase(P.value);
+			body.pending_removed.push_back(P.value);
 		}
 
 		if (p_remove) {
@@ -213,19 +217,23 @@ void JoltArea3D::_force_bodies_exited(bool p_remove) {
 }
 
 void JoltArea3D::_force_areas_entered() {
-	for (auto &[id, area] : areas_by_id) {
-		for (const auto &[id_pair, index_pair] : area.shape_pairs) {
-			area.pending_removed.erase(index_pair);
-			area.pending_added.push_back(index_pair);
+	for (KeyValue<JPH::BodyID, Overlap> &E : areas_by_id) {
+		Overlap &area = E.value;
+
+		for (const KeyValue<ShapeIDPair, ShapeIndexPair> &P : area.shape_pairs) {
+			area.pending_removed.erase(P.value);
+			area.pending_added.push_back(P.value);
 		}
 	}
 }
 
 void JoltArea3D::_force_areas_exited(bool p_remove) {
-	for (auto &[id, area] : areas_by_id) {
-		for (const auto &[id_pair, index_pair] : area.shape_pairs) {
-			area.pending_added.erase(index_pair);
-			area.pending_removed.push_back(index_pair);
+	for (KeyValue<JPH::BodyID, Overlap> &E : areas_by_id) {
+		Overlap &area = E.value;
+
+		for (const KeyValue<ShapeIDPair, ShapeIndexPair> &P : area.shape_pairs) {
+			area.pending_added.erase(P.value);
+			area.pending_removed.push_back(P.value);
 		}
 
 		if (p_remove) {
@@ -493,7 +501,7 @@ bool JoltArea3D::can_interact_with(const JoltArea3D &p_other) const {
 }
 
 Vector3 JoltArea3D::get_velocity_at_position(const Vector3 &p_position) const {
-	return { 0.0f, 0.0f, 0.0f };
+	return Vector3();
 }
 
 void JoltArea3D::set_point_gravity(bool p_enabled) {
@@ -621,9 +629,9 @@ void JoltArea3D::body_exited(const JPH::BodyID &p_body_id, bool p_notify) {
 		return;
 	}
 
-	for (auto &[id_pair, index_pair] : overlap->shape_pairs) {
-		overlap->pending_added.erase(index_pair);
-		overlap->pending_removed.push_back(index_pair);
+	for (KeyValue<ShapeIDPair, ShapeIndexPair> &E : overlap->shape_pairs) {
+		overlap->pending_added.erase(E.value);
+		overlap->pending_removed.push_back(E.value);
 	}
 
 	overlap->shape_pairs.clear();
@@ -643,9 +651,9 @@ void JoltArea3D::area_exited(const JPH::BodyID &p_body_id) {
 		return;
 	}
 
-	for (const auto &[id_pair, index_pair] : overlap->shape_pairs) {
-		overlap->pending_added.erase(index_pair);
-		overlap->pending_removed.push_back(index_pair);
+	for (const KeyValue<ShapeIDPair, ShapeIndexPair> &E : overlap->shape_pairs) {
+		overlap->pending_added.erase(E.value);
+		overlap->pending_removed.push_back(E.value);
 	}
 
 	overlap->shape_pairs.clear();

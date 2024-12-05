@@ -50,7 +50,6 @@ ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WIT
 
 #include "../jolt_project_settings.h"
 
-#include "core/error/error_macros.h"
 #include "core/variant/variant.h"
 
 #include "Jolt/Core/Memory.h"
@@ -87,7 +86,11 @@ void *JoltTempAllocator::Allocate(uint32_t p_size) {
 	if (new_top <= capacity) {
 		ptr = base + top;
 	} else {
-		WARN_PRINT_ONCE(vformat("Jolt Physics temporary memory allocator exceeded capacity of %d MiB. Falling back to slower general-purpose allocator. Consider increasing maximum temporary memory in project settings.", JoltProjectSettings::get_temp_memory_mib()));
+		WARN_PRINT_ONCE(vformat("Jolt Physics temporary memory allocator exceeded capacity of %d MiB. "
+								"Falling back to slower general-purpose allocator. "
+								"Consider increasing maximum temporary memory in project settings.",
+				JoltProjectSettings::get_temp_memory_mib()));
+
 		ptr = JPH::Allocate(p_size);
 	}
 

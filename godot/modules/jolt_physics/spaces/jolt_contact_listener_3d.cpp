@@ -37,8 +37,6 @@
 #include "../objects/jolt_soft_body_3d.h"
 #include "jolt_space_3d.h"
 
-#include "core/error/error_macros.h"
-
 #include "Jolt/Physics/Collision/EstimateCollisionResponse.h"
 #include "Jolt/Physics/SoftBody/SoftBodyManifold.h"
 
@@ -405,7 +403,10 @@ bool JoltContactListener3D::_try_add_debug_contacts(const JPH::Body &p_soft_body
 #endif
 
 void JoltContactListener3D::_flush_contacts() {
-	for (auto &&[shape_pair, manifold] : manifolds_by_shape_pair) {
+	for (KeyValue<JPH::SubShapeIDPair, Manifold> &E : manifolds_by_shape_pair) {
+		const JPH::SubShapeIDPair &shape_pair = E.key;
+		Manifold &manifold = E.value;
+
 		const JPH::BodyID body_ids[2] = { shape_pair.GetBody1ID(), shape_pair.GetBody2ID() };
 		const JoltReadableBodies3D jolt_bodies = space->read_bodies(body_ids, 2);
 
