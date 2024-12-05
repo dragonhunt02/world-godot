@@ -195,9 +195,19 @@ jobs:
           name: Godot-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}
           path: editor
 
+  merge:
+    runs-on: ubuntu-latest
+    needs: ["build", "build-native"]
+    steps:
+      - name: Merge Artifacts
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: v-sekai-world
+          delete-merged: true
+
   release:
     runs-on: ubuntu-latest
-    needs: build
+    needs: merge
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Create Release
@@ -217,12 +227,17 @@ jobs:
           path: v-sekai-world
           name: v-sekai-world
 
+      - name: Zip Artifacts
+        run: |
+          tree
+          zip -r v-sekai-world.zip v-sekai-world
+
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./v-sekai-world
-          asset_name: v-sekai-world
-          asset_content_type: application/octet-stream
+          asset_path: ./v-sekai-world.zip
+          asset_name: v-sekai-world.zip
+          asset_content_type: application/zip
