@@ -73,7 +73,7 @@ def get_flags():
 
 def configure(env: "SConsEnvironment"):
     # Validate arch.
-    supported_arches = ["x86_32", "x86_64", "arm32", "arm64", "rv64", "ppc32", "ppc64"]
+    supported_arches = ["x86_32", "x86_64", "arm32", "arm64", "rv64", "ppc32", "ppc64", "loongarch64"]
     validate_arch(env["arch"], get_name(), supported_arches)
 
     ## Build type
@@ -277,11 +277,6 @@ def configure(env: "SConsEnvironment"):
 
     if not env["builtin_libwebp"]:
         env.ParseConfig("pkg-config libwebp --cflags --libs")
-
-    if not env["builtin_libdatachannel"]:
-        # libdatachannel does not provide a pkgconfig config yet.
-        # Goes directly into /usr/lib64 based on example RPM file in Fedora 39.
-        env.Append(LIBS=["datachannel"])
 
     if not env["builtin_mbedtls"]:
         # mbedTLS only provides a pkgconfig file since 3.6.0, but we still support 2.28.x,
