@@ -441,7 +441,7 @@ Files generated from upstream source:
 
 Files extracted from upstream source:
 
-- All files in `Jolt/` except `Jolt.cmake`
+- All files in `Jolt/`, except `Jolt/Jolt.cmake` and any files dependent on `ENABLE_OBJECT_STREAM`, as seen in `Jolt/Jolt.cmake`
 - `LICENSE`
 
 
@@ -935,6 +935,8 @@ Files extracted from upstream source:
 
 See `thorvg/update-thorvg.sh` for extraction instructions. Set the version
 number and run the script.
+
+Patches in the `patches/` directory should be re-applied after updating.
 
 
 ## ufbx
