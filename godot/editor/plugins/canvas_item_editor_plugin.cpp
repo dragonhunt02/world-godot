@@ -32,6 +32,7 @@
 
 #include "core/config/project_settings.h"
 #include "core/input/input.h"
+#include "core/io/resource_importer.h"
 #include "core/os/keyboard.h"
 #include "editor/debugger/editor_debugger_node.h"
 #include "editor/editor_main_screen.h"
@@ -47,6 +48,7 @@
 #include "editor/scene_tree_dock.h"
 #include "editor/themes/editor_scale.h"
 #include "editor/themes/editor_theme_manager.h"
+#include "scene/2d/animated_sprite_2d.h"
 #include "scene/2d/audio_stream_player_2d.h"
 #include "scene/2d/polygon_2d.h"
 #include "scene/2d/skeleton_2d.h"
@@ -61,6 +63,7 @@
 #include "scene/gui/view_panner.h"
 #include "scene/main/canvas_layer.h"
 #include "scene/main/window.h"
+#include "scene/resources/atlas_texture.h"
 #include "scene/resources/packed_scene.h"
 #include "scene/resources/style_box_texture.h"
 
@@ -618,6 +621,9 @@ void CanvasItemEditor::_find_canvas_items_at_pos(const Point2 &p_pos, Node *p_no
 	if (CanvasLayer *cl = Object::cast_to<CanvasLayer>(p_node)) {
 		xform = cl->get_transform();
 	} else if (Viewport *vp = Object::cast_to<Viewport>(p_node)) {
+		if (!vp->is_visible_subviewport()) {
+			return;
+		}
 		xform = vp->get_popup_base_transform();
 		if (!vp->get_visible_rect().has_point(xform.xform_inv(p_pos))) {
 			return;
@@ -718,6 +724,9 @@ void CanvasItemEditor::_find_canvas_items_in_rect(const Rect2 &p_rect, Node *p_n
 	if (CanvasLayer *cl = Object::cast_to<CanvasLayer>(p_node)) {
 		xform = cl->get_transform();
 	} else if (Viewport *vp = Object::cast_to<Viewport>(p_node)) {
+		if (!vp->is_visible_subviewport()) {
+			return;
+		}
 		xform = vp->get_popup_base_transform();
 		if (!vp->get_visible_rect().intersects(xform.xform_inv(p_rect))) {
 			return;
@@ -797,6 +806,10 @@ List<CanvasItem *> CanvasItemEditor::_get_edited_canvas_items(bool p_retrieve_lo
 		CanvasItem *ci = Object::cast_to<CanvasItem>(E.key);
 		if (ci) {
 			if (ci->is_visible_in_tree() && (p_retrieve_locked || !_is_node_locked(ci))) {
+				Viewport *vp = ci->get_viewport();
+				if (vp && !vp->is_visible_subviewport()) {
+					continue;
+				}
 				CanvasItemEditorSelectedItem *se = editor_selection->get_node_editor_data<CanvasItemEditorSelectedItem>(ci);
 				if (se) {
 					selection.push_back(ci);
@@ -3819,6 +3832,9 @@ void CanvasItemEditor::_draw_invisible_nodes_positions(Node *p_node, const Trans
 		parent_xform = Transform2D();
 		canvas_xform = cl->get_transform();
 	} else if (Viewport *vp = Object::cast_to<Viewport>(p_node)) {
+		if (!vp->is_visible_subviewport()) {
+			return;
+		}
 		parent_xform = Transform2D();
 		canvas_xform = vp->get_popup_base_transform();
 	}
@@ -3947,10 +3963,15 @@ void CanvasItemEditor::_draw_locks_and_groups(Node *p_node, const Transform2D &p
 
 	if (ci && !ci->is_set_as_top_level()) {
 		parent_xform = parent_xform * ci->get_transform();
-	} else {
-		CanvasLayer *cl = Object::cast_to<CanvasLayer>(p_node);
+	} else if (CanvasLayer *cl = Object::cast_to<CanvasLayer>(p_node)) {
 		parent_xform = Transform2D();
-		canvas_xform = cl ? cl->get_transform() : p_canvas_xform;
+		canvas_xform = cl->get_transform();
+	} else if (Viewport *vp = Object::cast_to<Viewport>(p_node)) {
+		if (!vp->is_visible_subviewport()) {
+			return;
+		}
+		parent_xform = Transform2D();
+		canvas_xform = vp->get_popup_base_transform();
 	}
 
 	for (int i = p_node->get_child_count() - 1; i >= 0; i--) {
@@ -4074,6 +4095,7 @@ void CanvasItemEditor::_notification(int p_what) {
 		case NOTIFICATION_READY: {
 			_update_lock_and_group_button();
 
+			SceneTreeDock::get_singleton()->get_tree_editor()->connect("node_changed", callable_mp(this, &CanvasItemEditor::_update_lock_and_group_button));
 			ProjectSettings::get_singleton()->connect("settings_changed", callable_mp(this, &CanvasItemEditor::_project_settings_changed));
 		} break;
 
@@ -5920,6 +5942,23 @@ void CanvasItemEditorViewport::_create_texture_node(Node *p_parent, Node *p_chil
 			Vector2(0, texture_size.height)
 		};
 		undo_redo->add_do_property(p_child, "polygon", list);
+	} else if (Object::cast_to<AnimatedSprite2D>(p_child)) {
+		Dictionary meta = ResourceFormatImporter::get_singleton()->get_resource_metadata(p_path);
+		Ref<SpriteFrames> frames;
+		frames.instantiate();
+		frames->set_animation_speed(SceneStringName(default_), meta.get("fps", 5));
+		Size2i sprite_size = meta["sprite_size"];
+		for (int i = 0; i < (int)meta["frame_count"]; i++) {
+			int x = i % (int)meta["columns"] * sprite_size.width;
+			int y = i / (int)meta["columns"] * sprite_size.height;
+			Ref<AtlasTexture> atlas_texture;
+			atlas_texture.instantiate();
+			atlas_texture->set_atlas(texture);
+			atlas_texture->set_region(Rect2(x, y, sprite_size.width, sprite_size.height));
+			frames->add_frame(SceneStringName(default_), atlas_texture);
+		}
+		undo_redo->add_do_property(p_child, SceneStringName(autoplay), SceneStringName(default_));
+		undo_redo->add_do_property(p_child, "sprite_frames", frames);
 	}
 
 	// Compute the global position
@@ -6325,6 +6364,7 @@ CanvasItemEditorViewport::CanvasItemEditorViewport(CanvasItemEditor *p_canvas_it
 	texture_node_types.push_back("GPUParticles2D");
 	texture_node_types.push_back("Polygon2D");
 	texture_node_types.push_back("TouchScreenButton");
+	texture_node_types.push_back("AnimatedSprite2D");
 	// Control
 	texture_node_types.push_back("TextureRect");
 	texture_node_types.push_back("TextureButton");
