@@ -446,7 +446,7 @@ CSGBrush *CSGShape3D::_get_brush() {
 	}
 	const String manifold_error_message_template = "%s: The CSGShape3D could not be created due to this error, resulting in an empty shape.";
 	const String manifold_info_message = "CSGShape3D empty shapes typically occur because the mesh is not manifold. "
-										 "A manifold mesh forms a solid object without gaps, holes, or loose edges. Each edge must be a member of exactly two faces."
+										 "A manifold mesh forms a solid object without gaps, holes, or loose edges. Each edge must be a member of exactly two faces.";
 	if (manifold_error != manifold::Manifold::Error::NoError) {
 		String error_message = vformat(manifold_error_message_template, manifold_error_to_string(manifold_error));
 		if (!warnings.has(error_message)) {
