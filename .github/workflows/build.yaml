@@ -119,7 +119,8 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs \
-            | jq ".jobs[] | {job_status: .conclusion, matrix: .name}"
+            | jq ".jobs[] | {job_status: .conclusion, matrix: .name}" \
+          )
           echo $matrix_jobstatus
   
   release:
