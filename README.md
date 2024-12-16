@@ -2,4 +2,4 @@
 
 V-Sekai Godot Engine build.
 
-https://nightly.link/V-Sekai/world-godot/workflows/build.yaml/main?preview
+https://nightly.link/dragonhunt02/world-godot/workflows/build.yaml/main?preview
