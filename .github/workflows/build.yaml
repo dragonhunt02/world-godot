@@ -198,17 +198,26 @@ jobs:
   merge:
     runs-on: ubuntu-latest
     needs: ["build", "build-native"]
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [linuxbsd, windows, macos, android, web]
     steps:
       - name: Merge Artifacts
         uses: actions/upload-artifact/merge@v4
         with:
-          name: v-sekai-world
+          name: v-sekai-world-${{ matrix.platform }}
+          pattern: "*${{ matrix.platform }}*"
           delete-merged: true
 
   release:
     runs-on: ubuntu-latest
     needs: merge
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [linuxbsd, windows, macos, android, web]
     steps:
       - name: Create Release
         id: create_release
@@ -224,13 +233,13 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
-          path: v-sekai-world
-          name: v-sekai-world
+          path: v-sekai-world-${{ matrix.platform }}
+          name: v-sekai-world-${{ matrix.platform }}
 
       - name: Zip Artifacts
         run: |
           tree
-          zip -r v-sekai-world.zip v-sekai-world
+          zip -r v-sekai-world-${{ matrix.platform }}.zip v-sekai-world-${{ matrix.platform }}
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
@@ -238,6 +247,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./v-sekai-world.zip
-          asset_name: v-sekai-world.zip
+          asset_path: ./v-sekai-world-${{ matrix.platform }}.zip
+          asset_name: v-sekai-world-${{ matrix.platform }}.zip
           asset_content_type: application/zip
