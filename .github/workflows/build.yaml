@@ -98,6 +98,8 @@ jobs:
     runs-on: [ubuntu-latest]
     permissions:
       actions: read
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Check the Matrix job status
         run: |
