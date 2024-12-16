@@ -35,7 +35,7 @@ jobs:
     steps:          
       - name: Set up placeholders
         run: |
-          dnf install tree 
+          dnf -y install tree 
           mkdir -p godot/bin/
           mkdir -p tpz/
           mkdir -p editor
