@@ -99,8 +99,9 @@ jobs:
     steps:
       - name: Check the Matrix job status
         run: |
+          echo ${{ github.repository }}
           matrix_status=$( \
-            curl -L -X GET \
+            curl -L \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs \
