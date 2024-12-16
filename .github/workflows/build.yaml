@@ -96,6 +96,8 @@ jobs:
     needs: [build]
     if: always()
     runs-on: [ubuntu-latest]
+    permissions:
+      actions: read
     steps:
       - name: Check the Matrix job status
         run: |
