@@ -38,9 +38,9 @@ jobs:
           mkdir -p godot/bin/
           mkdir -p tpz/
           mkdir -p editor
-          echo "This is the README for the Godot bin directory." > godot/bin/readme.md
-          echo "This is the README for the TPZ directory." > tpz/readme.md
-          echo "This is the README for the Editor directory." > editor/readme.md
+          echo "This is the README for the Godot bin directory." > godot/bin/rea_${{ matrix.platform }}_dme.md
+          echo "This is the README for the TPZ directory." > tpz/rea_${{ matrix.platform }}_dme.md
+          echo "This is the README for the Editor directory." > editor/rea_${{ matrix.platform }}_dme.md
 
       - name: Checkout code 
         uses: actions/checkout@v4 
