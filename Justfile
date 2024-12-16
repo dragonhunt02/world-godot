@@ -200,7 +200,8 @@ build-platform-target platform target precision="double":
                     precision={{precision}} \
                     target={{target}} \
                     test=yes \
-                    debug_symbol=yes
+                    debug_symbol=yes \
+                    separate_debug_symbols=yes
             ;;
         web)
             scons platform=web \
@@ -210,8 +211,7 @@ build-platform-target platform target precision="double":
                     target={{target}} \
                     test=yes \
                     dlink_enabled=yes \
-                    debug_symbol=yes \
-                    separate_debug_symbols=yes
+                    debug_symbol=yes
             ;;
         *)
             echo "Unsupported platform: {{platform}}"
