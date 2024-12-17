@@ -120,7 +120,7 @@ jobs:
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs \
             | jq '.jobs[] | {job_status: .conclusion, matrix: .name} \
-            | select(.matrix | match("^build ") )' \
+            | select(.matrix | match("build") )' \
           )
           echo $matrix_jobstatus
   
