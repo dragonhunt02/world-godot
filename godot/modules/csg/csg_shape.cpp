@@ -903,14 +903,10 @@ Array CSGShape3D::get_meshes() const {
 
 PackedStringArray CSGShape3D::get_configuration_warnings() const {
 	PackedStringArray warnings = Node::get_configuration_warnings();
-	const String manifold_error_message = "The CSGShape3D has an empty shape.";
-	const String manifold_info_message = "CSGShape3D empty shapes typically occur because the mesh is not manifold. "
-										 "A manifold mesh forms a solid object without gaps, holes, or loose edges. Each edge must be a member of exactly two faces.";
 	const CSGShape3D *current_shape = this;
 	while (current_shape) {
 		if (!current_shape->brush || current_shape->brush->faces.is_empty()) {
-			warnings.push_back(manifold_error_message);
-			warnings.push_back(manifold_info_message);
+			warnings.push_back(RTR("The CSGShape3D has an empty shape.\nCSGShape3D empty shapes typically occur because the mesh is not manifold.\nA manifold mesh forms a solid object without gaps, holes, or loose edges.\nEach edge must be a member of exactly two faces."));
 			break;
 		}
 		current_shape = current_shape->parent_shape;
