@@ -134,27 +134,6 @@ jobs:
       - name: Checkout code 
         uses: actions/checkout@v4 
   
-      - name: Cache SCons cache 
-        uses: actions/cache@v4 
-        if: always() 
-        with: 
-          path: | 
-            .scons_cache  
-            emsdk  
-            osxcross  
-            jdk  
-            android_sdk  
-            vulkan_sdk  
-            mingw 
-          key: ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}-${{ github.sha }}-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}
-          restore-keys: | 
-            ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}-${{ github.sha }}-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}
-            ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}-${{ github.sha }}-${{ matrix.platform }}-${{ matrix.target }}
-            ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}-${{ github.sha }}  
-            ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}  
-            ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-refs/heads/${{ env.GODOT_BASE_BRANCH }}  
-            ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }} 
-  
       - name: Fetch dependencies and Build Platform Target 
         run: | 
           just install_packages 
