@@ -193,7 +193,7 @@ build-platform-target platform target precision="double":
                     precision={{precision}} \
                     target={{target}} \
                     test=yes \
-                    debug_symbols=yes
+                    # debug_symbols=yes    Runs out of space in Github Runner
             ;;
         linuxbsd)
             scons platform=linuxbsd \
