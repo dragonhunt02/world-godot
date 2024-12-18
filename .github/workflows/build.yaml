@@ -203,9 +203,33 @@ jobs:
       - name: Merge Export Templates
         uses: actions/upload-artifact/merge@v4
         with:
-          name: v-sekai-godot-templates
+          name: v-sekai-godot-templates-all
           pattern: "*.tpz"
           delete-merged: true
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: v-sekai-godot-templates
+          name: v-sekai-godot-templates-all
+
+      - name: Split Export Templates Symbols
+        run: | 
+          mkdir -p v-sekai-godot-templates-symbols
+          find . -path "/v-sekai-godot-templates/*" -name "file_name*"
+          # xargs
+
+      - name: Upload Export Templates
+        uses: actions/upload-artifact@v4
+        with:
+          name: v-sekai-godot-templates
+          path: v-sekai-godot-templates
+
+      - name: Upload Export Templates Symbols
+        uses: actions/upload-artifact@v4
+        with:
+          name: v-sekai-godot-templates-symbols
+          path: v-sekai-godot-templates-symbols
 
   merge:
     runs-on: ubuntu-latest
