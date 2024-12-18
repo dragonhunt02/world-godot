@@ -192,8 +192,8 @@ jobs:
       - name: Split symbols
         run: | 
           mkdir -p tpz-sym
-          mv tpz/*.debugsymbols tpz-sym/
-          mv tpz/*.pdb tpz-sym/
+          mv tpz/*.debugsymbols tpz-sym/ 2> /dev/null # Suppress null glob error
+          mv tpz/*.pdb tpz-sym/ 2> /dev/null
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -223,11 +223,18 @@ jobs:
     runs-on: ubuntu-latest
     needs: ["build", "build-native"]
     steps:
-      - name: Merge Export Templates
+      - name: Merge Export Templates Symbols
         uses: actions/upload-artifact/merge@v4
         with:
           name: v-sekai-godot-templates-symbols
           pattern: "*.tpz.sym"
+          delete-merged: true
+
+      - name: Merge Export Templates
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: v-sekai-godot-templates
+          pattern: "*.tpz"
           delete-merged: true
 
   merge:
@@ -266,17 +273,21 @@ jobs:
   upload-templates:
     runs-on: ubuntu-latest
     needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        type: [templates, templates-symbols]
     steps:
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
-          path: v-sekai-godot-templates-symbols
-          name: v-sekai-godot-templates-symbols
+          path: v-sekai-godot-${{ matrix.type }}
+          name: v-sekai-godot-${{ matrix.type }}
 
       - name: Zip Artifacts
         run: |
           tree
-          zip -r v-sekai-godot-templates.zip v-sekai-godot-templates
+          zip -r v-sekai-godot-${{ matrix.type }}.zip v-sekai-godot-${{ matrix.type }}
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
@@ -284,8 +295,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.release.outputs.upload_url }}
-          asset_path: ./v-sekai-godot-templates-symbols.zip
-          asset_name: v-sekai-godot-templates-symbols.zip
+          asset_path: ./v-sekai-godot-${{ matrix.type }}.zip
+          asset_name: v-sekai-godot-${{ matrix.type }}.zip
           asset_content_type: application/zip
 
   upload-releases:
