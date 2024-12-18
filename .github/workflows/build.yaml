@@ -192,8 +192,8 @@ jobs:
       - name: Split symbols
         run: | 
           mkdir -p tpz-sym
-          mv tpz/*.debugsymbols tpz-sym/ 2> /dev/null # Suppress null glob error
-          mv tpz/*.pdb tpz-sym/ 2> /dev/null
+          mv tpz/*.debugsymbols tpz-sym/ 2>/dev/null # Suppress null glob error
+          mv tpz/*.pdb tpz-sym/ 2>/dev/null
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
