@@ -16,7 +16,7 @@ export GIT_URL_VSEKAI := "https://github.com/V-Sekai/v-sekai-game.git"
 export WORLD_PWD := invocation_directory()
 export ANDROID_NDK_VERSION := "23.2.8568313"
 export cmdlinetools := "commandlinetools-linux-11076708_latest.zip"
-export SCONS_CACHE_LIMIT := "2000"
+export SCONS_CACHE_LIMIT := "1500"
 
 export SCONS_CACHE := WORLD_PWD + "/.scons_cache"
 export ANDROID_SDK_ROOT := WORLD_PWD + "/android_sdk"
