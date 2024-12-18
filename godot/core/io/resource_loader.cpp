@@ -295,6 +295,8 @@ Ref<Resource> ResourceLoader::_load(const String &p_path, const String &p_origin
 	}
 	load_paths_stack.push_back(original_path);
 
+	print_verbose(vformat("Loading resource: %s", p_path));
+
 	// Try all loaders and pick the first match for the type hint
 	bool found = false;
 	Ref<Resource> res;
@@ -317,8 +319,10 @@ Ref<Resource> ResourceLoader::_load(const String &p_path, const String &p_origin
 	res_ref_overrides.erase(load_nesting);
 	load_nesting--;
 
-	if (!res.is_null()) {
+	if (res.is_valid()) {
 		return res;
+	} else {
+		print_verbose(vformat("Failed loading resource: %s", p_path));
 	}
 
 	ERR_FAIL_COND_V_MSG(found, Ref<Resource>(),
@@ -366,8 +370,6 @@ void ResourceLoader::_run_load_task(void *p_userdata) {
 	bool xl_remapped = false;
 	const String &remapped_path = _path_remap(load_task.local_path, &xl_remapped);
 
-	print_verbose("Loading resource: " + remapped_path);
-
 	Error load_err = OK;
 	Ref<Resource> res = _load(remapped_path,
 			remapped_path != load_task.local_path ? load_task.local_path : String(),
@@ -382,10 +384,6 @@ void ResourceLoader::_run_load_task(void *p_userdata) {
 
 	if (MessageQueue::get_singleton() != MessageQueue::get_main_singleton()) {
 		MessageQueue::get_singleton()->flush();
-	}
-
-	if (res.is_null()) {
-		print_verbose("Failed loading resource: " + remapped_path);
 	}
 
 	thread_load_mutex.lock();
