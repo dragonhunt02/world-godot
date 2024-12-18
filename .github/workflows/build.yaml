@@ -217,7 +217,7 @@ jobs:
         run: | 
           mkdir -p v-sekai-godot-templates-symbols
           find "/v-sekai-godot-templates/" -regextype "sed" -regex "*.debugsymbols|*.pdb" \
-          -exec mv {} ./v-sekai-godot-templates-symbols
+          -exec mv {} ./v-sekai-godot-templates-symbols/
 
       - name: Upload Export Templates
         uses: actions/upload-artifact@v4
