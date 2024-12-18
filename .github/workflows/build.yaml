@@ -250,7 +250,7 @@ jobs:
           zip -r v-sekai-godot-${{ matrix.platform }}.zip v-sekai-godot-${{ matrix.platform }}
 
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
