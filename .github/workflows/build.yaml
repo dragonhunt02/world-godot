@@ -246,6 +246,7 @@ jobs:
       - name: Zip Artifacts
         run: |
           tree
+          chmod +x v-sekai-godot-${{ matrix.platform }}/*editor*
           zip -r v-sekai-godot-${{ matrix.platform }}.zip v-sekai-godot-${{ matrix.platform }}
 
       - name: Upload Release Asset
