@@ -71,6 +71,11 @@ jobs:
           export PLATFORM_ARGS="fetch-vulkan-sdk"
           hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.precision }}'
 
+      - name: Split symbols
+        run: | 
+          mkdir -p tpz-sym
+          mv tpz/*.dSym tpz-sym/
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -82,6 +87,12 @@ jobs:
         with:
           name: Godot-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}.tpz
           path: tpz
+
+      - name: Upload TPZ Symbols Files
+        uses: actions/upload-artifact@v4
+        with:
+          name: Godot-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}.tpz.sym
+          path: tpz-sym
 
       - name: Upload Godot Editor Files
         uses: actions/upload-artifact@v4
@@ -178,6 +189,12 @@ jobs:
           esac  
           hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.precision }}'
 
+      - name: Split symbols
+        run: | 
+          mkdir -p tpz-sym
+          mv tpz/*.debugsymbols tpz-sym/
+          mv tpz/*.pdb tpz-sym/
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -190,15 +207,32 @@ jobs:
           name: Godot-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}.tpz
           path: tpz
 
+      - name: Upload TPZ Symbols Files
+        uses: actions/upload-artifact@v4
+        with:
+          name: Godot-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}.tpz.sym
+          path: tpz-sym
+
       - name: Upload Godot Editor Files
         uses: actions/upload-artifact@v4
         with:
           name: Godot-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}
           path: editor
 
-  merge:
+  merge-templates:
     runs-on: ubuntu-latest
     needs: ["build", "build-native"]
+    steps:
+      - name: Merge Export Templates
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: v-sekai-godot-templates-symbols
+          pattern: "*.tpz.sym"
+          delete-merged: true
+
+  merge:
+    runs-on: ubuntu-latest
+    needs: ["merge-templates"]
     strategy:
       fail-fast: false
       matrix:
@@ -228,6 +262,31 @@ jobs:
           release_name: Latest Release of V-Sekai Godot Engine Editor
           draft: false
           prerelease: true
+
+  upload-templates:
+    runs-on: ubuntu-latest
+    needs: release
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: v-sekai-godot-templates-symbols
+          name: v-sekai-godot-templates-symbols
+
+      - name: Zip Artifacts
+        run: |
+          tree
+          zip -r v-sekai-godot-templates.zip v-sekai-godot-templates
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.release.outputs.upload_url }}
+          asset_path: ./v-sekai-godot-templates-symbols.zip
+          asset_name: v-sekai-godot-templates-symbols.zip
+          asset_content_type: application/zip
 
   upload-releases:
     runs-on: ubuntu-latest
