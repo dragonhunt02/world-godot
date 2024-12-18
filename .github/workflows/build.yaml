@@ -216,7 +216,7 @@ jobs:
       - name: Split Export Templates Symbols
         run: | 
           mkdir -p v-sekai-godot-templates-symbols
-          find . -path "/v-sekai-godot-templates/*" -name "file_name*" \
+          find "/v-sekai-godot-templates/" -regextype "sed" -regex "*.debugsymbols|*.pdb" \
           -exec mv {} ./v-sekai-godot-templates-symbols
 
       - name: Upload Export Templates
