@@ -218,9 +218,9 @@ jobs:
           mkdir -p v-sekai-godot-templates-symbols
 
           # Suppress if null glob error
-          mv v-sekai-godot-templates/*.pdb v-sekai-godot-templates-symbols/ 2>/dev/null
-          mv v-sekai-godot-templates/*.debugsymbols v-sekai-godot-templates-symbols/ 2>/dev/null
-          mv v-sekai-godot-templates/*.dSym v-sekai-godot-templates-symbols/ 2>/dev/null
+          mv v-sekai-godot-templates/*.pdb v-sekai-godot-templates-symbols/ || true
+          mv v-sekai-godot-templates/*.debugsymbols v-sekai-godot-templates-symbols/ || true
+          mv v-sekai-godot-templates/*.dSym v-sekai-godot-templates-symbols/ || true
           tree
 
       - name: Upload Export Templates
