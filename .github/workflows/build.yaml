@@ -284,7 +284,7 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
-        if: ${{ matrix.type == "templates" }}
+        if: ${{ matrix.type == 'templates' }}
         with:
           sparse-checkout: |
             Justfile
@@ -294,7 +294,7 @@ jobs:
         id: pack
         run: |
           tree
-          if ${{ matrix.type == "templates" }}; then \
+          if ${{ matrix.type == 'templates' }}; then \
             apt install -y just; \
             just package-tpz v-sekai-godot-${{ matrix.type }} ./godot/version.py; \
           else \
