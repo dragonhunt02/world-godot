@@ -258,3 +258,17 @@ handle-android target:
         cd ../../..
         ls -l bin/
     fi
+
+package-tpz folder tpzname version:
+    #!/usr/bin/env bash
+    echo "{{{version}}" > {{folder}}/version.txt
+    for file in {{folder}}/*; do \
+        filename=$( echo ${file} \
+          | sed 's/\(godot.\|.double\|.template\|.llvm\)//g' \
+          | sed 's/linuxbsd/linux/;s/.console/_console/' \
+          | sed 's/\(windows_[a-z]*\)\./\1_/' \
+        ) \
+        && echo "Renaming ${file} to ${filename}" \
+        && mv {{folder}}/${file} {{folder}}/${filename} \
+    done
+    zip -r {{tpzname}}.tpz {{folder}}/{{tpzname}}
