@@ -282,10 +282,25 @@ jobs:
           path: v-sekai-godot-${{ matrix.type }}
           name: v-sekai-godot-${{ matrix.type }}
 
-      - name: Zip Artifacts
+      - name: Checkout
+        uses: actions/checkout@v4
+        if: ${{ matrix.type == "templates" }}
+        with:
+          sparse-checkout: |
+            Justfile
+            godot/version.py
+
+      - name: Pack Artifacts
+        id: pack
         run: |
           tree
-          zip -r v-sekai-godot-${{ matrix.type }}.zip v-sekai-godot-${{ matrix.type }}
+          if ${{ matrix.type == "templates" }}; then \
+            apt install -y just; \
+            just package-tpz v-sekai-godot-${{ matrix.type }} ./godot/version.py; \
+          else \
+            zip -r v-sekai-godot-${{ matrix.type }}.zip v-sekai-godot-${{ matrix.type }}; \
+          fi
+          echo "name=$( find . v-sekai-godot-${{ matrix.type }} )" >> ${GITHUB_OUTPUT}
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
@@ -293,8 +308,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.release.outputs.upload_url }}
-          asset_path: ./v-sekai-godot-${{ matrix.type }}.zip
-          asset_name: v-sekai-godot-${{ matrix.type }}.zip
+          asset_path: ./${{ steps.pack.outputs.name }}
+          asset_name: ${{ steps.pack.outputs.name }}
           asset_content_type: application/zip
 
   upload-releases:
