@@ -269,7 +269,8 @@ jobs:
           prerelease: true
 
   upload-templates:
-    runs-on: ubuntu-latest
+    # 'just' is apt package from 24.04+
+    runs-on: ubuntu-24.04
     needs: release
     strategy:
       fail-fast: false
