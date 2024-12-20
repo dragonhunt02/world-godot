@@ -275,8 +275,8 @@ package-tpz folder tpzname versionpy:
     cd ..
     cat {{versionpy}} | tr -d ' ' | tr -s '\n' ' ' \
       | sed -E 's/.*major=([0-9]).minor=([0-9]).*status=\"([a-z]*)\".*/\1.\2.\3/' \
-      > {{folder}}/versionTEST.txt
-    echo "Godot TPZ Version: $( cat {{folder}}/versionTEST.txt )"
+      > {{folder}}/version.txt
+    echo "Godot TPZ Version: $( cat {{folder}}/version.txt )"
     mkdir -p tpz_temp && mv {{folder}} tpz_temp/templates && cd tpz_temp \
       && zip -r ../{{tpzname}}.tpz templates && cd ..
     rm -r tpz_temp
