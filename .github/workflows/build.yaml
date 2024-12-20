@@ -277,12 +277,6 @@ jobs:
       matrix:
         type: [templates, templates-symbols]
     steps:
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: v-sekai-godot-${{ matrix.type }}
-          name: v-sekai-godot-${{ matrix.type }}
-
       - name: Checkout
         uses: actions/checkout@v4
         if: ${{ matrix.type == 'templates' }}
@@ -290,6 +284,12 @@ jobs:
           sparse-checkout: |
             Justfile
             godot/version.py
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: v-sekai-godot-${{ matrix.type }}
+          name: v-sekai-godot-${{ matrix.type }}
 
       - name: Pack Artifacts
         id: pack
