@@ -301,8 +301,8 @@ jobs:
           else \
             zip -r v-sekai-godot-${{ matrix.type }}.zip v-sekai-godot-${{ matrix.type }}; \
           fi
-          echo "name=$( find . -type f -name "v-sekai-godot-${{ matrix.type }}*" )"
-          echo "name=$( find . -type f -name "v-sekai-godot-${{ matrix.type }}*" )" >> ${GITHUB_OUTPUT}
+          echo "name=$( find . -type f -name "v-sekai-godot-${{ matrix.type }}*" -exec basename {} \; )"
+          echo "name=$( find . -type f -name "v-sekai-godot-${{ matrix.type }}*" -exec basename {} \; )" >> ${GITHUB_OUTPUT}
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
