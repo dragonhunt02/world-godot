@@ -23,8 +23,11 @@ jobs:
       fail-fast: false
       matrix:
         precision: [double]
-        platform: [macos]
+        platform: [macos, ios]
         target: [editor, template_release, template_debug]
+        exclude:
+          - platform: ios
+            target: editor
 
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}
