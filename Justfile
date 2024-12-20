@@ -215,6 +215,26 @@ build-platform-target platform target precision="double":
                     dlink_enabled=yes \
                     debug_symbols=yes
             ;;
+        ios)
+            if [ "$(uname)" = "Darwin" ]; then
+                unset OSXCROSS_ROOT
+            else
+                export PATH=${OSXCROSS_ROOT}/target/bin/:$PATH
+            fi
+            scons platform=ios \
+                    werror=no \
+                    compiledb=yes \
+                    precision={{precision}} \
+                    target={{target}} \
+                    test=yes \
+                    vulkan=no \
+                    arch=arm64 \
+                    vulkan_sdk_path=$VULKAN_SDK_ROOT/MoltenVK/MoltenVK/static/MoltenVK.xcframework \
+                    osxcross_sdk=darwin24 \
+                    generate_bundle=yes \
+                    debug_symbols=yes \
+                    separate_debug_symbols=yes
+            ;;
         *)
             echo "Unsupported platform: {{platform}}"
             exit 1
