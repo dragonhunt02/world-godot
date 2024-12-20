@@ -296,7 +296,7 @@ jobs:
           tree
           if ${{ matrix.type == 'templates' }}; then \
             apt install -y just; \
-            just package-tpz v-sekai-godot-${{ matrix.type }} ./godot/version.py; \
+            just package-tpz v-sekai-godot-${{ matrix.type }} v-sekai-godot-${{ matrix.type }} ./godot/version.py; \
           else \
             zip -r v-sekai-godot-${{ matrix.type }}.zip v-sekai-godot-${{ matrix.type }}; \
           fi
