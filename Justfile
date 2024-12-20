@@ -261,7 +261,6 @@ handle-android target:
 
 package-tpz folder tpzname versionpy:
     #!/usr/bin/env bash
-    mkdir -p tpz_temp
     for file in {{folder}}/*; do \
         filename=$( echo ${file} \
           | sed 's/\(godot.\|.double\|.template\|.llvm\)//g' \
@@ -269,12 +268,12 @@ package-tpz folder tpzname versionpy:
           | sed 's/\(windows_[a-z]*\)\./\1_/' \
         ) \
         && echo "Renaming ${file} to ${filename}" \
-        && cp {{folder}}/${file} tpz_temp/${filename} \
+        && mv {{folder}}/${file} {{folder}}/${filename} \
     done
     cat {{versionpy}} | tr -d ' ' | tr -s '\n' ' ' \
       | sed -E 's/.*major=([0-9]).minor=([0-9]).*status=\"([a-z]*)\".*/\1.\2.\3/' \
-      > tpz_temp/version.txt
-    echo "Godot TPZ Version: $( cat tpz_temp/version.txt )"
-    mkdir tpz_temp2 && mv tpz_temp tpz_temp2/templates && cd tpz_temp2 \
+      > {{folder}}/version.txt
+    echo "Godot TPZ Version: $( cat {{folder}}/version.txt )"
+    mkdir tpz_temp && mv {{folder}} tpz_temp/templates && cd tpz_temp \
       && zip -r ../{{tpzname}}.tpz templates && cd ..
-    rm -r tpz_temp2
+    rm -r tpz_temp
