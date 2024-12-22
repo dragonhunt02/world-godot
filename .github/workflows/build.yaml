@@ -279,6 +279,13 @@ jobs:
       matrix:
         type: [templates, templates-symbols]
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        if: ${{ matrix.type == 'templates' }}
+        with:
+          sparse-checkout: |
+            .github/
+
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
@@ -288,17 +295,14 @@ jobs:
       - name: Zip Artifacts
         run: |
           tree
-          zip -r v-sekai-godot-${{ matrix.type }}.zip v-sekai-godot-${{ matrix.type }}
+          zip -rm v-sekai-godot-${{ matrix.type }}.zip v-sekai-godot-${{ matrix.type }}
 
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Zip Release Asset
+        uses: ./.github/zip-upload-split
         with:
-          upload_url: ${{ needs.release.outputs.upload_url }}
-          asset_path: ./v-sekai-godot-${{ matrix.type }}.zip
-          asset_name: v-sekai-godot-${{ matrix.type }}.zip
-          asset_content_type: application/zip
+          zip-path: ./v-sekai-godot-${{ matrix.type }}.zip
+          release-id: ${{ steps.create_release.outputs.id }}
+          token: ${GITHUB_TOKEN}
 
   upload-releases:
     runs-on: ubuntu-latest

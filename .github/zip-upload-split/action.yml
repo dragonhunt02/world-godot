@@ -1,0 +1,39 @@
+name: 'zip-upload-split'
+
+description: 'Split zip and upload 2G release parts'
+
+inputs:
+  zip-path:
+    description: 'Zip file to split'
+    required: true
+  release-id:
+    description: 'Release identifier'
+    required: true
+  token:
+    description: 'Github Token'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Upload Release Asset
+      shell: bash
+      env:
+        # Github upload limit is less than stated 2147483648 bytes (2147483k).
+        MAX_SIZE: 2050000
+      run: |
+          mkdir _temp
+          zip ${{ inputs.zip-path }} --out _temp/new.zip -s "${MAX_SIZE}k"
+          tree
+          cd _temp
+          for file in *; do \
+            echo -e "Uploading $file...\n"; \
+            curl -L \
+              -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ inputs.token }}" \
+              -H "Content-Type: application/zip" \
+              "https://uploads.github.com/repos/${{ github.repository }}/releases/${{ inputs.release-id }}/assets?name=${file}" \
+              -T "${file}"; \
+            done
+            cd .. && rm -r _temp
