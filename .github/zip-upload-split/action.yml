@@ -23,7 +23,7 @@ runs:
         MAX_SIZE: 2050000
       run: |
           mkdir _temp
-          zip ${{ inputs.zip-path }} --out _temp/new.zip -s "${MAX_SIZE}k"
+          zip -v ${{ inputs.zip-path }} --out _temp/new.zip -s "${MAX_SIZE}k"
           tree
           cd _temp
           for file in *; do \
