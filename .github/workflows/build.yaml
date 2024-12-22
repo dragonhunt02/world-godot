@@ -237,6 +237,7 @@ jobs:
     if: github.event_name == 'push' 
     #&& github.ref == 'refs/heads/main'
     outputs:
+      id: ${{ steps.create_release.outputs.id }}
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
       - name: Create Release
@@ -253,6 +254,8 @@ jobs:
   upload-templates:
     runs-on: ubuntu-latest
     needs: release
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
@@ -280,7 +283,7 @@ jobs:
         uses: ./.github/zip-upload-split
         with:
           zip-path: ./v-sekai-godot-${{ matrix.type }}.zip
-          release-id: ${{ steps.create_release.outputs.id }}
+          release-id: ${{ needs.release.outputs.id }}
           token: ${GITHUB_TOKEN}
 
   upload-releases:
