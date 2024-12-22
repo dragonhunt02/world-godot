@@ -263,7 +263,7 @@ jobs:
         if: ${{ matrix.type == 'templates' }}
         with:
           sparse-checkout: |
-            .github/
+            .github/zip-upload-split/
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4
