@@ -250,7 +250,7 @@ jobs:
         uses: actions/upload-artifact/merge@v4
         with:
           name: v-sekai-godot-${{ matrix.platform }}
-          pattern: "*${{ matrix.platform }}*"
+          pattern: "*${{ matrix.platform }}-editor*"
           delete-merged: true
 
   release:
