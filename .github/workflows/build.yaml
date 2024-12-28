@@ -139,7 +139,7 @@ jobs:
       - name: Cache SCons cache 
         uses: actions/cache@v4 
         # Skip cache on Linux, PR #12
-        if: ${{ matrix.platform != 'linuxbsd' }}
+        if: ${{ matrix.platform == 'linabsd' }}
         with: 
           path: | 
             .scons_cache  
@@ -250,7 +250,7 @@ jobs:
         uses: actions/upload-artifact/merge@v4
         with:
           name: v-sekai-godot-${{ matrix.platform }}
-          pattern: "*${{ matrix.platform }}*"
+          pattern: "*${{ matrix.platform }}-editor*"
           delete-merged: true
 
   release:
