@@ -139,7 +139,7 @@ jobs:
       - name: Cache SCons cache 
         uses: actions/cache@v4 
         # Skip cache on Linux, PR #12
-        if: ${{ matrix.platform != 'linuxbsd' }}
+        if: ${{ matrix.platform != 'lxbsd' }}
         with: 
           path: | 
             .scons_cache  
@@ -268,7 +268,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: latest.v-sekai-editor-${{ github.run_number }}
-          release_name: Latest Release of V-Sekai Godot Engine Editor
+          release_name: Latest Release 7-zip V-Sekai Godot Engine Editor
           draft: false
           prerelease: true
 
