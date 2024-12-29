@@ -2,7 +2,7 @@ name: Build Platform Target
 
 on:
   push:
-    branches: [main]
+    branches: [zip-bug-tes]
   pull_request:
     branches: [main]
     types: [opened, reopened, edited, synchronize]
@@ -139,7 +139,7 @@ jobs:
       - name: Cache SCons cache 
         uses: actions/cache@v4 
         # Skip cache on Linux, PR #12
-        if: ${{ matrix.platform != 'linuxbsd' }}
+        if: ${{ matrix.platform != 'lxbsd' }}
         with: 
           path: | 
             .scons_cache  
@@ -256,7 +256,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     needs: merge
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push'
     outputs:
       id: ${{ steps.create_release.outputs.id }}
       upload_url: ${{ steps.create_release.outputs.upload_url }}
@@ -267,8 +267,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: latest.v-sekai-editor-${{ github.run_number }}
-          release_name: Latest Release of V-Sekai Godot Engine Editor
+          tag_name: latest.v-sekai-zipbug-${{ github.run_number }}
+          release_name: Zip Bug V-Sekai Godot Engine Editor
           draft: false
           prerelease: true
 
@@ -293,6 +293,12 @@ jobs:
         with:
           path: v-sekai-godot-${{ matrix.type }}
           name: v-sekai-godot-${{ matrix.type }}
+
+      - name: Tar Artifacts
+        if: ${{ matrix.type != 'templates' }}
+        run: |
+          tree
+          zip -rm v-sekai-godot-${{ matrix.type }}.zip v-sekai-godot-${{ matrix.type }}
 
       - name: Zip Artifacts
         run: |
