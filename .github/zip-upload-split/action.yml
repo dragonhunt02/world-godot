@@ -22,7 +22,7 @@ runs:
         # Github upload limit is less than stated 2147483648 bytes (2147483k).
         MAX_SIZE: 2050000
       run: |
-          sudi apt install -y 7zip
+          sudo apt install -y 7zip
           mkdir _temp
           NAME=$( basename ${{ inputs.zip-path }} )
           7z a -tzip -v${MAX_SIZE}k _temp/ ${{ inputs.zip-path }}
