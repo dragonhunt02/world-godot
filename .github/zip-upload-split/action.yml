@@ -30,7 +30,7 @@ runs:
           NAME=$( basename ${{ inputs.zip-path }} )
           if [ ${{ inputs.zip-cmd }} == '7zip' ]; then
             sudo apt install -y 7zip;
-            7z a -tzip -v${MAX_SIZE}k _temp/ ${{ inputs.zip-path }};
+            7z a -tzip -v${MAX_SIZE}k _temp/${NAME} ${{ inputs.zip-path }};
           else
             zip ${{ inputs.zip-path }} --out _temp/${NAME} -s "${MAX_SIZE}k";
           fi
