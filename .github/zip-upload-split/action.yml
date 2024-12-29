@@ -12,6 +12,10 @@ inputs:
   token:
     description: 'Github Token'
     required: true
+  zip-cmd:
+    description: 'Select zipping software ( "7zip", "zip" )'
+    required: false
+    default: '7zip'
 
 runs:
   using: "composite"
@@ -25,8 +29,12 @@ runs:
           sudo apt install -y 7zip
           mkdir _temp
           NAME=$( basename ${{ inputs.zip-path }} )
-          7z a -tzip -v${MAX_SIZE}k _temp/ ${{ inputs.zip-path }}
-          # zip ${{ inputs.zip-path }} --out _temp/${NAME} -s "${MAX_SIZE}k"
+          if [ ${{ inputs.zip-cmd }} == '7zip' ]; then
+            sudo apt install -y 7zip;
+            7z a -tzip -v${MAX_SIZE}k _temp/ ${{ inputs.zip-path }};
+          else
+            zip ${{ inputs.zip-path }} --out _temp/${NAME} -s "${MAX_SIZE}k";
+          fi
           tree
           cd _temp
           for file in *; do \
