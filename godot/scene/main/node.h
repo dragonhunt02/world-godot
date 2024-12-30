@@ -32,7 +32,6 @@
 #define NODE_H
 
 #include "core/string/node_path.h"
-#include "core/templates/rb_map.h"
 #include "core/variant/typed_array.h"
 #include "scene/main/scene_tree.h"
 #include "scene/scene_string_names.h"
@@ -432,6 +431,7 @@ public:
 		NOTIFICATION_WM_DPI_CHANGE = 1009,
 		NOTIFICATION_VP_MOUSE_ENTER = 1010,
 		NOTIFICATION_VP_MOUSE_EXIT = 1011,
+		NOTIFICATION_WM_POSITION_CHANGED = 1012,
 
 		NOTIFICATION_OS_MEMORY_WARNING = MainLoop::NOTIFICATION_OS_MEMORY_WARNING,
 		NOTIFICATION_TRANSLATION_CHANGED = MainLoop::NOTIFICATION_TRANSLATION_CHANGED,

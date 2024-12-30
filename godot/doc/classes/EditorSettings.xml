@@ -242,7 +242,7 @@
 			If [code]true[/code], new node created when reparenting node(s) will be positioned at the average position of the selected node(s).
 		</member>
 		<member name="docks/scene_tree/hide_filtered_out_parents" type="bool" setter="" getter="">
-			If [code]true[/code], the scene tree dock will only show nodes that match the filter, without showing parents that don't.
+			If [code]true[/code], the scene tree dock will only show nodes that match the filter, without showing parents that don't. This settings can also be changed in the Scene dock's top menu.
 		</member>
 		<member name="docks/scene_tree/start_create_dialog_fully_expanded" type="bool" setter="" getter="">
 			If [code]true[/code], the Create dialog (Create New Node/Create New Resource) will start with all its sections expanded. Otherwise, sections will be collapsed until the user starts searching (which will automatically expand sections as needed).
@@ -521,9 +521,6 @@
 		<member name="editors/bone_mapper/handle_colors/set" type="Color" setter="" getter="">
 		</member>
 		<member name="editors/bone_mapper/handle_colors/unset" type="Color" setter="" getter="">
-		</member>
-		<member name="editors/grid_map/editor_side" type="int" setter="" getter="">
-			Specifies the side of 3D editor's viewport where GridMap's mesh palette will appear.
 		</member>
 		<member name="editors/grid_map/palette_min_width" type="int" setter="" getter="">
 			Minimum width of GridMap's mesh palette side panel.

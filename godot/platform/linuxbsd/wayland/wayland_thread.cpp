@@ -1794,7 +1794,7 @@ void WaylandThread::_wl_pointer_on_axis_discrete(void *data, struct wl_pointer *
 		pd.discrete_scroll_vector_120.y = discrete * 120;
 	}
 
-	if (axis == WL_POINTER_AXIS_VERTICAL_SCROLL) {
+	if (axis == WL_POINTER_AXIS_HORIZONTAL_SCROLL) {
 		pd.discrete_scroll_vector_120.x = discrete * 120;
 	}
 }
@@ -1815,7 +1815,7 @@ void WaylandThread::_wl_pointer_on_axis_value120(void *data, struct wl_pointer *
 		pd.discrete_scroll_vector_120.y += value120;
 	}
 
-	if (axis == WL_POINTER_AXIS_VERTICAL_SCROLL) {
+	if (axis == WL_POINTER_AXIS_HORIZONTAL_SCROLL) {
 		pd.discrete_scroll_vector_120.x += value120;
 	}
 }
@@ -3880,7 +3880,7 @@ void WaylandThread::cursor_set_shape(DisplayServer::CursorShape p_cursor_shape) 
 }
 
 void WaylandThread::cursor_shape_set_custom_image(DisplayServer::CursorShape p_cursor_shape, Ref<Image> p_image, const Point2i &p_hotspot) {
-	ERR_FAIL_COND(!p_image.is_valid());
+	ERR_FAIL_COND(p_image.is_null());
 
 	Size2i image_size = p_image->get_size();
 

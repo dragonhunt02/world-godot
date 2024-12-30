@@ -58,6 +58,7 @@
 #include "editor/reparent_dialog.h"
 #include "editor/shader_create_dialog.h"
 #include "editor/themes/editor_scale.h"
+#include "scene/2d/node_2d.h"
 #include "scene/animation/animation_tree.h"
 #include "scene/audio/audio_stream_player.h"
 #include "scene/gui/check_box.h"
@@ -291,7 +292,7 @@ void SceneTreeDock::_perform_instantiate_scenes(const Vector<String> &p_files, N
 
 	for (int i = 0; i < p_files.size(); i++) {
 		Ref<PackedScene> sdata = ResourceLoader::load(p_files[i]);
-		if (!sdata.is_valid()) {
+		if (sdata.is_null()) {
 			current_option = -1;
 			accept->set_text(vformat(TTR("Error loading scene from %s"), p_files[i]));
 			accept->popup_centered();
@@ -432,7 +433,7 @@ void SceneTreeDock::_replace_with_branch_scene(const String &p_file, Node *base)
 	ERR_FAIL_COND_MSG(base->get_internal_mode() != INTERNAL_MODE_DISABLED, "Trying to replace internal node, this is not supported.");
 
 	Ref<PackedScene> sdata = ResourceLoader::load(p_file);
-	if (!sdata.is_valid()) {
+	if (sdata.is_null()) {
 		accept->set_text(vformat(TTR("Error loading scene from %s"), p_file));
 		accept->popup_centered();
 		return;
@@ -3585,7 +3586,7 @@ void SceneTreeDock::_files_dropped(const Vector<String> &p_files, NodePath p_to,
 
 void SceneTreeDock::_script_dropped(const String &p_file, NodePath p_to) {
 	Ref<Script> scr = ResourceLoader::load(p_file);
-	ERR_FAIL_COND(!scr.is_valid());
+	ERR_FAIL_COND(scr.is_null());
 	Node *n = get_node(p_to);
 
 	if (!n) {
@@ -3965,14 +3966,14 @@ void SceneTreeDock::_update_tree_menu() {
 
 	tree_menu->add_separator();
 	tree_menu->add_check_item(TTR("Auto Expand to Selected"), TOOL_AUTO_EXPAND);
-	tree_menu->set_item_checked(tree_menu->get_item_index(TOOL_AUTO_EXPAND), EDITOR_GET("docks/scene_tree/auto_expand_to_selected"));
+	tree_menu->set_item_checked(-1, EDITOR_GET("docks/scene_tree/auto_expand_to_selected"));
 
 	tree_menu->add_check_item(TTR("Center Node on Reparent"), TOOL_CENTER_PARENT);
-	tree_menu->set_item_checked(tree_menu->get_item_index(TOOL_CENTER_PARENT), EDITOR_GET("docks/scene_tree/center_node_on_reparent"));
-	tree_menu->set_item_tooltip(tree_menu->get_item_index(TOOL_CENTER_PARENT), TTR("If enabled, Reparent to New Node will create the new node in the center of the selected nodes, if possible."));
+	tree_menu->set_item_checked(-1, EDITOR_GET("docks/scene_tree/center_node_on_reparent"));
+	tree_menu->set_item_tooltip(-1, TTR("If enabled, Reparent to New Node will create the new node in the center of the selected nodes, if possible."));
 
 	tree_menu->add_check_item(TTR("Hide Filtered Out Parents"), TOOL_HIDE_FILTERED_OUT_PARENTS);
-	tree_menu->set_item_checked(tree_menu->get_item_index(TOOL_HIDE_FILTERED_OUT_PARENTS), EDITOR_GET("docks/scene_tree/hide_filtered_out_parents"));
+	tree_menu->set_item_checked(-1, EDITOR_GET("docks/scene_tree/hide_filtered_out_parents"));
 
 	tree_menu->add_separator();
 	PopupMenu *resource_list = memnew(PopupMenu);

@@ -39,7 +39,6 @@
 #include "core/templates/list.h"
 #include "core/templates/vector.h"
 
-#include <stdarg.h>
 #include <stdlib.h>
 
 class OS {
@@ -63,6 +62,7 @@ class OS {
 	bool _stderr_enabled = true;
 	bool _writing_movie = false;
 	bool _in_editor = false;
+	bool _embedded_in_editor = false;
 
 	CompositeLogger *_logger = nullptr;
 
