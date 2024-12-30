@@ -29,8 +29,12 @@ runs:
           mkdir _temp
           NAME=$( basename ${{ inputs.zip-path }} )
           if [ ${{ inputs.zip-cmd }} == '7zip' ]; then
-            sudo apt install -y 7zip;
-            7z a -tzip -v${MAX_SIZE}k _temp/${NAME} ${{ inputs.zip-path }};
+            # sudo apt install -y 7zip;
+            curl -O "https://www.7-zip.org/a/7z2409-linux-x86.tar.xz";
+            tar -xvf 7z2409-linux-x86.tar.xz "7zz";
+            chmod +x 7zz;
+            ./7zz a -tzip -v${MAX_SIZE}k _temp/${NAME} ${{ inputs.zip-path }};
+            rm 7z2409-linux-x86.tar.xz 7zz
           else
             zip ${{ inputs.zip-path }} --out _temp/${NAME} -s "${MAX_SIZE}k";
           fi
