@@ -24,19 +24,26 @@ runs:
       shell: bash
       env:
         # Github upload limit is less than stated 2147483648 bytes (2147483k).
-        MAX_SIZE: 2050000
+        MAX_SIZE: 2050000000
+        MAX_SIZE_K: 2050000
       run: |
           mkdir _temp
           NAME=$( basename ${{ inputs.zip-path }} )
-          if [ ${{ inputs.zip-cmd }} == '7zip' ]; then
+          SIZE=$( stat -c %s ${{ inputs.zip-path }} )
+          if [ "${SIZE}" -le MAX_SIZE ]; then
+            cp ${{ inputs.zip-path }} _temp/${NAME};
+          elif [ ${{ inputs.zip-cmd }} == '7zip' ]; then
+            # On ubuntu-22.04 and ubuntu-24.04 apt package has a bug
+            # https://sourceforge.net/p/sevenzip/bugs/2407/
             # sudo apt install -y 7zip;
             curl -O "https://www.7-zip.org/a/7z2409-linux-x86.tar.xz";
             tar -xvf 7z2409-linux-x86.tar.xz "7zz";
             chmod +x 7zz;
-            ./7zz a -tzip -v${MAX_SIZE}k _temp/${NAME} ${{ inputs.zip-path }};
+            ./7zz a -tzip -v${MAX_SIZE_K}k _temp/${NAME} ${{ inputs.zip-path }};
             rm 7z2409-linux-x86.tar.xz 7zz
           else
-            zip ${{ inputs.zip-path }} --out _temp/${NAME} -s "${MAX_SIZE}k";
+            # unknown zip bug can corrupt files in split archives 
+            zip ${{ inputs.zip-path }} --out _temp/${NAME} -s "${MAX_SIZE_K}k";
           fi
           tree
           cd _temp
