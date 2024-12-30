@@ -271,7 +271,7 @@ jobs:
           release_name: Latest Release 7-zip V-Sekai Godot Engine Editor
           draft: false
           prerelease: true
-
+ 
   upload-templates:
     runs-on: ubuntu-24.04
     needs: release
