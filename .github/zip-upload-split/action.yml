@@ -21,7 +21,6 @@ runs:
   using: "composite"
   steps:
     - name: Upload Release Asset
-      runs-on: ubuntu-24.04
       shell: bash
       env:
         # Github upload limit is less than stated 2147483648 bytes (2147483k).
