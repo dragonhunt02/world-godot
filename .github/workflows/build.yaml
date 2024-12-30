@@ -139,7 +139,7 @@ jobs:
       - name: Cache SCons cache 
         uses: actions/cache@v4 
         # Skip cache on Linux, PR #12
-        if: ${{ matrix.platform != 'linuxbsd' }}
+        if: ${{ matrix.platform == 'lbsd' }}
         with: 
           path: | 
             .scons_cache  
