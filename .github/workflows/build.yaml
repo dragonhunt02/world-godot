@@ -273,7 +273,8 @@ jobs:
           prerelease: true
 
   upload-templates:
-    runs-on: ubuntu-latest
+    # 'just' is apt package from 24.04+
+    runs-on: ubuntu-24.04
     needs: release
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -286,6 +287,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
+            Justfile
+            godot/version.py
             .github/zip-upload-split/action.yml
 
       - name: Download Artifacts
@@ -294,15 +297,23 @@ jobs:
           path: v-sekai-godot-${{ matrix.type }}
           name: v-sekai-godot-${{ matrix.type }}
 
-      - name: Zip Artifacts
+      - name: Pack Artifacts
+        id: pack
         run: |
           tree
-          zip -rm v-sekai-godot-${{ matrix.type }}.zip v-sekai-godot-${{ matrix.type }}
+          if ${{ matrix.type == 'templates' }}; then \
+            sudo apt install -y just; \
+            just package-tpz v-sekai-godot-${{ matrix.type }} v-sekai-godot-${{ matrix.type }} ./godot/version.py; \
+            zip -0 -rm v-sekai-godot-${{ matrix.type }}.zip v-sekai-godot-${{ matrix.type }}.tpz; \
+          else \
+            zip -rm v-sekai-godot-${{ matrix.type }}.zip v-sekai-godot-${{ matrix.type }}; \
+          fi
+          echo "name=v-sekai-godot-${{ matrix.type }}.zip" >> ${GITHUB_OUTPUT}
 
       - name: Upload Zip Release Asset
         uses: ./.github/zip-upload-split
         with:
-          zip-path: ./v-sekai-godot-${{ matrix.type }}.zip
+          zip-path: ./${{ steps.pack.outputs.name }}
           release-id: ${{ needs.release.outputs.id }}
           token: ${GITHUB_TOKEN}
 
