@@ -26,17 +26,33 @@ runs:
         # Github upload limit is less than stated 2147483648 bytes (2147483k).
         MAX_SIZE: 2050000000
         MAX_SIZE_K: 2050000
+        SHA256_7ZIP: 'cb5e49caaf761df67add54729553bef89a38071b0c455461452578018625fee5'
       run: |
-          mkdir _temp
           NAME=$( basename ${{ inputs.zip-path }} )
           SIZE=$( stat -c %s ${{ inputs.zip-path }} )
+
+          mkdir _temp
           if [ "${SIZE}" -le "${MAX_SIZE}" ]; then
             cp ${{ inputs.zip-path }} _temp/${NAME};
           elif [ ${{ inputs.zip-cmd }} == '7zip' ]; then
+
             # On ubuntu-22.04 and ubuntu-24.04 apt package has a bug
             # https://sourceforge.net/p/sevenzip/bugs/2407/
             # sudo apt install -y 7zip;
+
+            # Checksum
             curl -O "https://www.7-zip.org/a/7z2409-linux-x86.tar.xz";
+            if ! echo "${SHA256_7ZIP} 7z2409-linux-x86.tar.xz" | sha256sum -c ; then
+              echo "Incorrect 7zip package SHA256 checksum. Downloading from mirror..." >&2;
+              rm 7z2409-linux-x86.tar.xz;
+
+              curl -OL "https://github.com/ip7z/7zip/releases/download/24.09/7z2409-linux-x86.tar.xz";
+              if ! echo "${SHA256_7ZIP} 7z2409-linux-x86.tar.xz" | sha256sum -c ; then
+                echo "7zip package SHA256 check failed." >&2;
+                exit 1;
+              fi
+            fi
+
             tar -xvf 7z2409-linux-x86.tar.xz "7zz";
             chmod +x 7zz;
             ./7zz a -tzip -v${MAX_SIZE_K}k _temp/${NAME} ${{ inputs.zip-path }};
@@ -45,6 +61,7 @@ runs:
             # unknown zip bug can corrupt files in split archives 
             zip ${{ inputs.zip-path }} --out _temp/${NAME} -s "${MAX_SIZE_K}k";
           fi
+
           tree
           cd _temp
           for file in *; do \
