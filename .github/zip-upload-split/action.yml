@@ -30,7 +30,7 @@ runs:
           mkdir _temp
           NAME=$( basename ${{ inputs.zip-path }} )
           SIZE=$( stat -c %s ${{ inputs.zip-path }} )
-          if [ "${SIZE}" -le MAX_SIZE ]; then
+          if [ "${SIZE}" -le "${MAX_SIZE}" ]; then
             cp ${{ inputs.zip-path }} _temp/${NAME};
           elif [ ${{ inputs.zip-cmd }} == '7zip' ]; then
             # On ubuntu-22.04 and ubuntu-24.04 apt package has a bug
