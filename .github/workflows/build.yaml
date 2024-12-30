@@ -273,7 +273,8 @@ jobs:
           prerelease: true
  
   upload-templates:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
+    #24.04
     needs: release
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
