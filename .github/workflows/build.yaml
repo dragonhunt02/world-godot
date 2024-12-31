@@ -2,7 +2,7 @@ name: Build Platform Target
 
 on:
   push:
-    branches: [main]
+    branches: [7z-test2]
   pull_request:
     branches: [main]
     types: [opened, reopened, edited, synchronize]
@@ -139,7 +139,7 @@ jobs:
       - name: Cache SCons cache 
         uses: actions/cache@v4 
         # Skip cache on Linux, PR #12
-        if: ${{ matrix.platform != 'linuxbsd' }}
+        if: ${{ matrix.platform == 'xbsd' }}
         with: 
           path: | 
             .scons_cache  
@@ -256,7 +256,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     needs: merge
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push'
     outputs:
       id: ${{ steps.create_release.outputs.id }}
       upload_url: ${{ steps.create_release.outputs.upload_url }}
@@ -301,12 +301,59 @@ jobs:
         id: pack
         run: |
           tree
-          if ${{ matrix.type == 'templates' }}; then \
-            sudo apt install -y just; \
-            just package-tpz v-sekai-godot-${{ matrix.type }} v-sekai-godot-${{ matrix.type }} ./godot/version.py; \
-            zip -0 -rm v-sekai-godot-${{ matrix.type }}.zip v-sekai-godot-${{ matrix.type }}.tpz; \
-          else \
-            zip -rm v-sekai-godot-${{ matrix.type }}.zip v-sekai-godot-${{ matrix.type }}; \
+          if ${{ matrix.type == 'templates' }}; then
+
+            mkdir tttt;
+            mkdir tttt2;
+            mkdir tttt3;
+            echo "First zip test";
+            cp -v v-sekai-godot-${{ matrix.type }}/android_source.zip tttt/;
+            cd tttt;
+            unzip android_source.zip;
+            ls -l .;
+            cd ..;
+            rm -r tttt;
+            echo "End first zip test";
+          
+            sudo apt install -y just;
+            just package-tpz v-sekai-godot-${{ matrix.type }} v-sekai-godot-${{ matrix.type }} ./godot/version.py;
+
+
+            echo "Second zip test";
+            cp -v v-sekai-godot-${{ matrix.type }}.tpz tttt2/v-sekai-godot-${{ matrix.type }}.zip;
+            cd tttt2;
+            unzip v-sekai-godot-${{ matrix.type }}.zip;
+            cd templates;
+            unzip android_source.zip;
+            ls -l .;
+            cd ..;
+            cd ..;
+            rm -r tttt2;
+            echo "End second zip test";
+
+            
+            zip -0 -rm v-sekai-godot-${{ matrix.type }}.zip v-sekai-godot-${{ matrix.type }}.tpz;
+
+
+            echo "Third zip test";
+            cp -v v-sekai-godot-${{ matrix.type }}.zip tttt3/v-sekai-godot-${{ matrix.type }}.zip;
+            cd tttt3;
+            unzip v-sekai-godot-${{ matrix.type }}.zip;
+            rm v-sekai-godot-${{ matrix.type }}.zip;
+            echo "Remove...";
+            mv -v v-sekai-godot-${{ matrix.type }}.tpz v-sekai-godot-${{ matrix.type }}.zip;
+            unzip v-sekai-godot-${{ matrix.type }}.zip;
+            cd templates;
+            unzip android_source.zip;
+            ls -l .;
+            cd ..;
+            cd ..;
+            rm -r tttt3;
+            echo "End third zip test";
+
+            
+          else
+            zip -rm v-sekai-godot-${{ matrix.type }}.zip v-sekai-godot-${{ matrix.type }};
           fi
           echo "name=v-sekai-godot-${{ matrix.type }}.zip" >> ${GITHUB_OUTPUT}
 
