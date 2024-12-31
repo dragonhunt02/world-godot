@@ -43,6 +43,7 @@
 #include "editor/plugins/canvas_item_editor_plugin.h"
 #include "editor/plugins/script_editor_plugin.h"
 #include "editor/themes/editor_scale.h"
+#include "scene/2d/node_2d.h"
 #include "scene/gui/flow_container.h"
 #include "scene/gui/label.h"
 #include "scene/gui/texture_rect.h"
@@ -53,6 +54,27 @@ Node *SceneTreeEditor::get_scene_node() const {
 	ERR_FAIL_COND_V(!is_inside_tree(), nullptr);
 
 	return get_tree()->get_edited_scene_root();
+}
+
+PackedStringArray SceneTreeEditor::_get_node_configuration_warnings(Node *p_node) {
+	PackedStringArray warnings = p_node->get_configuration_warnings();
+	if (p_node == get_scene_node()) {
+		Node2D *node_2d = Object::cast_to<Node2D>(p_node);
+		if (node_2d) {
+			// Note: Warn for Node2D but not all CanvasItems, don't warn for Control nodes.
+			// Control nodes may have reasons to use a transformed root node like anchors.
+			if (!node_2d->get_transform().is_equal_approx(Transform2D())) {
+				warnings.append(TTR("The root node of a scene is recommended to not be transformed, since instances of the scene will usually override this. Reset the transform and reload the scene to remove this warning."));
+			}
+		}
+		Node3D *node_3d = Object::cast_to<Node3D>(p_node);
+		if (node_3d) {
+			if (!node_3d->get_transform().is_equal_approx(Transform3D())) {
+				warnings.append(TTR("The root node of a scene is recommended to not be transformed, since instances of the scene will usually override this. Reset the transform and reload the scene to remove this warning."));
+			}
+		}
+	}
+	return warnings;
 }
 
 void SceneTreeEditor::_cell_button_pressed(Object *p_item, int p_column, int p_id, MouseButton p_button) {
@@ -83,7 +105,7 @@ void SceneTreeEditor::_cell_button_pressed(Object *p_item, int p_column, int p_i
 		}
 	} else if (p_id == BUTTON_SCRIPT) {
 		Ref<Script> script_typed = n->get_script();
-		if (!script_typed.is_null()) {
+		if (script_typed.is_valid()) {
 			emit_signal(SNAME("open_script"), script_typed);
 		}
 
@@ -129,7 +151,7 @@ void SceneTreeEditor::_cell_button_pressed(Object *p_item, int p_column, int p_i
 		}
 		undo_redo->commit_action();
 	} else if (p_id == BUTTON_WARNING) {
-		const PackedStringArray warnings = n->get_configuration_warnings();
+		const PackedStringArray warnings = _get_node_configuration_warnings(n);
 
 		if (warnings.is_empty()) {
 			return;
@@ -348,7 +370,7 @@ void SceneTreeEditor::_update_node_subtree(Node *p_node, TreeItem *p_parent, boo
 			item->set_selectable(0, false);
 			item->deselect(0);
 			if (selected == p_node) {
-				set_selected(nullptr, false);
+				selected = nullptr;
 			}
 		}
 	}
@@ -451,8 +473,7 @@ void SceneTreeEditor::_update_node(Node *p_node, TreeItem *p_item, bool p_part_o
 	}
 
 	if (can_rename) { // TODO Should be can edit..
-
-		const PackedStringArray warnings = p_node->get_configuration_warnings();
+		const PackedStringArray warnings = _get_node_configuration_warnings(p_node);
 		const int num_warnings = warnings.size();
 		if (num_warnings > 0) {
 			StringName warning_icon;
@@ -544,7 +565,7 @@ void SceneTreeEditor::_update_node(Node *p_node, TreeItem *p_item, bool p_part_o
 	// Show buttons only when necessary (SceneTreeDock) to avoid crashes.
 	if (can_open_instance && is_scene_tree_dock) {
 		Ref<Script> scr = p_node->get_script();
-		if (!scr.is_null()) {
+		if (scr.is_valid()) {
 			String additional_notes;
 			Color button_color = Color(1, 1, 1);
 			// Can't set tooltip after adding button, need to do it before.
@@ -931,50 +952,62 @@ bool SceneTreeEditor::_update_filter(TreeItem *p_parent, bool p_scroll_to_select
 		return false;
 	}
 
+	// Now find other reasons to keep this Node, too.
+	PackedStringArray terms = filter.to_lower().split_spaces();
+	bool keep = _item_matches_all_terms(p_parent, terms);
+
+	bool selectable = keep;
+	bool is_root = p_parent == tree->get_root();
+
+	if (keep) {
+		Node *n = get_node(p_parent->get_metadata(0));
+		if (!p_parent->is_visible() || (is_root && tree->is_root_hidden())) {
+			// Place back moved out children from when this item has hidden.
+			HashMap<Node *, CachedNode>::Iterator I = node_cache.get(n, false);
+			if (I && I->value.has_moved_children) {
+				_update_node_subtree(I->value.node, nullptr, true);
+			}
+		}
+
+		if (!valid_types.is_empty()) {
+			selectable = false;
+			for (const StringName &E : valid_types) {
+				if (n->is_class(E) ||
+						EditorNode::get_singleton()->is_object_of_custom_type(n, E)) {
+					selectable = true;
+					break;
+				} else {
+					Ref<Script> node_script = n->get_script();
+					while (node_script.is_valid()) {
+						if (node_script->get_path() == E) {
+							selectable = true;
+							break;
+						}
+						node_script = node_script->get_base_script();
+					}
+					if (selectable) {
+						break;
+					}
+				}
+			}
+		}
+	}
+
 	bool keep_for_children = false;
 	for (TreeItem *child = p_parent->get_first_child(); child; child = child->get_next()) {
 		// Always keep if at least one of the children are kept.
 		keep_for_children = _update_filter(child, p_scroll_to_selected) || keep_for_children;
 	}
 
-	// Now find other reasons to keep this Node, too.
-	PackedStringArray terms = filter.to_lower().split_spaces();
-	bool keep = _item_matches_all_terms(p_parent, terms);
-
-	bool selectable = keep;
-	if (keep && !valid_types.is_empty()) {
-		selectable = false;
-		Node *n = get_node(p_parent->get_metadata(0));
-
-		for (const StringName &E : valid_types) {
-			if (n->is_class(E) ||
-					EditorNode::get_singleton()->is_object_of_custom_type(n, E)) {
-				selectable = true;
-				break;
-			} else {
-				Ref<Script> node_script = n->get_script();
-				while (node_script.is_valid()) {
-					if (node_script->get_path() == E) {
-						selectable = true;
-						break;
-					}
-					node_script = node_script->get_base_script();
-				}
-				if (selectable) {
-					break;
-				}
-			}
+	if (!is_root) {
+		if (show_all_nodes) {
+			p_parent->set_visible(keep_for_children || keep);
+		} else {
+			// Show only selectable nodes, or parents of selectable.
+			p_parent->set_visible(keep_for_children || selectable);
 		}
 	}
 
-	if (show_all_nodes) {
-		p_parent->set_visible(keep_for_children || keep);
-	} else {
-		// Show only selectable nodes, or parents of selectable.
-		p_parent->set_visible(keep_for_children || selectable);
-	}
-
-	bool is_root = p_parent == tree->get_root();
 	if (selectable) {
 		Color custom_color = p_parent->get_meta(SNAME("custom_color"), Color(0, 0, 0, 0));
 		if (custom_color == Color(0, 0, 0, 0)) {
@@ -987,10 +1020,10 @@ bool SceneTreeEditor::_update_filter(TreeItem *p_parent, bool p_scroll_to_select
 	} else if (keep_for_children) {
 		p_parent->set_visible(!hide_filtered_out_parents || is_root);
 
-		if (hide_filtered_out_parents && !is_root) {
+		if (!p_parent->is_visible()) {
 			TreeItem *filtered_parent = p_parent->get_parent();
 			while (filtered_parent) {
-				if (filtered_parent->is_selectable(0) && filtered_parent->is_visible()) {
+				if (filtered_parent == tree->get_root() || (filtered_parent->is_selectable(0) && filtered_parent->is_visible())) {
 					break;
 				}
 				filtered_parent = filtered_parent->get_parent();
@@ -999,8 +1032,23 @@ bool SceneTreeEditor::_update_filter(TreeItem *p_parent, bool p_scroll_to_select
 			if (filtered_parent) {
 				for (Variant &item : p_parent->get_children()) {
 					TreeItem *ti = Object::cast_to<TreeItem>(item);
+					bool is_selected = ti->is_selected(0);
+
 					p_parent->remove_child(ti);
 					filtered_parent->add_child(ti);
+					TreeItem *prev = p_parent->get_prev();
+					if (prev) {
+						ti->move_after(prev);
+					}
+
+					if (is_selected) {
+						ti->select(0);
+					}
+
+					HashMap<Node *, CachedNode>::Iterator I = node_cache.get(get_node(p_parent->get_metadata(0)), false);
+					if (I) {
+						I->value.has_moved_children = true;
+					}
 				}
 
 				return false;
@@ -1013,6 +1061,9 @@ bool SceneTreeEditor::_update_filter(TreeItem *p_parent, bool p_scroll_to_select
 	}
 	if (is_root) {
 		tree->set_hide_root(hide_filtered_out_parents && !selectable);
+		if (tree->is_root_hidden()) {
+			p_parent->set_collapsed(false);
+		}
 	}
 
 	if (editor_selection) {
@@ -1539,11 +1590,7 @@ void SceneTreeEditor::set_marked(Node *p_marked, bool p_selectable, bool p_child
 
 void SceneTreeEditor::set_filter(const String &p_filter) {
 	filter = p_filter;
-	if (hide_filtered_out_parents) {
-		_update_tree(true);
-	} else {
-		_update_filter(nullptr, true);
-	}
+	_update_filter(nullptr, true);
 }
 
 String SceneTreeEditor::get_filter() const {
@@ -1556,11 +1603,7 @@ String SceneTreeEditor::get_filter_term_warning() {
 
 void SceneTreeEditor::set_show_all_nodes(bool p_show_all_nodes) {
 	show_all_nodes = p_show_all_nodes;
-	if (hide_filtered_out_parents) {
-		_update_tree(true);
-	} else {
-		_update_filter(nullptr, true);
-	}
+	_update_filter(nullptr, true);
 }
 
 void SceneTreeEditor::set_as_scene_tree_dock() {
@@ -1903,26 +1946,36 @@ void SceneTreeEditor::set_auto_expand_selected(bool p_auto, bool p_update_settin
 }
 
 void SceneTreeEditor::set_hide_filtered_out_parents(bool p_hide, bool p_update_settings) {
+	if (p_hide == hide_filtered_out_parents) {
+		return;
+	}
+
 	if (p_update_settings) {
 		EditorSettings::get_singleton()->set("docks/scene_tree/hide_filtered_out_parents", p_hide);
 	}
 	hide_filtered_out_parents = p_hide;
-	_update_tree(true);
+
+	if (hide_filtered_out_parents) {
+		_update_filter();
+	} else {
+		node_cache.force_update = true;
+		_update_tree();
+	}
 }
 
 void SceneTreeEditor::set_connect_to_script_mode(bool p_enable) {
 	connect_to_script_mode = p_enable;
-	update_tree();
+	_update_tree();
 }
 
 void SceneTreeEditor::set_connecting_signal(bool p_enable) {
 	connecting_signal = p_enable;
-	update_tree();
+	_update_tree();
 }
 
 void SceneTreeEditor::set_update_when_invisible(bool p_enable) {
 	update_when_invisible = p_enable;
-	update_tree();
+	_update_tree();
 }
 
 void SceneTreeEditor::_bind_methods() {

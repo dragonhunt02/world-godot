@@ -33,8 +33,6 @@
 #include "core/config/project_settings.h"
 #include "core/io/dir_access.h"
 #include "core/io/file_access_compressed.h"
-#include "core/io/image.h"
-#include "core/io/marshalls.h"
 #include "core/io/missing_resource.h"
 #include "core/object/script_language.h"
 #include "core/version.h"
@@ -706,7 +704,7 @@ Error ResourceLoaderBinary::load() {
 			ERR_FAIL_V_MSG(error, "External dependency not in whitelist: " + path + ".");
 		}
 
-		external_resources.write[i].load_token = ResourceLoader::_load_start(path, external_resources[i].type, use_sub_threads ? ResourceLoader::LOAD_THREAD_DISTRIBUTE : ResourceLoader::LOAD_THREAD_FROM_CURRENT, ResourceFormatLoader::CACHE_MODE_REUSE, false, false, Dictionary(), Dictionary());
+		external_resources.write[i].load_token = ResourceLoader::_load_start(path, external_resources[i].type, use_sub_threads ? ResourceLoader::LOAD_THREAD_DISTRIBUTE : ResourceLoader::LOAD_THREAD_FROM_CURRENT, cache_mode_for_external, true, using_whitelist, external_path_whitelist, type_whitelist);
 
 		if (!external_resources[i].load_token.is_valid()) {
 			if (!ResourceLoader::get_abort_on_missing_resources()) {
@@ -1436,7 +1434,7 @@ Error ResourceFormatLoaderBinary::rename_dependencies(const String &p_path, cons
 
 		ERR_FAIL_COND_V(err != ERR_FILE_EOF, ERR_FILE_CORRUPT);
 		Ref<Resource> res = loader.get_resource();
-		ERR_FAIL_COND_V(!res.is_valid(), ERR_FILE_CORRUPT);
+		ERR_FAIL_COND_V(res.is_null(), ERR_FILE_CORRUPT);
 
 		return ResourceFormatSaverBinary::singleton->save(res, p_path);
 	}

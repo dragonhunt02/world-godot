@@ -31,7 +31,6 @@
 #include "default_theme.h"
 
 #include "core/io/image.h"
-#include "core/os/os.h"
 #include "default_font.gen.h"
 #include "default_theme_icons.gen.h"
 #include "scene/resources/font.h"
@@ -1257,6 +1256,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_color("selection_stroke", "GraphEdit", Color(1, 1, 1, 0.8));
 	theme->set_color("activity", "GraphEdit", Color(1, 1, 1));
 	theme->set_color("connection_hover_tint_color", "GraphEdit", Color(0, 0, 0, 0.3));
+	theme->set_constant("connection_hover_thickness", "GraphEdit", 0);
 	theme->set_color("connection_valid_target_tint_color", "GraphEdit", Color(1, 1, 1, 0.4));
 	theme->set_color("connection_rim_color", "GraphEdit", style_normal_color);
 

@@ -275,6 +275,7 @@ private:
 
 		Color activity_color;
 		Color connection_hover_tint_color;
+		int connection_hover_thickness;
 		Color connection_valid_target_tint_color;
 		Color connection_rim_color;
 
@@ -507,6 +508,7 @@ public:
 	HBoxContainer *get_menu_hbox();
 	Ref<ViewPanner> get_panner();
 	void set_warped_panning(bool p_warped);
+	void update_warped_panning();
 
 	void arrange_nodes();
 

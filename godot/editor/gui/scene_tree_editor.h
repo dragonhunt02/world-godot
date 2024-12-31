@@ -135,6 +135,7 @@ class SceneTreeEditor : public Control {
 
 	void _compute_hash(Node *p_node, uint64_t &hash);
 	void _reset();
+	PackedStringArray _get_node_configuration_warnings(Node *p_node);
 
 	void _update_node_path(Node *p_node, bool p_recursive = true);
 	void _update_node_subtree(Node *p_node, TreeItem *p_parent, bool p_force = false);
@@ -243,7 +244,7 @@ public:
 	void set_show_enabled_subscene(bool p_show) { show_enabled_subscene = p_show; }
 	void set_valid_types(const Vector<StringName> &p_valid);
 
-	void update_tree() { _update_tree(); }
+	inline void update_tree() { _update_tree(); }
 
 	void set_auto_expand_selected(bool p_auto, bool p_update_settings);
 	void set_hide_filtered_out_parents(bool p_hide, bool p_update_settings);
