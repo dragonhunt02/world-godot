@@ -55,7 +55,7 @@ runs:
 
             tar -xvf 7z2409-linux-x86.tar.xz "7zz";
             chmod +x 7zz;
-            ./7zz a -tzip -v${MAX_SIZE_K}k _temp/${NAME} ${{ inputs.zip-path }};
+            ./7zz a -tzip -mx0 -v${MAX_SIZE_K}k _temp/${NAME} ${{ inputs.zip-path }};
             rm 7z2409-linux-x86.tar.xz 7zz
           else
             # unknown zip bug can corrupt files in split archives 
