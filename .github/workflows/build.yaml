@@ -340,7 +340,7 @@ jobs:
             cd tttt3;
             unzip v-sekai-godot-${{ matrix.type }}.zip;
             rm v-sekai-godot-${{ matrix.type }}.zip;
-            echo "Remove...";
+            echo "Remove....";
             mv -v v-sekai-godot-${{ matrix.type }}.tpz v-sekai-godot-${{ matrix.type }}.zip;
             unzip v-sekai-godot-${{ matrix.type }}.zip;
             cd templates;
