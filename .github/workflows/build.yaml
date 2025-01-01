@@ -24,7 +24,7 @@ jobs:
       matrix:
         precision: [double]
         platform: [macos, ios]
-        target: [editor, template_release, template_debug]
+        target: [editor, templates]
         exclude:
           - platform: ios
             target: editor
@@ -35,7 +35,7 @@ jobs:
 
     steps:
       - name: Set up dependencies
-        run: brew install just hyperfine scons
+        run: brew install just hyperfine scons tree
 
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -71,8 +71,15 @@ jobs:
   
       - name: Fetch dependencies and Build Platform Target 
         run: | 
+          tree godot/bin/
           export PLATFORM_ARGS="fetch-vulkan-sdk"
-          hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.precision }}'
+          if [ ${{ matrix.target }} == "templates" ]; then
+            hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-templates ${{ matrix.platform }} ${{ matrix.precision }}'
+          else
+            hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.precision }}'
+          fi
+          tree godot/bin/
+          tree tpz/
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
