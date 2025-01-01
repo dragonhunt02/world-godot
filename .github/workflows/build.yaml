@@ -71,15 +71,15 @@ jobs:
   
       - name: Fetch dependencies and Build Platform Target 
         run: | 
-          tree godot/bin/
+          tree godot/bin/ || true
           export PLATFORM_ARGS="fetch-vulkan-sdk"
           if [ ${{ matrix.target }} == "templates" ]; then
             hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-templates ${{ matrix.platform }} ${{ matrix.precision }}'
           else
             hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.precision }}'
           fi
-          tree godot/bin/
-          tree tpz/
+          tree godot/bin/ || true
+          tree tpz/ || true
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
