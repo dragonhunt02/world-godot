@@ -147,7 +147,7 @@ generate_build_constants:
     echo "const BUILD_DATE_STR = \"$(shell date --utc --iso=seconds)\"" >> v/addons/vsk_version/build_constants.gd
     echo "const BUILD_UNIX_TIME = $(shell date +%s)" >> v/addons/vsk_version/build_constants.gd
 
-build-platform-target platform target precision="double":
+build-platform-target platform target precision="double" osx_bundle="yes":
     #!/usr/bin/env bash
     set -o xtrace
     cd $WORLD_PWD
@@ -170,7 +170,7 @@ build-platform-target platform target precision="double":
                     arch=arm64 \
                     vulkan_sdk_path=$VULKAN_SDK_ROOT/MoltenVK/MoltenVK/static/MoltenVK.xcframework \
                     osxcross_sdk=darwin24 \
-                    generate_bundle=yes \
+                    generate_bundle={{osx_bundle}} \
                     debug_symbols=yes \
                     separate_debug_symbols=yes
             ;;
@@ -231,7 +231,7 @@ build-platform-target platform target precision="double":
                     arch=arm64 \
                     vulkan_sdk_path=$VULKAN_SDK_ROOT/MoltenVK/MoltenVK/static/MoltenVK.xcframework \
                     osxcross_sdk=darwin24 \
-                    generate_bundle=yes \
+                    generate_bundle={{osx_bundle}} \
                     debug_symbols=yes \
                     separate_debug_symbols=yes
             ;;
@@ -244,10 +244,20 @@ build-platform-target platform target precision="double":
     if [[ "{{target}}" == "editor" ]]; then
         mkdir -p $WORLD_PWD/editors
         cp -rf $WORLD_PWD/godot/bin/* $WORLD_PWD/editors
+    elif [[ "{{target}}" =~ template_* && \
+            "{{platform}}" =~ ^(mac|i)os && \
+            "{{osx_bundle}}" == "no" ]]; then
+        # don't copy files to $WORLD_PWD/tpz
+        true
     elif [[ "{{target}}" =~ template_* ]]; then
         mkdir -p $WORLD_PWD/tpz
         cp -rf $WORLD_PWD/godot/bin/* $WORLD_PWD/tpz
     fi
+
+build-platform-templates platform precision="double":
+    # Bundle all on last command on osx
+    just build-platform-target {{platform}} template_debug {{precision}} osx_bundle="no"
+    just build-platform-target {{platform}} template_release {{precision}} osx_bundle="yes"
 
 all-build-platform-target:
     #!/usr/bin/env bash
