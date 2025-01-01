@@ -255,9 +255,9 @@ build-platform-target platform target precision="double" osx_bundle="yes":
     fi
 
 build-platform-templates platform precision="double":
-    # Bundle all on last command on osx
-    just build-platform-target {{platform}} template_debug {{precision}} osx_bundle="no"
-    just build-platform-target {{platform}} template_release {{precision}} osx_bundle="yes"
+    # Bundle all on last command with osx_bundle
+    just build-platform-target {{platform}} template_debug {{precision}} "no"
+    just build-platform-target {{platform}} template_release {{precision}} "yes"
 
 all-build-platform-target:
     #!/usr/bin/env bash
