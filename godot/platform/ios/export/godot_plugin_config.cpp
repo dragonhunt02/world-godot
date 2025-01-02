@@ -169,7 +169,7 @@ uint64_t PluginConfigIOS::get_plugin_modification_time(const PluginConfigIOS &pl
 PluginConfigIOS PluginConfigIOS::load_plugin_config(Ref<ConfigFile> config_file, const String &path) {
 	PluginConfigIOS plugin_config = {};
 
-	if (config_file.is_null()) {
+	if (!config_file.is_valid()) {
 		return plugin_config;
 	}
 

@@ -45,6 +45,8 @@
 #include <alsa/asoundlib.h>
 #endif
 
+#include <stdio.h>
+
 class MIDIDriverALSAMidi : public MIDIDriver {
 	Thread thread;
 	Mutex mutex;

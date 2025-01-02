@@ -33,10 +33,7 @@
 
 /**
  * @class Vector
- * Vector container. Simple copy-on-write container.
- *
- * LocalVector is an alternative available for internal use when COW is not
- * required.
+ * Vector container. Regular Vector Container. Use with care and for smaller arrays when possible. Use Vector for large arrays.
  */
 
 #include "core/error/error_macros.h"
@@ -47,7 +44,6 @@
 
 #include <climits>
 #include <initializer_list>
-#include <utility>
 
 template <typename T>
 class VectorWriteProxy {
@@ -148,19 +144,17 @@ public:
 		insert(i, p_val);
 	}
 
-	void operator=(const Vector &p_from) { _cowdata._ref(p_from._cowdata); }
-	void operator=(Vector &&p_from) { _cowdata = std::move(p_from._cowdata); }
+	inline void operator=(const Vector &p_from) {
+		_cowdata._ref(p_from._cowdata);
+	}
 
 	Vector<uint8_t> to_byte_array() const {
 		Vector<uint8_t> ret;
 		if (is_empty()) {
 			return ret;
 		}
-		size_t alloc_size = size() * sizeof(T);
-		ret.resize(alloc_size);
-		if (alloc_size) {
-			memcpy(ret.ptrw(), ptr(), alloc_size);
-		}
+		ret.resize(size() * sizeof(T));
+		memcpy(ret.ptrw(), ptr(), sizeof(T) * size());
 		return ret;
 	}
 
@@ -283,11 +277,16 @@ public:
 	}
 
 	_FORCE_INLINE_ Vector() {}
-	_FORCE_INLINE_ Vector(std::initializer_list<T> p_init) :
-			_cowdata(p_init) {}
+	_FORCE_INLINE_ Vector(std::initializer_list<T> p_init) {
+		Error err = _cowdata.resize(p_init.size());
+		ERR_FAIL_COND(err);
+
+		Size i = 0;
+		for (const T &element : p_init) {
+			_cowdata.set(i++, element);
+		}
+	}
 	_FORCE_INLINE_ Vector(const Vector &p_from) { _cowdata._ref(p_from._cowdata); }
-	_FORCE_INLINE_ Vector(Vector &&p_from) :
-			_cowdata(std::move(p_from._cowdata)) {}
 
 	_FORCE_INLINE_ ~Vector() {}
 };

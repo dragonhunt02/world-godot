@@ -271,14 +271,6 @@ private:
 	};
 
 	struct AudioStreamPlaybackListNode {
-		// The state machine for audio stream playbacks is as follows:
-		// 1. The playback is created and added to the playback list in the playing state.
-		// 2. The playback is (maybe) paused, and the state is set to FADE_OUT_TO_PAUSE.
-		// 2.1. The playback is mixed after being paused, and the audio server thread atomically sets the state to PAUSED after performing a brief fade-out.
-		// 3. The playback is (maybe) deleted, and the state is set to FADE_OUT_TO_DELETION.
-		// 3.1. The playback is mixed after being deleted, and the audio server thread atomically sets the state to AWAITING_DELETION after performing a brief fade-out.
-		// 		NOTE: The playback is not deallocated at this time because allocation and deallocation are not realtime-safe.
-		// 4. The playback is removed and deallocated on the main thread using the SafeList maybe_cleanup method.
 		enum PlaybackState {
 			PAUSED = 0, // Paused. Keep this stream playback around though so it can be restarted.
 			PLAYING = 1, // Playing. Fading may still be necessary if volume changes!
@@ -383,9 +375,6 @@ public:
 
 	void set_bus_volume_db(int p_bus, float p_volume_db);
 	float get_bus_volume_db(int p_bus) const;
-
-	void set_bus_volume_linear(int p_bus, float p_volume_linear);
-	float get_bus_volume_linear(int p_bus) const;
 
 	void set_bus_send(int p_bus, const StringName &p_send);
 	StringName get_bus_send(int p_bus) const;

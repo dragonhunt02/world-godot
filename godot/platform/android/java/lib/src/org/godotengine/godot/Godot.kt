@@ -57,7 +57,6 @@ import com.google.android.vending.expansion.downloader.*
 import org.godotengine.godot.error.Error
 import org.godotengine.godot.input.GodotEditText
 import org.godotengine.godot.input.GodotInputHandler
-import org.godotengine.godot.io.FilePicker
 import org.godotengine.godot.io.directory.DirectoryAccessHandler
 import org.godotengine.godot.io.file.FileAccessHandler
 import org.godotengine.godot.plugin.AndroidRuntimePlugin
@@ -678,9 +677,6 @@ class Godot(private val context: Context) {
 		for (plugin in pluginRegistry.allPlugins) {
 			plugin.onMainActivityResult(requestCode, resultCode, data)
 		}
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-			FilePicker.handleActivityResult(context, requestCode, resultCode, data)
-		}
 	}
 
 	/**
@@ -745,7 +741,6 @@ class Godot(private val context: Context) {
 
 		runOnUiThread {
 			registerSensorsIfNeeded()
-			enableImmersiveMode(useImmersive.get(), true)
 		}
 
 		for (plugin in pluginRegistry.allPlugins) {
@@ -895,13 +890,6 @@ class Godot(private val context: Context) {
 		mClipboard.setPrimaryClip(clip)
 	}
 
-	@Keep
-	private fun showFilePicker(currentDirectory: String, filename: String, fileMode: Int, filters: Array<String>) {
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-			FilePicker.showFilePicker(context, getActivity(), currentDirectory, filename, fileMode, filters)
-		}
-	}
-
 	/**
 	 * Popup a dialog to input text.
 	 */
@@ -926,19 +914,6 @@ class Godot(private val context: Context) {
 		}
 	}
 
-	@Keep
-	private fun getAccentColor(): Int {
-		val value = TypedValue()
-		context.theme.resolveAttribute(android.R.attr.colorAccent, value, true)
-		return value.data
-	}
-
-	@Keep
-	private fun getBaseColor(): Int {
-		val value = TypedValue()
-		context.theme.resolveAttribute(android.R.attr.colorBackground, value, true)
-		return value.data
-	}
 
 	/**
 	 * Destroys the Godot Engine and kill the process it's running in.
@@ -977,10 +952,15 @@ class Godot(private val context: Context) {
 	}
 
 	fun onBackPressed() {
+		var shouldQuit = true
 		for (plugin in pluginRegistry.allPlugins) {
-			plugin.onMainBackPressed()
+			if (plugin.onMainBackPressed()) {
+				shouldQuit = false
+			}
 		}
-		renderView?.queueOnRenderThread { GodotLib.back() }
+		if (shouldQuit) {
+			renderView?.queueOnRenderThread { GodotLib.back() }
+		}
 	}
 
 	/**
@@ -1039,8 +1019,7 @@ class Godot(private val context: Context) {
 	}
 
 	fun requestPermission(name: String?): Boolean {
-		val activity = getActivity() ?: return false
-		return requestPermission(name, activity)
+		return requestPermission(name, getActivity())
 	}
 
 	fun requestPermissions(): Boolean {
@@ -1127,7 +1106,7 @@ class Godot(private val context: Context) {
 
 	@Keep
 	private fun createNewGodotInstance(args: Array<String>): Int {
-		return primaryHost?.onNewGodotInstanceRequested(args) ?: -1
+		return primaryHost?.onNewGodotInstanceRequested(args) ?: 0
 	}
 
 	@Keep

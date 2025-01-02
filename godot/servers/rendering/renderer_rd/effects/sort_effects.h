@@ -31,7 +31,11 @@
 #ifndef SORT_EFFECTS_RD_H
 #define SORT_EFFECTS_RD_H
 
+#include "servers/rendering/renderer_rd/pipeline_cache_rd.h"
 #include "servers/rendering/renderer_rd/shaders/effects/sort.glsl.gen.h"
+#include "servers/rendering/renderer_scene_render.h"
+
+#include "servers/rendering_server.h"
 
 namespace RendererRD {
 

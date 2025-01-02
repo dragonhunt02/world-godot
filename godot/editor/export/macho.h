@@ -33,6 +33,8 @@
 
 // Mach-O binary object file format parser and editor.
 
+#include "core/crypto/crypto.h"
+#include "core/crypto/crypto_core.h"
 #include "core/io/file_access.h"
 #include "core/object/ref_counted.h"
 

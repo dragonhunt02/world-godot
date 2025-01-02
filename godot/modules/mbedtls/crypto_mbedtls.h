@@ -32,6 +32,7 @@
 #define CRYPTO_MBEDTLS_H
 
 #include "core/crypto/crypto.h"
+#include "core/io/resource.h"
 
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>

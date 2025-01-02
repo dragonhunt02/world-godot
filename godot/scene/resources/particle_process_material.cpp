@@ -1172,13 +1172,9 @@ void ParticleProcessMaterial::flush_changes() {
 }
 
 void ParticleProcessMaterial::_queue_shader_change() {
-	if (!_is_initialized()) {
-		return;
-	}
-
 	MutexLock lock(material_mutex);
 
-	if (!element.in_list()) {
+	if (_is_initialized() && !element.in_list()) {
 		dirty_materials.add(&element);
 	}
 }
@@ -1862,7 +1858,7 @@ void ParticleProcessMaterial::set_sub_emitter_mode(SubEmitterMode p_sub_emitter_
 	_queue_shader_change();
 	notify_property_list_changed();
 	if (sub_emitter_mode != SUB_EMITTER_DISABLED && RenderingServer::get_singleton()->is_low_end()) {
-		WARN_PRINT_ONCE_ED("Sub-emitter modes other than SUB_EMITTER_DISABLED are not supported in the Compatibility renderer.");
+		WARN_PRINT_ONCE_ED("Sub-emitter modes other than SUB_EMITTER_DISABLED are not supported in the GL Compatibility rendering backend.");
 	}
 }
 

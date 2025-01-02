@@ -31,6 +31,7 @@
 #include "check_button.h"
 
 #include "scene/theme/theme_db.h"
+#include "servers/rendering_server.h"
 
 Size2 CheckButton::get_icon_size() const {
 	Ref<Texture2D> on_tex;
@@ -55,10 +56,10 @@ Size2 CheckButton::get_icon_size() const {
 	}
 
 	Size2 tex_size = Size2(0, 0);
-	if (on_tex.is_valid()) {
+	if (!on_tex.is_null()) {
 		tex_size = on_tex->get_size();
 	}
-	if (off_tex.is_valid()) {
+	if (!off_tex.is_null()) {
 		tex_size = tex_size.max(off_tex->get_size());
 	}
 

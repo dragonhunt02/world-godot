@@ -31,11 +31,12 @@
 #include "base_button.h"
 
 #include "core/config/project_settings.h"
+#include "core/os/keyboard.h"
 #include "scene/gui/label.h"
 #include "scene/main/window.h"
 
 void BaseButton::_unpress_group() {
-	if (button_group.is_null()) {
+	if (!button_group.is_valid()) {
 		return;
 	}
 
@@ -204,7 +205,6 @@ void BaseButton::set_disabled(bool p_disabled) {
 		status.pressing_inside = false;
 	}
 	queue_redraw();
-	update_minimum_size();
 }
 
 bool BaseButton::is_disabled() const {

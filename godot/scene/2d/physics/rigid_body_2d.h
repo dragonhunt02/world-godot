@@ -31,8 +31,7 @@
 #ifndef RIGID_BODY_2D_H
 #define RIGID_BODY_2D_H
 
-#include "core/templates/vset.h"
-#include "scene/2d/physics/physics_body_2d.h"
+#include "scene/2d/physics/static_body_2d.h"
 
 class RigidBody2D : public PhysicsBody2D {
 	GDCLASS(RigidBody2D, PhysicsBody2D);

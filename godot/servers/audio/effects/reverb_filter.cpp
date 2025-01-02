@@ -30,8 +30,7 @@
 
 #include "reverb_filter.h"
 
-#include "core/math/audio_frame.h"
-#include "core/os/memory.h"
+#include "core/math/math_funcs.h"
 
 #include <math.h>
 

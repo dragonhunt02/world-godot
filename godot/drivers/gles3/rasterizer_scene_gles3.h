@@ -103,7 +103,6 @@ struct RenderDataGLES3 {
 	Transform3D inv_cam_transform;
 	Projection cam_projection;
 	bool cam_orthogonal = false;
-	bool cam_frustum = false;
 	uint32_t camera_visible_layers = 0xFFFFFFFF;
 
 	// For billboards to cast correct shadows.
@@ -461,7 +460,7 @@ private:
 		bool used_depth_prepass = false;
 
 		GLES3::SceneShaderData::BlendMode current_blend_mode = GLES3::SceneShaderData::BLEND_MODE_MIX;
-		RS::CullMode cull_mode = RS::CULL_MODE_BACK;
+		GLES3::SceneShaderData::Cull cull_mode = GLES3::SceneShaderData::CULL_BACK;
 
 		bool current_blend_enabled = false;
 		bool current_depth_draw_enabled = false;
@@ -477,7 +476,7 @@ private:
 
 			glCullFace(GL_BACK);
 			glEnable(GL_CULL_FACE);
-			cull_mode = RS::CULL_MODE_BACK;
+			cull_mode = GLES3::SceneShaderData::CULL_BACK;
 
 			glDepthMask(GL_FALSE);
 			current_depth_draw_enabled = false;
@@ -485,16 +484,16 @@ private:
 			current_depth_test_enabled = false;
 		}
 
-		void set_gl_cull_mode(RS::CullMode p_mode) {
+		void set_gl_cull_mode(GLES3::SceneShaderData::Cull p_mode) {
 			if (cull_mode != p_mode) {
-				if (p_mode == RS::CULL_MODE_DISABLED) {
+				if (p_mode == GLES3::SceneShaderData::CULL_DISABLED) {
 					glDisable(GL_CULL_FACE);
 				} else {
-					if (cull_mode == RS::CULL_MODE_DISABLED) {
+					if (cull_mode == GLES3::SceneShaderData::CULL_DISABLED) {
 						// Last time was disabled, so enable and set proper face.
 						glEnable(GL_CULL_FACE);
 					}
-					glCullFace(p_mode == RS::CULL_MODE_FRONT ? GL_FRONT : GL_BACK);
+					glCullFace(p_mode == GLES3::SceneShaderData::CULL_FRONT ? GL_FRONT : GL_BACK);
 				}
 				cull_mode = p_mode;
 			}

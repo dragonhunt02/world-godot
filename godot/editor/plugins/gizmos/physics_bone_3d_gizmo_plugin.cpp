@@ -32,8 +32,9 @@
 
 #include "editor/editor_settings.h"
 #include "editor/plugins/gizmos/joint_3d_gizmo_plugin.h"
-#include "scene/3d/physical_bone_simulator_3d.h"
+#include "editor/plugins/node_3d_editor_plugin.h"
 #include "scene/3d/physics/physical_bone_3d.h"
+#include "scene/3d/physics/physics_body_3d.h"
 
 PhysicalBone3DGizmoPlugin::PhysicalBone3DGizmoPlugin() {
 	create_material("joint_material", EDITOR_GET("editors/3d_gizmos/gizmo_colors/joint"));

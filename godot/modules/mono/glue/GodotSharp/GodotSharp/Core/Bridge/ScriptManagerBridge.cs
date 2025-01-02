@@ -90,7 +90,8 @@ namespace Godot.Bridge
         }
 
         [UnmanagedCallersOnly]
-        internal static unsafe IntPtr CreateManagedForGodotObjectBinding(godot_string_name* nativeTypeName, IntPtr godotObject)
+        internal static unsafe IntPtr CreateManagedForGodotObjectBinding(godot_string_name* nativeTypeName,
+            IntPtr godotObject)
         {
             try
             {
@@ -142,7 +143,7 @@ namespace Godot.Bridge
                     }
                 }
 
-                var obj = (GodotObject)RuntimeHelpers.GetUninitializedObject(scriptType);
+                var obj = (GodotObject)FormatterServices.GetUninitializedObject(scriptType);
 
                 var parameters = ctor.GetParameters();
                 int paramCount = parameters.Length;
@@ -181,7 +182,18 @@ namespace Godot.Bridge
                     return;
                 }
 
-                var nativeName = GodotObject.InternalGetClassNativeBaseName(scriptType);
+                var native = GodotObject.InternalGetClassNativeBase(scriptType);
+
+                var field = native.GetField("NativeName", BindingFlags.DeclaredOnly | BindingFlags.Static |
+                                                           BindingFlags.Public | BindingFlags.NonPublic);
+
+                if (field == null)
+                {
+                    *outRes = default;
+                    return;
+                }
+
+                var nativeName = (StringName?)field.GetValue(null);
 
                 if (nativeName == null)
                 {
@@ -421,28 +433,15 @@ namespace Godot.Bridge
 
         private static unsafe bool AddScriptBridgeCore(IntPtr scriptPtr, string scriptPath)
         {
-            _scriptTypeBiMap.ReadWriteLock.EnterUpgradeableReadLock();
-            try
+            lock (_scriptTypeBiMap.ReadWriteLock)
             {
                 if (!_scriptTypeBiMap.IsScriptRegistered(scriptPtr))
                 {
                     if (!_pathTypeBiMap.TryGetScriptType(scriptPath, out Type? scriptType))
                         return false;
 
-                    _scriptTypeBiMap.ReadWriteLock.EnterWriteLock();
-                    try
-                    {
-                        _scriptTypeBiMap.Add(scriptPtr, scriptType);
-                    }
-                    finally
-                    {
-                        _scriptTypeBiMap.ReadWriteLock.ExitWriteLock();
-                    }
+                    _scriptTypeBiMap.Add(scriptPtr, scriptType);
                 }
-            }
-            finally
-            {
-                _scriptTypeBiMap.ReadWriteLock.ExitUpgradeableReadLock();
             }
 
             return true;
@@ -466,8 +465,7 @@ namespace Godot.Bridge
 
         private static unsafe void GetOrCreateScriptBridgeForType(Type scriptType, godot_ref* outScript)
         {
-            _scriptTypeBiMap.ReadWriteLock.EnterUpgradeableReadLock();
-            try
+            lock (_scriptTypeBiMap.ReadWriteLock)
             {
                 if (_scriptTypeBiMap.TryGetScriptPtr(scriptType, out IntPtr scriptPtr))
                 {
@@ -479,10 +477,6 @@ namespace Godot.Bridge
                 // This path is slower, but it's only executed for the first instantiation of the type
                 CreateScriptBridgeForType(scriptType, outScript);
             }
-            finally
-            {
-                _scriptTypeBiMap.ReadWriteLock.ExitUpgradeableReadLock();
-            }
         }
 
         internal static unsafe void GetOrLoadOrCreateScriptForType(Type scriptType, godot_ref* outScript)
@@ -490,8 +484,7 @@ namespace Godot.Bridge
             static bool GetPathOtherwiseGetOrCreateScript(Type scriptType, godot_ref* outScript,
                 [MaybeNullWhen(false)] out string scriptPath)
             {
-                _scriptTypeBiMap.ReadWriteLock.EnterUpgradeableReadLock();
-                try
+                lock (_scriptTypeBiMap.ReadWriteLock)
                 {
                     if (_scriptTypeBiMap.TryGetScriptPtr(scriptType, out IntPtr scriptPtr))
                     {
@@ -518,10 +511,6 @@ namespace Godot.Bridge
                     CreateScriptBridgeForType(scriptType, outScript);
                     scriptPath = null;
                     return false;
-                }
-                finally
-                {
-                    _scriptTypeBiMap.ReadWriteLock.ExitUpgradeableReadLock();
                 }
             }
 
@@ -552,16 +541,7 @@ namespace Godot.Bridge
                     // IMPORTANT: The virtual path must be added to _pathTypeBiMap before the first
                     // load of the script, otherwise the loaded script won't be added to _scriptTypeBiMap.
                     scriptPath = GetVirtualConstructedGenericTypeScriptPath(scriptType, scriptPath);
-
-                    _scriptTypeBiMap.ReadWriteLock.EnterWriteLock();
-                    try
-                    {
-                        _pathTypeBiMap.Add(scriptPath, scriptType);
-                    }
-                    finally
-                    {
-                        _scriptTypeBiMap.ReadWriteLock.ExitWriteLock();
-                    }
+                    _pathTypeBiMap.Add(scriptPath, scriptType);
                 }
 
                 // This must be done outside the read-write lock, as the script resource loading can lock it
@@ -591,119 +571,96 @@ namespace Godot.Bridge
         {
             Debug.Assert(!scriptType.IsGenericTypeDefinition, $"Script type must be a constructed generic type or not generic at all. Type: {scriptType}.");
 
-            _scriptTypeBiMap.ReadWriteLock.EnterWriteLock();
-            try
-            {
-                NativeFuncs.godotsharp_internal_new_csharp_script(outScript);
-                IntPtr scriptPtr = outScript->Reference;
+            NativeFuncs.godotsharp_internal_new_csharp_script(outScript);
+            IntPtr scriptPtr = outScript->Reference;
 
-                _scriptTypeBiMap.Add(scriptPtr, scriptType);
-            }
-            finally
-            {
-                _scriptTypeBiMap.ReadWriteLock.ExitWriteLock();
-            }
+            // Caller takes care of locking
+            _scriptTypeBiMap.Add(scriptPtr, scriptType);
 
-            NativeFuncs.godotsharp_internal_reload_registered_script(outScript->Reference);
+            NativeFuncs.godotsharp_internal_reload_registered_script(scriptPtr);
         }
 
         [UnmanagedCallersOnly]
         internal static void RemoveScriptBridge(IntPtr scriptPtr)
         {
-            _scriptTypeBiMap.ReadWriteLock.EnterWriteLock();
             try
             {
-                _scriptTypeBiMap.Remove(scriptPtr);
+                lock (_scriptTypeBiMap.ReadWriteLock)
+                {
+                    _scriptTypeBiMap.Remove(scriptPtr);
+                }
             }
             catch (Exception e)
             {
                 ExceptionUtils.LogException(e);
-            }
-            finally
-            {
-                _scriptTypeBiMap.ReadWriteLock.ExitWriteLock();
             }
         }
 
         [UnmanagedCallersOnly]
         internal static godot_bool TryReloadRegisteredScriptWithClass(IntPtr scriptPtr)
         {
-            _scriptTypeBiMap.ReadWriteLock.EnterUpgradeableReadLock();
             try
             {
-                if (_scriptTypeBiMap.TryGetScriptType(scriptPtr, out _))
+                lock (_scriptTypeBiMap.ReadWriteLock)
                 {
-                    // NOTE:
-                    // Currently, we reload all scripts, not only the ones from the unloaded ALC.
-                    // As such, we need to handle this case instead of treating it as an error.
+                    if (_scriptTypeBiMap.TryGetScriptType(scriptPtr, out _))
+                    {
+                        // NOTE:
+                        // Currently, we reload all scripts, not only the ones from the unloaded ALC.
+                        // As such, we need to handle this case instead of treating it as an error.
+                        NativeFuncs.godotsharp_internal_reload_registered_script(scriptPtr);
+                        return godot_bool.True;
+                    }
+
+                    if (!_scriptDataForReload.TryGetValue(scriptPtr, out var dataForReload))
+                    {
+                        GD.PushError("Missing class qualified name for reloading script");
+                        return godot_bool.False;
+                    }
+
+                    _ = _scriptDataForReload.TryRemove(scriptPtr, out _);
+
+                    if (dataForReload.assemblyName == null)
+                    {
+                        GD.PushError(
+                            $"Missing assembly name of class '{dataForReload.classFullName}' for reloading script");
+                        return godot_bool.False;
+                    }
+
+                    var scriptType = ReflectionUtils.FindTypeInLoadedAssemblies(dataForReload.assemblyName,
+                        dataForReload.classFullName);
+
+                    if (scriptType == null)
+                    {
+                        // The class was removed, can't reload
+                        return godot_bool.False;
+                    }
+
+                    if (!typeof(GodotObject).IsAssignableFrom(scriptType))
+                    {
+                        // The class no longer inherits GodotObject, can't reload
+                        return godot_bool.False;
+                    }
+
+                    _scriptTypeBiMap.Add(scriptPtr, scriptType);
+
                     NativeFuncs.godotsharp_internal_reload_registered_script(scriptPtr);
+
                     return godot_bool.True;
                 }
-
-                if (!_scriptDataForReload.TryGetValue(scriptPtr, out var dataForReload))
-                {
-                    GD.PushError("Missing class qualified name for reloading script");
-                    return godot_bool.False;
-                }
-
-                _ = _scriptDataForReload.TryRemove(scriptPtr, out _);
-
-                if (dataForReload.assemblyName == null)
-                {
-                    GD.PushError(
-                        $"Missing assembly name of class '{dataForReload.classFullName}' for reloading script");
-                    return godot_bool.False;
-                }
-
-                var scriptType = ReflectionUtils.FindTypeInLoadedAssemblies(dataForReload.assemblyName,
-                    dataForReload.classFullName);
-
-                if (scriptType == null)
-                {
-                    // The class was removed, can't reload
-                    return godot_bool.False;
-                }
-
-                if (!typeof(GodotObject).IsAssignableFrom(scriptType))
-                {
-                    // The class no longer inherits GodotObject, can't reload
-                    return godot_bool.False;
-                }
-
-                _scriptTypeBiMap.ReadWriteLock.EnterWriteLock();
-                try
-                {
-                    _scriptTypeBiMap.Add(scriptPtr, scriptType);
-                }
-                finally
-                {
-                    _scriptTypeBiMap.ReadWriteLock.ExitWriteLock();
-                }
-
-                NativeFuncs.godotsharp_internal_reload_registered_script(scriptPtr);
-
-                return godot_bool.True;
             }
             catch (Exception e)
             {
                 ExceptionUtils.LogException(e);
                 return godot_bool.False;
             }
-            finally
-            {
-                _scriptTypeBiMap.ReadWriteLock.ExitUpgradeableReadLock();
-            }
         }
 
         private static unsafe void GetScriptTypeInfo(Type scriptType, godot_csharp_type_info* outTypeInfo)
         {
+            Type native = GodotObject.InternalGetClassNativeBase(scriptType);
+
             godot_string className = Marshaling.ConvertStringToNative(ReflectionUtils.ConstructTypeName(scriptType));
-
-            StringName? nativeBase = GodotObject.InternalGetClassNativeBaseName(scriptType);
-
-            godot_string_name nativeBaseName = nativeBase != null
-                ? NativeFuncs.godotsharp_string_name_new_copy((godot_string_name)nativeBase.NativeValue)
-                : default;
 
             bool isTool = scriptType.IsDefined(typeof(ToolAttribute), inherit: false);
 
@@ -729,7 +686,6 @@ namespace Godot.Bridge
             godot_string iconPath = Marshaling.ConvertStringToNative(iconAttr?.Path);
 
             outTypeInfo->ClassName = className;
-            outTypeInfo->NativeBaseName = nativeBaseName;
             outTypeInfo->IconPath = iconPath;
             outTypeInfo->IsTool = isTool.ToGodotBool();
             outTypeInfo->IsGlobalClass = isGlobalClass.ToGodotBool();

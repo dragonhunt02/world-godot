@@ -39,6 +39,7 @@
 #include "scene/gui/dialogs.h"
 #include "scene/gui/graph_edit.h"
 #include "scene/gui/panel_container.h"
+#include "scene/gui/popup.h"
 #include "scene/gui/tree.h"
 
 class AcceptDialog;

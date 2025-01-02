@@ -33,6 +33,8 @@
 
 #include "scene/3d/skeleton_modifier_3d.h"
 
+#include "scene/3d/physics/physical_bone_3d.h"
+
 class PhysicalBone3D;
 
 class PhysicalBoneSimulator3D : public SkeletonModifier3D {

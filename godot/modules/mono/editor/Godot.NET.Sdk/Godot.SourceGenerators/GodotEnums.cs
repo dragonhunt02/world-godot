@@ -89,8 +89,7 @@ namespace Godot.SourceGenerators
         Password = 36,
         LayersAvoidance = 37,
         DictionaryType = 38,
-        ToolButton = 39,
-        Max = 40
+        Max = 39
     }
 
     [Flags]

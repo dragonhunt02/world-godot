@@ -30,8 +30,8 @@
 
 #include "gdextension_manager.h"
 
+#include "core/extension/gdextension_compat_hashes.h"
 #include "core/extension/gdextension_library_loader.h"
-#include "core/extension/gdextension_special_compat_hashes.h"
 #include "core/io/dir_access.h"
 #include "core/io/file_access.h"
 #include "core/object/script_language.h"
@@ -210,12 +210,6 @@ void GDExtensionManager::initialize_extensions(GDExtension::InitializationLevel 
 	ERR_FAIL_COND(int32_t(p_level) - 1 != level);
 	for (KeyValue<String, Ref<GDExtension>> &E : gdextension_map) {
 		E.value->initialize_library(p_level);
-
-		if (p_level == GDExtension::INITIALIZATION_LEVEL_EDITOR) {
-			for (const KeyValue<String, String> &kv : E.value->class_icon_paths) {
-				gdextension_class_icon_paths[kv.key] = kv.value;
-			}
-		}
 	}
 	level = p_level;
 }
@@ -264,7 +258,7 @@ void GDExtensionManager::load_extensions() {
 		String s = f->get_line().strip_edges();
 		if (!s.is_empty()) {
 			LoadStatus err = load_extension(s);
-			ERR_CONTINUE_MSG(err == LOAD_STATUS_FAILED, vformat("Error loading extension: '%s'.", s));
+			ERR_CONTINUE_MSG(err == LOAD_STATUS_FAILED, "Error loading extension: " + s);
 		}
 	}
 
@@ -391,7 +385,7 @@ GDExtensionManager::GDExtensionManager() {
 	singleton = this;
 
 #ifndef DISABLE_DEPRECATED
-	GDExtensionSpecialCompatHashes::initialize();
+	GDExtensionCompatHashes::initialize();
 #endif
 }
 
@@ -400,6 +394,6 @@ GDExtensionManager::~GDExtensionManager() {
 		singleton = nullptr;
 	}
 #ifndef DISABLE_DEPRECATED
-	GDExtensionSpecialCompatHashes::finalize();
+	GDExtensionCompatHashes::finalize();
 #endif
 }

@@ -78,7 +78,7 @@ void init_autoloads() {
 			scn.instantiate();
 			scn->set_path(info.path);
 			scn->reload_from_file();
-			ERR_CONTINUE_MSG(scn.is_null(), vformat("Failed to instantiate an autoload, can't load from path: %s.", info.path));
+			ERR_CONTINUE_MSG(!scn.is_valid(), vformat("Failed to instantiate an autoload, can't load from path: %s.", info.path));
 
 			if (scn.is_valid()) {
 				n = scn->instantiate();
@@ -176,7 +176,7 @@ static String strip_warnings(const String &p_expected) {
 	// so it doesn't fail just because of difference in warnings.
 	String expected_no_warnings;
 	for (String line : p_expected.split("\n")) {
-		if (line.begins_with("~~ ")) {
+		if (line.begins_with(">> ")) {
 			continue;
 		}
 		expected_no_warnings += line + "\n";
@@ -275,7 +275,6 @@ bool GDScriptTestRunner::make_tests_for_dir(const String &p_dir) {
 				return false;
 			}
 		} else {
-			// `*.notest.gd` files are skipped.
 			if (next.ends_with(".notest.gd")) {
 				next = dir->get_next();
 				continue;
@@ -451,43 +450,47 @@ void GDScriptTest::error_handler(void *p_this, const char *p_function, const cha
 
 	result->status = GDTEST_RUNTIME_ERROR;
 
-	// Only include the file, line, and function for script errors,
-	// otherwise the test outputs changes based on the platform/compiler.
-	String header;
+	StringBuilder builder;
+	builder.append(">> ");
+	// Only include the function, file and line for script errors, otherwise the
+	// test outputs changes based on the platform/compiler.
 	bool include_source_info = false;
 	switch (p_type) {
 		case ERR_HANDLER_ERROR:
-			header = "ERROR";
+			builder.append("ERROR");
 			break;
 		case ERR_HANDLER_WARNING:
-			header = "WARNING";
+			builder.append("WARNING");
 			break;
 		case ERR_HANDLER_SCRIPT:
-			header = "SCRIPT ERROR";
+			builder.append("SCRIPT ERROR");
 			include_source_info = true;
 			break;
 		case ERR_HANDLER_SHADER:
-			header = "SHADER ERROR";
+			builder.append("SHADER ERROR");
 			break;
 		default:
-			header = "UNKNOWN ERROR";
+			builder.append("Unknown error type");
 			break;
 	}
 
 	if (include_source_info) {
-		header += vformat(" at %s:%d on %s()",
-				String::utf8(p_file).trim_prefix(self->base_dir).replace("\\", "/"),
-				p_line,
-				String::utf8(p_function));
+		builder.append("\n>> on function: ");
+		builder.append(String::utf8(p_function));
+		builder.append("()\n>> ");
+		builder.append(String::utf8(p_file).trim_prefix(self->base_dir).replace("\\", "/"));
+		builder.append("\n>> ");
+		builder.append(itos(p_line));
 	}
-
-	StringBuilder error_string;
-	error_string.append(vformat(">> %s: %s\n", header, String::utf8(p_error)));
+	builder.append("\n>> ");
+	builder.append(String::utf8(p_error));
 	if (strlen(p_explanation) > 0) {
-		error_string.append(vformat(">>   %s\n", String::utf8(p_explanation)));
+		builder.append("\n>> ");
+		builder.append(String::utf8(p_explanation));
 	}
+	builder.append("\n");
 
-	result->output += error_string.as_string();
+	result->output = builder.as_string();
 }
 
 bool GDScriptTest::check_output(const String &p_output) const {
@@ -585,11 +588,11 @@ GDScriptTest::TestResult GDScriptTest::execute_test_code(bool p_is_generating) {
 		result.status = GDTEST_ANALYZER_ERROR;
 		result.output = get_text_for_status(result.status) + "\n";
 
-		StringBuilder error_string;
-		for (const GDScriptParser::ParserError &error : parser.get_errors()) {
-			error_string.append(vformat(">> ERROR at line %d: %s\n", error.line, error.message));
+		const List<GDScriptParser::ParserError> &errors = parser.get_errors();
+		if (!errors.is_empty()) {
+			// Only the first error since the following might be cascading.
+			result.output += errors.front()->get().message + "\n"; // TODO: line, column?
 		}
-		result.output += error_string.as_string();
 		if (!p_is_generating) {
 			result.passed = check_output(result.output);
 		}
@@ -598,8 +601,16 @@ GDScriptTest::TestResult GDScriptTest::execute_test_code(bool p_is_generating) {
 
 #ifdef DEBUG_ENABLED
 	StringBuilder warning_string;
-	for (const GDScriptWarning &warning : parser.get_warnings()) {
-		warning_string.append(vformat("~~ WARNING at line %d: (%s) %s\n", warning.start_line, warning.get_name(), warning.get_message()));
+	for (const GDScriptWarning &E : parser.get_warnings()) {
+		const GDScriptWarning warning = E;
+		warning_string.append(">> WARNING");
+		warning_string.append("\n>> Line: ");
+		warning_string.append(itos(warning.start_line));
+		warning_string.append("\n>> ");
+		warning_string.append(warning.get_name());
+		warning_string.append("\n>> ");
+		warning_string.append(warning.get_message());
+		warning_string.append("\n");
 	}
 	result.output += warning_string.as_string();
 #endif
@@ -617,18 +628,12 @@ GDScriptTest::TestResult GDScriptTest::execute_test_code(bool p_is_generating) {
 		}
 		return result;
 	}
-
-	// `*.norun.gd` files are allowed to not contain a `test()` function (no runtime testing).
-	if (source_file.ends_with(".norun.gd")) {
+	// Script files matching this pattern are allowed to not contain a test() function.
+	if (source_file.match("*.notest.gd")) {
 		enable_stdout();
-		result.status = GDTEST_OK;
-		result.output = get_text_for_status(result.status) + "\n" + result.output;
-		if (!p_is_generating) {
-			result.passed = check_output(result.output);
-		}
+		result.passed = check_output(result.output);
 		return result;
 	}
-
 	// Test running.
 	const HashMap<StringName, GDScriptFunction *>::ConstIterator test_function_element = script->get_member_functions().find(GDScriptTestRunner::test_function_name);
 	if (!test_function_element) {

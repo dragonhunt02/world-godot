@@ -258,13 +258,7 @@ public:
 	bool is_group_task_completed(GroupID p_group) const;
 	void wait_for_group_task_completion(GroupID p_group);
 
-	_FORCE_INLINE_ int get_thread_count() const {
-#ifdef THREADS_ENABLED
-		return threads.size();
-#else
-		return 1;
-#endif
-	}
+	_FORCE_INLINE_ int get_thread_count() const { return threads.size(); }
 
 	static WorkerThreadPool *get_singleton() { return singleton; }
 	static int get_thread_index();

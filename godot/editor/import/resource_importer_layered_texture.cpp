@@ -32,12 +32,15 @@
 
 #include "core/config/project_settings.h"
 #include "core/error/error_macros.h"
+#include "core/io/config_file.h"
 #include "core/io/image_loader.h"
 #include "core/object/ref_counted.h"
 #include "editor/editor_file_system.h"
+#include "editor/editor_node.h"
 #include "editor/import/resource_importer_texture.h"
 #include "editor/import/resource_importer_texture_settings.h"
 #include "scene/resources/compressed_texture.h"
+#include "scene/resources/texture.h"
 
 String ResourceImporterLayeredTexture::get_importer_name() const {
 	switch (mode) {
@@ -286,7 +289,7 @@ void ResourceImporterLayeredTexture::_save_tex(Vector<Ref<Image>> p_images, cons
 	}
 }
 
-Error ResourceImporterLayeredTexture::import(ResourceUID::ID p_source_id, const String &p_source_file, const String &p_save_path, const HashMap<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata) {
+Error ResourceImporterLayeredTexture::import(const String &p_source_file, const String &p_save_path, const HashMap<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata) {
 	int compress_mode = p_options["compress/mode"];
 	float lossy = p_options["compress/lossy_quality"];
 	bool high_quality = p_options["compress/high_quality"];
@@ -340,7 +343,7 @@ Error ResourceImporterLayeredTexture::import(ResourceUID::ID p_source_id, const 
 		//if using video ram, optimize
 		if (channel_pack == 0) {
 			//remove alpha if not needed, so compression is more efficient
-			if (image->get_format() == Image::FORMAT_RGBA8 && image->detect_alpha() == Image::ALPHA_NONE) {
+			if (image->get_format() == Image::FORMAT_RGBA8 && !image->detect_alpha()) {
 				image->convert(Image::FORMAT_RGB8);
 			}
 		} else if (image->get_format() < Image::FORMAT_RGBA8) {
@@ -484,7 +487,6 @@ ResourceImporterLayeredTexture::~ResourceImporterLayeredTexture() {
 void ResourceImporterLayeredTexture::_check_compress_ctex(const String &p_source_file, Ref<LayeredTextureImport> r_texture_import) {
 	String extension = get_save_extension();
 	ERR_FAIL_NULL(r_texture_import->csource);
-
 	if (r_texture_import->compress_mode != COMPRESS_VRAM_COMPRESSED) {
 		// Import normally.
 		_save_tex(*r_texture_import->slices, r_texture_import->save_path + "." + extension, r_texture_import->compress_mode, r_texture_import->lossy, Image::COMPRESS_S3TC /* IGNORED */, *r_texture_import->csource, r_texture_import->used_channels, r_texture_import->mipmaps, false);

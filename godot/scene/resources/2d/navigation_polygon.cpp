@@ -32,10 +32,11 @@
 
 #include "core/math/geometry_2d.h"
 #include "core/os/mutex.h"
+#include "servers/navigation_server_2d.h"
 
 #include "thirdparty/misc/polypartition.h"
 
-#ifdef DEBUG_ENABLED
+#ifdef TOOLS_ENABLED
 Rect2 NavigationPolygon::_edit_get_rect() const {
 	RWLockRead read_lock(rwlock);
 	if (rect_cache_dirty) {
@@ -78,7 +79,7 @@ bool NavigationPolygon::_edit_is_selected_on_click(const Point2 &p_point, double
 	}
 	return false;
 }
-#endif // DEBUG_ENABLED
+#endif
 
 void NavigationPolygon::set_vertices(const Vector<Vector2> &p_vertices) {
 	RWLockWrite write_lock(rwlock);

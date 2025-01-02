@@ -31,75 +31,108 @@
 #include "navigation_path_query_parameters_3d.h"
 
 void NavigationPathQueryParameters3D::set_pathfinding_algorithm(const NavigationPathQueryParameters3D::PathfindingAlgorithm p_pathfinding_algorithm) {
-	pathfinding_algorithm = p_pathfinding_algorithm;
+	switch (p_pathfinding_algorithm) {
+		case PATHFINDING_ALGORITHM_ASTAR: {
+			parameters.pathfinding_algorithm = NavigationUtilities::PathfindingAlgorithm::PATHFINDING_ALGORITHM_ASTAR;
+		} break;
+		default: {
+			WARN_PRINT_ONCE("No match for used PathfindingAlgorithm - fallback to default");
+			parameters.pathfinding_algorithm = NavigationUtilities::PathfindingAlgorithm::PATHFINDING_ALGORITHM_ASTAR;
+		} break;
+	}
 }
 
 NavigationPathQueryParameters3D::PathfindingAlgorithm NavigationPathQueryParameters3D::get_pathfinding_algorithm() const {
-	return pathfinding_algorithm;
+	switch (parameters.pathfinding_algorithm) {
+		case NavigationUtilities::PathfindingAlgorithm::PATHFINDING_ALGORITHM_ASTAR:
+			return PATHFINDING_ALGORITHM_ASTAR;
+		default:
+			WARN_PRINT_ONCE("No match for used PathfindingAlgorithm - fallback to default");
+			return PATHFINDING_ALGORITHM_ASTAR;
+	}
 }
 
 void NavigationPathQueryParameters3D::set_path_postprocessing(const NavigationPathQueryParameters3D::PathPostProcessing p_path_postprocessing) {
-	path_postprocessing = p_path_postprocessing;
+	switch (p_path_postprocessing) {
+		case PATH_POSTPROCESSING_CORRIDORFUNNEL: {
+			parameters.path_postprocessing = NavigationUtilities::PathPostProcessing::PATH_POSTPROCESSING_CORRIDORFUNNEL;
+		} break;
+		case PATH_POSTPROCESSING_EDGECENTERED: {
+			parameters.path_postprocessing = NavigationUtilities::PathPostProcessing::PATH_POSTPROCESSING_EDGECENTERED;
+		} break;
+		default: {
+			WARN_PRINT_ONCE("No match for used PathPostProcessing - fallback to default");
+			parameters.path_postprocessing = NavigationUtilities::PathPostProcessing::PATH_POSTPROCESSING_CORRIDORFUNNEL;
+		} break;
+	}
 }
 
 NavigationPathQueryParameters3D::PathPostProcessing NavigationPathQueryParameters3D::get_path_postprocessing() const {
-	return path_postprocessing;
+	switch (parameters.path_postprocessing) {
+		case NavigationUtilities::PathPostProcessing::PATH_POSTPROCESSING_CORRIDORFUNNEL:
+			return PATH_POSTPROCESSING_CORRIDORFUNNEL;
+		case NavigationUtilities::PathPostProcessing::PATH_POSTPROCESSING_EDGECENTERED:
+			return PATH_POSTPROCESSING_EDGECENTERED;
+		default:
+			WARN_PRINT_ONCE("No match for used PathPostProcessing - fallback to default");
+			return PATH_POSTPROCESSING_CORRIDORFUNNEL;
+	}
 }
 
-void NavigationPathQueryParameters3D::set_map(RID p_map) {
-	map = p_map;
+void NavigationPathQueryParameters3D::set_map(const RID &p_map) {
+	parameters.map = p_map;
 }
 
-RID NavigationPathQueryParameters3D::get_map() const {
-	return map;
+const RID &NavigationPathQueryParameters3D::get_map() const {
+	return parameters.map;
 }
 
-void NavigationPathQueryParameters3D::set_start_position(Vector3 p_start_position) {
-	start_position = p_start_position;
+void NavigationPathQueryParameters3D::set_start_position(const Vector3 &p_start_position) {
+	parameters.start_position = p_start_position;
 }
 
-Vector3 NavigationPathQueryParameters3D::get_start_position() const {
-	return start_position;
+const Vector3 &NavigationPathQueryParameters3D::get_start_position() const {
+	return parameters.start_position;
 }
 
-void NavigationPathQueryParameters3D::set_target_position(Vector3 p_target_position) {
-	target_position = p_target_position;
+void NavigationPathQueryParameters3D::set_target_position(const Vector3 &p_target_position) {
+	parameters.target_position = p_target_position;
 }
 
-Vector3 NavigationPathQueryParameters3D::get_target_position() const {
-	return target_position;
+const Vector3 &NavigationPathQueryParameters3D::get_target_position() const {
+	return parameters.target_position;
 }
 
 void NavigationPathQueryParameters3D::set_navigation_layers(uint32_t p_navigation_layers) {
-	navigation_layers = p_navigation_layers;
+	parameters.navigation_layers = p_navigation_layers;
 }
 
 uint32_t NavigationPathQueryParameters3D::get_navigation_layers() const {
-	return navigation_layers;
+	return parameters.navigation_layers;
 }
 
 void NavigationPathQueryParameters3D::set_metadata_flags(BitField<NavigationPathQueryParameters3D::PathMetadataFlags> p_flags) {
-	metadata_flags = (int64_t)p_flags;
+	parameters.metadata_flags = (int64_t)p_flags;
 }
 
 BitField<NavigationPathQueryParameters3D::PathMetadataFlags> NavigationPathQueryParameters3D::get_metadata_flags() const {
-	return (int64_t)metadata_flags;
+	return (int64_t)parameters.metadata_flags;
 }
 
 void NavigationPathQueryParameters3D::set_simplify_path(bool p_enabled) {
-	simplify_path = p_enabled;
+	parameters.simplify_path = p_enabled;
 }
 
 bool NavigationPathQueryParameters3D::get_simplify_path() const {
-	return simplify_path;
+	return parameters.simplify_path;
 }
 
 void NavigationPathQueryParameters3D::set_simplify_epsilon(real_t p_epsilon) {
-	simplify_epsilon = MAX(0.0, p_epsilon);
+	parameters.simplify_epsilon = MAX(0.0, p_epsilon);
 }
 
 real_t NavigationPathQueryParameters3D::get_simplify_epsilon() const {
-	return simplify_epsilon;
+	return parameters.simplify_epsilon;
 }
 
 void NavigationPathQueryParameters3D::_bind_methods() {
@@ -135,7 +168,7 @@ void NavigationPathQueryParameters3D::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "target_position"), "set_target_position", "get_target_position");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "navigation_layers", PROPERTY_HINT_LAYERS_3D_NAVIGATION), "set_navigation_layers", "get_navigation_layers");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "pathfinding_algorithm", PROPERTY_HINT_ENUM, "AStar"), "set_pathfinding_algorithm", "get_pathfinding_algorithm");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "path_postprocessing", PROPERTY_HINT_ENUM, "Corridorfunnel,Edgecentered,None"), "set_path_postprocessing", "get_path_postprocessing");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "path_postprocessing", PROPERTY_HINT_ENUM, "Corridorfunnel,Edgecentered"), "set_path_postprocessing", "get_path_postprocessing");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "metadata_flags", PROPERTY_HINT_FLAGS, "Include Types,Include RIDs,Include Owners"), "set_metadata_flags", "get_metadata_flags");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "simplify_path"), "set_simplify_path", "get_simplify_path");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "simplify_epsilon"), "set_simplify_epsilon", "get_simplify_epsilon");
@@ -144,7 +177,6 @@ void NavigationPathQueryParameters3D::_bind_methods() {
 
 	BIND_ENUM_CONSTANT(PATH_POSTPROCESSING_CORRIDORFUNNEL);
 	BIND_ENUM_CONSTANT(PATH_POSTPROCESSING_EDGECENTERED);
-	BIND_ENUM_CONSTANT(PATH_POSTPROCESSING_NONE);
 
 	BIND_BITFIELD_FLAG(PATH_METADATA_INCLUDE_NONE);
 	BIND_BITFIELD_FLAG(PATH_METADATA_INCLUDE_TYPES);

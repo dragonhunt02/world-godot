@@ -231,7 +231,7 @@ class AnimatedSprite3D : public SpriteBase3D {
 	String autoplay;
 
 	bool playing = false;
-	StringName animation = SceneStringName(default_);
+	StringName animation = "default";
 	int frame = 0;
 	float speed_scale = 1.0;
 	float custom_speed_scale = 1.0;

@@ -29,6 +29,7 @@
 /**************************************************************************/
 
 #include "xr_interface.h"
+#include "servers/rendering/renderer_compositor.h"
 
 void XRInterface::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("play_area_changed", PropertyInfo(Variant::INT, "mode")));
@@ -184,14 +185,6 @@ RID XRInterface::get_depth_texture() {
 
 RID XRInterface::get_velocity_texture() {
 	return RID();
-}
-
-RID XRInterface::get_velocity_depth_texture() {
-	return RID();
-}
-
-Size2i XRInterface::get_velocity_target_size() {
-	return Size2i();
 }
 
 PackedStringArray XRInterface::get_suggested_tracker_names() const {

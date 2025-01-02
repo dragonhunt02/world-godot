@@ -35,6 +35,7 @@
 #include "servers/physics_server_3d.h"
 
 class PhysicsBody3D;
+class SoftBody3D;
 
 class SoftBodyRenderingServerHandler : public PhysicsServer3DRenderingServerHandler {
 	friend class SoftBody3D;

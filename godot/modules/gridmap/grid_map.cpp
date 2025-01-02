@@ -31,7 +31,9 @@
 #include "grid_map.h"
 
 #include "core/io/marshalls.h"
+#include "scene/3d/light_3d.h"
 #include "scene/resources/3d/mesh_library.h"
+#include "scene/resources/3d/primitive_meshes.h"
 #include "scene/resources/physics_material.h"
 #include "scene/resources/surface_tool.h"
 #include "servers/navigation_server_3d.h"
@@ -68,7 +70,7 @@ bool GridMap::_set(const StringName &p_name, const Variant &p_value) {
 		for (int i = 0; i < meshes.size(); i++) {
 			BakedMesh bm;
 			bm.mesh = meshes[i];
-			ERR_CONTINUE(bm.mesh.is_null());
+			ERR_CONTINUE(!bm.mesh.is_valid());
 			bm.instance = RS::get_singleton()->instance_create();
 			RS::get_singleton()->instance_set_base(bm.instance, bm.mesh->get_rid());
 			RS::get_singleton()->instance_attach_object_instance_id(bm.instance, get_instance_id());
@@ -253,11 +255,11 @@ RID GridMap::get_navigation_map() const {
 }
 
 void GridMap::set_mesh_library(const Ref<MeshLibrary> &p_mesh_library) {
-	if (mesh_library.is_valid()) {
+	if (!mesh_library.is_null()) {
 		mesh_library->disconnect_changed(callable_mp(this, &GridMap::_recreate_octant_data));
 	}
 	mesh_library = p_mesh_library;
-	if (mesh_library.is_valid()) {
+	if (!mesh_library.is_null()) {
 		mesh_library->connect_changed(callable_mp(this, &GridMap::_recreate_octant_data));
 	}
 
@@ -594,7 +596,7 @@ bool GridMap::_octant_update(const OctantKey &p_key) {
 		ERR_CONTINUE(!cell_map.has(E));
 		const Cell &c = cell_map[E];
 
-		if (mesh_library.is_null() || !mesh_library->has_item(c.item)) {
+		if (!mesh_library.is_valid() || !mesh_library->has_item(c.item)) {
 			continue;
 		}
 
@@ -623,7 +625,7 @@ bool GridMap::_octant_update(const OctantKey &p_key) {
 		// add the item's shape at given xform to octant's static_body
 		for (int i = 0; i < shapes.size(); i++) {
 			// add the item's shape
-			if (shapes[i].shape.is_null()) {
+			if (!shapes[i].shape.is_valid()) {
 				continue;
 			}
 			PhysicsServer3D::get_singleton()->body_add_shape(g.static_body, shapes[i].shape->get_rid(), xform * shapes[i].local_transform);
@@ -712,9 +714,6 @@ bool GridMap::_octant_update(const OctantKey &p_key) {
 				RS::get_singleton()->instance_set_transform(instance, get_global_transform());
 			}
 
-			RS::ShadowCastingSetting cast_shadows = (RS::ShadowCastingSetting)mesh_library->get_item_mesh_cast_shadow(E.key);
-			RS::get_singleton()->instance_geometry_set_cast_shadows_setting(instance, cast_shadows);
-
 			mmi.multimesh = mm;
 			mmi.instance = instance;
 
@@ -802,8 +801,8 @@ void GridMap::_octant_enter_world(const OctantKey &p_key) {
 			if (!g.navigation_debug_edge_connections_instance.is_valid()) {
 				g.navigation_debug_edge_connections_instance = RenderingServer::get_singleton()->instance_create();
 			}
-			if (g.navigation_debug_edge_connections_mesh.is_null()) {
-				g.navigation_debug_edge_connections_mesh.instantiate();
+			if (!g.navigation_debug_edge_connections_mesh.is_valid()) {
+				g.navigation_debug_edge_connections_mesh = Ref<ArrayMesh>(memnew(ArrayMesh));
 			}
 
 			_update_octant_navigation_debug_edge_connections_mesh(p_key);
@@ -848,7 +847,7 @@ void GridMap::_octant_exit_world(const OctantKey &p_key) {
 			g.navigation_debug_edge_connections_instance = RID();
 		}
 		if (g.navigation_debug_edge_connections_mesh.is_valid()) {
-			g.navigation_debug_edge_connections_mesh.unref();
+			RenderingServer::get_singleton()->free(g.navigation_debug_edge_connections_mesh->get_rid());
 		}
 	}
 #endif // DEBUG_ENABLED
@@ -889,7 +888,7 @@ void GridMap::_octant_clean_up(const OctantKey &p_key) {
 			g.navigation_debug_edge_connections_instance = RID();
 		}
 		if (g.navigation_debug_edge_connections_mesh.is_valid()) {
-			g.navigation_debug_edge_connections_mesh.unref();
+			RenderingServer::get_singleton()->free(g.navigation_debug_edge_connections_mesh->get_rid());
 		}
 	}
 #endif // DEBUG_ENABLED
@@ -1225,7 +1224,7 @@ void GridMap::clear_baked_meshes() {
 }
 
 void GridMap::make_baked_meshes(bool p_gen_lightmap_uv, float p_lightmap_uv_texel_size) {
-	if (mesh_library.is_null()) {
+	if (!mesh_library.is_valid()) {
 		return;
 	}
 
@@ -1241,7 +1240,7 @@ void GridMap::make_baked_meshes(bool p_gen_lightmap_uv, float p_lightmap_uv_texe
 		}
 
 		Ref<Mesh> mesh = mesh_library->get_item_mesh(item);
-		if (mesh.is_null()) {
+		if (!mesh.is_valid()) {
 			continue;
 		}
 
@@ -1387,8 +1386,8 @@ void GridMap::_update_octant_navigation_debug_edge_connections_mesh(const Octant
 		g.navigation_debug_edge_connections_instance = RenderingServer::get_singleton()->instance_create();
 	}
 
-	if (g.navigation_debug_edge_connections_mesh.is_null()) {
-		g.navigation_debug_edge_connections_mesh.instantiate();
+	if (!g.navigation_debug_edge_connections_mesh.is_valid()) {
+		g.navigation_debug_edge_connections_mesh = Ref<ArrayMesh>(memnew(ArrayMesh));
 	}
 
 	g.navigation_debug_edge_connections_mesh->clear_surfaces();

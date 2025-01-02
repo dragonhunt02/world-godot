@@ -464,7 +464,7 @@ Error ResourceLoaderText::load() {
 
 		ext_resources[id].path = path;
 		ext_resources[id].type = type;
-		ext_resources[id].load_token = ResourceLoader::_load_start(path, type, use_sub_threads ? ResourceLoader::LOAD_THREAD_DISTRIBUTE : ResourceLoader::LOAD_THREAD_FROM_CURRENT, cache_mode_for_external, false, false, Dictionary(), Dictionary());
+		ext_resources[id].load_token = ResourceLoader::_load_start(path, type, use_sub_threads ? ResourceLoader::LOAD_THREAD_DISTRIBUTE : ResourceLoader::LOAD_THREAD_FROM_CURRENT, cache_mode_for_external);
 		if (!ext_resources[id].load_token.is_valid()) {
 			if (ResourceLoader::get_abort_on_missing_resources()) {
 				error = ERR_FILE_CORRUPT;
@@ -600,7 +600,7 @@ Error ResourceLoaderText::load() {
 				if (do_assign) {
 					bool set_valid = true;
 
-					if (value.get_type() == Variant::OBJECT && missing_resource == nullptr && ResourceLoader::is_creating_missing_resources_if_class_unavailable_enabled()) {
+					if (value.get_type() == Variant::OBJECT && missing_resource != nullptr) {
 						// If the property being set is a missing resource (and the parent is not),
 						// then setting it will most likely not work.
 						// Instead, save it as metadata.
@@ -684,7 +684,7 @@ Error ResourceLoaderText::load() {
 				resource = cache;
 			}
 
-			if (resource.is_null()) {
+			if (!resource.is_valid()) {
 				Object *obj = ClassDB::instantiate(res_type);
 				if (!obj) {
 					if (ResourceLoader::is_creating_missing_resources_if_class_unavailable_enabled()) {
@@ -723,25 +723,24 @@ Error ResourceLoaderText::load() {
 			if (error) {
 				if (error != ERR_FILE_EOF) {
 					_printerr();
-					return error;
-				}
-				// EOF, Done parsing.
-				error = OK;
-				if (cache_mode != ResourceFormatLoader::CACHE_MODE_IGNORE) {
-					if (!ResourceCache::has(res_path)) {
-						resource->set_path(res_path);
-					}
-					resource->set_as_translation_remapped(translation_remapped);
 				} else {
-					resource->set_path_cache(res_path);
+					error = OK;
+					if (cache_mode != ResourceFormatLoader::CACHE_MODE_IGNORE) {
+						if (!ResourceCache::has(res_path)) {
+							resource->set_path(res_path);
+						}
+						resource->set_as_translation_remapped(translation_remapped);
+					} else {
+						resource->set_path_cache(res_path);
+					}
 				}
-				break;
+				return error;
 			}
 
 			if (!assign.is_empty()) {
 				bool set_valid = true;
 
-				if (value.get_type() == Variant::OBJECT && missing_resource == nullptr && ResourceLoader::is_creating_missing_resources_if_class_unavailable_enabled()) {
+				if (value.get_type() == Variant::OBJECT && missing_resource != nullptr) {
 					// If the property being set is a missing resource (and the parent is not),
 					// then setting it will most likely not work.
 					// Instead, save it as metadata.
@@ -823,7 +822,7 @@ Error ResourceLoaderText::load() {
 
 		Ref<PackedScene> packed_scene = _parse_node_tag(rp);
 
-		if (packed_scene.is_null()) {
+		if (!packed_scene.is_valid()) {
 			return error;
 		}
 
@@ -1526,10 +1525,6 @@ ResourceUID::ID ResourceFormatLoaderText::get_resource_uid(const String &p_path)
 	return loader.get_uid(f);
 }
 
-bool ResourceFormatLoaderText::has_custom_uid_support() const {
-	return true;
-}
-
 void ResourceFormatLoaderText::get_dependencies(const String &p_path, List<String> *p_dependencies, bool p_add_types) {
 	Ref<FileAccess> f = FileAccess::open(p_path, FileAccess::READ);
 	if (f.is_null()) {
@@ -1782,7 +1777,7 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const Ref<Reso
 	for (KeyValue<Ref<Resource>, String> &E : external_resources) {
 		String cached_id = E.key->get_id_for_path(local_path);
 		if (cached_id.is_empty() || cached_ids_found.has(cached_id)) {
-			int sep_pos = E.value.find_char('_');
+			int sep_pos = E.value.find("_");
 			if (sep_pos != -1) {
 				E.value = E.value.substr(0, sep_pos + 1); // Keep the order found, for improved thread loading performance.
 			} else {
@@ -1905,7 +1900,7 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const Ref<Reso
 #endif
 		}
 
-		Dictionary missing_resource_properties = res->get_meta(META_MISSING_RESOURCES, Dictionary());
+		Dictionary missing_resource_properties = p_resource->get_meta(META_MISSING_RESOURCES, Dictionary());
 
 		List<PropertyInfo> property_list;
 		res->get_property_list(&property_list);
@@ -1917,7 +1912,7 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const Ref<Reso
 				continue;
 			}
 
-			if (PE->get().usage & PROPERTY_USAGE_STORAGE || missing_resource_properties.has(PE->get().name)) {
+			if (PE->get().usage & PROPERTY_USAGE_STORAGE) {
 				String name = PE->get().name;
 				Variant value;
 				if (PE->get().usage & PROPERTY_USAGE_RESOURCE_NOT_PERSISTENT) {
@@ -2121,7 +2116,7 @@ Error ResourceLoaderText::set_uid(Ref<FileAccess> p_f, ResourceUID::ID p_uid) {
 }
 
 Error ResourceFormatSaverText::save(const Ref<Resource> &p_resource, const String &p_path, uint32_t p_flags) {
-	if (p_path.ends_with(".tscn") && Ref<PackedScene>(p_resource).is_null()) {
+	if (p_path.ends_with(".tscn") && !Ref<PackedScene>(p_resource).is_valid()) {
 		return ERR_FILE_UNRECOGNIZED;
 	}
 

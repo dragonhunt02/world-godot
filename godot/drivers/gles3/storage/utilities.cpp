@@ -40,6 +40,8 @@
 #include "particles_storage.h"
 #include "texture_storage.h"
 
+#include "servers/rendering/rendering_server_globals.h"
+
 using namespace GLES3;
 
 Utilities *Utilities::singleton = nullptr;

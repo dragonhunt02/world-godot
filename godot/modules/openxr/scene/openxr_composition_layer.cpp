@@ -85,7 +85,6 @@ OpenXRCompositionLayer::~OpenXRCompositionLayer() {
 	composition_layer_nodes.erase(this);
 
 	if (openxr_layer_provider != nullptr) {
-		_clear_composition_layer_provider();
 		memdelete(openxr_layer_provider);
 		openxr_layer_provider = nullptr;
 	}
@@ -375,7 +374,16 @@ void OpenXRCompositionLayer::_reset_fallback_material() {
 
 		material->set_flag(StandardMaterial3D::FLAG_DISABLE_DEPTH_TEST, !enable_hole_punch);
 		material->set_transparency(get_alpha_blend() ? StandardMaterial3D::TRANSPARENCY_ALPHA : StandardMaterial3D::TRANSPARENCY_DISABLED);
-		material->set_texture(StandardMaterial3D::TEXTURE_ALBEDO, layer_viewport->get_texture());
+
+		Ref<ViewportTexture> texture = material->get_texture(StandardMaterial3D::TEXTURE_ALBEDO);
+		if (texture.is_null()) {
+			texture = layer_viewport->get_texture();
+		}
+
+		Node *loc_scene = texture->get_local_scene();
+		NodePath viewport_path = loc_scene->get_path_to(layer_viewport);
+		texture->set_viewport_path_in_scene(viewport_path);
+		material->set_texture(StandardMaterial3D::TEXTURE_ALBEDO, texture);
 	} else {
 		fallback->set_surface_override_material(0, Ref<Material>());
 	}
@@ -401,7 +409,7 @@ void OpenXRCompositionLayer::_notification(int p_what) {
 			}
 		} break;
 		case NOTIFICATION_VISIBILITY_CHANGED: {
-			if (is_natively_supported() && openxr_session_running && is_inside_tree()) {
+			if (!fallback && openxr_session_running && is_inside_tree()) {
 				if (is_visible()) {
 					_setup_composition_layer_provider();
 				} else {
@@ -435,7 +443,7 @@ void OpenXRCompositionLayer::_get_property_list(List<PropertyInfo> *p_property_l
 
 	for (const PropertyInfo &pinfo : extension_properties) {
 		StringName prop_name = pinfo.name;
-		if (!String(prop_name).contains_char('/')) {
+		if (!String(prop_name).contains("/")) {
 			WARN_PRINT_ONCE(vformat("Discarding OpenXRCompositionLayer property name '%s' from extension because it doesn't contain a '/'."));
 			continue;
 		}

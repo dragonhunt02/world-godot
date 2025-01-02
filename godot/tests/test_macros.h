@@ -93,11 +93,8 @@ DOCTEST_STRINGIFY_VARIANT(Rect2);
 DOCTEST_STRINGIFY_VARIANT(Rect2i);
 DOCTEST_STRINGIFY_VARIANT(Vector3);
 DOCTEST_STRINGIFY_VARIANT(Vector3i);
-DOCTEST_STRINGIFY_VARIANT(Vector4);
-DOCTEST_STRINGIFY_VARIANT(Vector4i);
 DOCTEST_STRINGIFY_VARIANT(Transform2D);
 DOCTEST_STRINGIFY_VARIANT(Plane);
-DOCTEST_STRINGIFY_VARIANT(Projection);
 DOCTEST_STRINGIFY_VARIANT(Quaternion);
 DOCTEST_STRINGIFY_VARIANT(AABB);
 DOCTEST_STRINGIFY_VARIANT(Basis);
@@ -477,6 +474,6 @@ public:
 		for (int i = 0; i < string_list.size(); ++i) {                                           \
 			CHECK(string_list[i] == m_slices[i]);                                                \
 		}                                                                                        \
-	} while (false)
+	} while (0)
 
 #endif // TEST_MACROS_H

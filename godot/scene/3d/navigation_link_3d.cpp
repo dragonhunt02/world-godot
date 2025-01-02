@@ -30,6 +30,7 @@
 
 #include "navigation_link_3d.h"
 
+#include "mesh_instance_3d.h"
 #include "servers/navigation_server_3d.h"
 
 #ifdef DEBUG_ENABLED
@@ -55,8 +56,8 @@ void NavigationLink3D::_update_debug_mesh() {
 		debug_instance = RenderingServer::get_singleton()->instance_create();
 	}
 
-	if (debug_mesh.is_null()) {
-		debug_mesh.instantiate();
+	if (!debug_mesh.is_valid()) {
+		debug_mesh = Ref<ArrayMesh>(memnew(ArrayMesh));
 	}
 
 	RID nav_map = get_world_3d()->get_navigation_map();

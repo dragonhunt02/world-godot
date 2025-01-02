@@ -34,6 +34,7 @@
 #include "core/io/resource.h"
 #include "core/object/gdvirtual.gen.inc"
 #include "core/object/worker_thread_pool.h"
+#include "core/os/semaphore.h"
 #include "core/os/thread.h"
 
 class ConditionVariable;
@@ -71,9 +72,6 @@ protected:
 
 public:
 	virtual Ref<Resource> load(const String &p_path, const String &p_original_path = "", Error *r_error = nullptr, bool p_use_sub_threads = false, float *r_progress = nullptr, CacheMode p_cache_mode = CACHE_MODE_REUSE);
-	virtual Ref<Resource> load_whitelisted(const String &p_path, Dictionary p_external_path_whitelist, Dictionary p_type_whitelist, const String &p_original_path = "", Error *r_error = nullptr, bool p_use_sub_threads = false, float *r_progress = nullptr, CacheMode p_cache_mode = CACHE_MODE_REUSE) {
-		return Ref<Resource>();
-	}
 	virtual bool exists(const String &p_path) const;
 	virtual void get_recognized_extensions(List<String> *p_extensions) const;
 	virtual void get_recognized_extensions_for_type(const String &p_type, List<String> *p_extensions) const;
@@ -83,7 +81,6 @@ public:
 	virtual String get_resource_type(const String &p_path) const;
 	virtual String get_resource_script_class(const String &p_path) const;
 	virtual ResourceUID::ID get_resource_uid(const String &p_path) const;
-	virtual bool has_custom_uid_support() const;
 	virtual void get_dependencies(const String &p_path, List<String> *p_dependencies, bool p_add_types = false);
 	virtual Error rename_dependencies(const String &p_path, const HashMap<String, String> &p_map);
 	virtual bool is_import_valid(const String &p_path) const { return true; }
@@ -138,7 +135,7 @@ public:
 
 	static const int BINARY_MUTEX_TAG = 1;
 
-	static Ref<LoadToken> _load_start(const String &p_path, const String &p_type_hint, LoadThreadMode p_thread_mode, ResourceFormatLoader::CacheMode p_cache_mode, bool p_for_user, bool p_use_whitelist, Dictionary p_external_path_whitelist, Dictionary p_type_whitelist);
+	static Ref<LoadToken> _load_start(const String &p_path, const String &p_type_hint, LoadThreadMode p_thread_mode, ResourceFormatLoader::CacheMode p_cache_mode, bool p_for_user = false);
 	static Ref<Resource> _load_complete(LoadToken &p_load_token, Error *r_error);
 
 private:
@@ -167,7 +164,7 @@ private:
 
 	friend class ResourceFormatImporter;
 
-	static Ref<Resource> _load(const String &p_path, const String &p_original_path, const String &p_type_hint, ResourceFormatLoader::CacheMode p_cache_mode, bool p_using_whitelist, Dictionary p_external_path_whitelist, Dictionary p_type_whitelist, Error *r_error, bool p_use_sub_threads, float *r_progress);
+	static Ref<Resource> _load(const String &p_path, const String &p_original_path, const String &p_type_hint, ResourceFormatLoader::CacheMode p_cache_mode, Error *r_error, bool p_use_sub_threads, float *r_progress);
 
 	static ResourceLoadedCallback _loaded_callback;
 
@@ -191,7 +188,6 @@ private:
 		Error error = OK;
 		Ref<Resource> resource;
 		bool use_sub_threads = false;
-		bool using_whitelist = false;
 		HashSet<String> sub_tasks;
 
 		struct ResourceChangedConnection {
@@ -200,8 +196,6 @@ private:
 			uint32_t flags = 0;
 		};
 		LocalVector<ResourceChangedConnection> resource_changed_connections;
-		Dictionary external_path_whitelist;
-		Dictionary type_whitelist;
 	};
 
 	static void _run_load_task(void *p_userdata);
@@ -221,12 +215,9 @@ private:
 
 	static float _dependency_get_progress(const String &p_path);
 
-	static Error _load_threaded_request_whitelisted_int(const String &p_path, const String &p_type_hint, bool p_use_sub_threads, ResourceFormatLoader::CacheMode p_cache_mode, bool p_use_whitelist, Dictionary p_external_path_whitelist, Dictionary p_type_whitelist);
-
 	static bool _ensure_load_progress();
 
 public:
-	static Error load_threaded_request_whitelisted(const String &p_path, Dictionary p_external_path_whitelist, Dictionary p_type_whitelist, const String &p_type_hint = "", bool p_use_sub_threads = false, ResourceFormatLoader::CacheMode p_cache_mode = ResourceFormatLoader::CACHE_MODE_REUSE);
 	static Error load_threaded_request(const String &p_path, const String &p_type_hint = "", bool p_use_sub_threads = false, ResourceFormatLoader::CacheMode p_cache_mode = ResourceFormatLoader::CACHE_MODE_REUSE);
 	static ThreadLoadStatus load_threaded_get_status(const String &p_path, float *r_progress = nullptr);
 	static Ref<Resource> load_threaded_get(const String &p_path, Error *r_error = nullptr);
@@ -237,7 +228,6 @@ public:
 	static void resource_changed_disconnect(Resource *p_source, const Callable &p_callable);
 	static void resource_changed_emit(Resource *p_source);
 
-	static Ref<Resource> load_whitelisted(const String &p_path, Dictionary p_external_path_whitelist, Dictionary p_type_whitelist, const String &p_type_hint = "", ResourceFormatLoader::CacheMode p_cache_mode = ResourceFormatLoader::CACHE_MODE_REUSE, Error *r_error = nullptr);
 	static Ref<Resource> load(const String &p_path, const String &p_type_hint = "", ResourceFormatLoader::CacheMode p_cache_mode = ResourceFormatLoader::CACHE_MODE_REUSE, Error *r_error = nullptr);
 	static bool exists(const String &p_path, const String &p_type_hint = "");
 
@@ -248,7 +238,6 @@ public:
 	static String get_resource_type(const String &p_path);
 	static String get_resource_script_class(const String &p_path);
 	static ResourceUID::ID get_resource_uid(const String &p_path);
-	static bool has_custom_uid_support(const String &p_path);
 	static void get_dependencies(const String &p_path, List<String> *p_dependencies, bool p_add_types = false);
 	static Error rename_dependencies(const String &p_path, const HashMap<String, String> &p_map);
 	static bool is_import_valid(const String &p_path);
@@ -312,8 +301,6 @@ public:
 	static Ref<Resource> get_resource_ref_override(const String &p_path);
 
 	static bool is_cleaning_tasks();
-
-	static Vector<String> list_directory(const String &p_directory);
 
 	static void initialize();
 	static void finalize();

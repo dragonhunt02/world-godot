@@ -116,10 +116,6 @@ void Engine::set_time_scale(double p_scale) {
 }
 
 double Engine::get_time_scale() const {
-	return freeze_time_scale ? 0 : _time_scale;
-}
-
-double Engine::get_unfrozen_time_scale() const {
 	return _time_scale;
 }
 
@@ -247,9 +243,6 @@ String Engine::get_architecture_name() const {
 #else
 	return "ppc";
 #endif
-
-#elif defined(__loongarch64)
-	return "loongarch64";
 
 #elif defined(__wasm__)
 #if defined(__wasm64__)
@@ -409,18 +402,6 @@ Engine *Engine::get_singleton() {
 bool Engine::notify_frame_server_synced() {
 	frame_server_synced = true;
 	return server_syncs > SERVER_SYNC_FRAME_COUNT_WARNING;
-}
-
-void Engine::set_freeze_time_scale(bool p_frozen) {
-	freeze_time_scale = p_frozen;
-}
-
-void Engine::set_embedded_in_editor(bool p_enabled) {
-	embedded_in_editor = p_enabled;
-}
-
-bool Engine::is_embedded_in_editor() const {
-	return embedded_in_editor;
 }
 
 Engine::Engine() {

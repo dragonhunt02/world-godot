@@ -33,8 +33,10 @@
 
 #ifdef GLES3_ENABLED
 
+#include "core/templates/local_vector.h"
 #include "core/templates/rid_owner.h"
 #include "core/templates/self_list.h"
+#include "servers/rendering/renderer_compositor.h"
 #include "servers/rendering/shader_compiler.h"
 #include "servers/rendering/shader_language.h"
 #include "servers/rendering/storage/material_storage.h"
@@ -261,6 +263,12 @@ struct SceneShaderData : public ShaderData {
 		DEPTH_TEST_ENABLED
 	};
 
+	enum Cull {
+		CULL_DISABLED,
+		CULL_FRONT,
+		CULL_BACK
+	};
+
 	enum AlphaAntiAliasing {
 		ALPHA_ANTIALIASING_OFF,
 		ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE,
@@ -284,7 +292,7 @@ struct SceneShaderData : public ShaderData {
 	AlphaAntiAliasing alpha_antialiasing_mode;
 	DepthDraw depth_draw;
 	DepthTest depth_test;
-	RS::CullMode cull_mode;
+	Cull cull_mode;
 
 	bool uses_point_size;
 	bool uses_alpha;
@@ -610,7 +618,6 @@ public:
 
 	virtual bool material_is_animated(RID p_material) override;
 	virtual bool material_casts_shadows(RID p_material) override;
-	virtual RS::CullMode material_get_cull_mode(RID p_material) const override;
 
 	virtual void material_get_instance_shader_parameters(RID p_material, List<InstanceShaderParam> *r_parameters) override;
 

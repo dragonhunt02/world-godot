@@ -31,6 +31,7 @@
 #include "audio_stream.h"
 
 #include "core/config/project_settings.h"
+#include "core/os/os.h"
 
 void AudioStreamPlayback::start(double p_from_pos) {
 	if (GDVIRTUAL_CALL(_start, p_from_pos)) {
@@ -280,7 +281,7 @@ double AudioStream::get_bpm() const {
 }
 
 bool AudioStream::has_loop() const {
-	bool ret = false;
+	bool ret = 0;
 	GDVIRTUAL_CALL(_has_loop, ret);
 	return ret;
 }
@@ -351,8 +352,6 @@ void AudioStream::_bind_methods() {
 	GDVIRTUAL_BIND(_get_bpm)
 	GDVIRTUAL_BIND(_get_beat_count)
 	GDVIRTUAL_BIND(_get_parameter_list)
-	GDVIRTUAL_BIND(_has_loop);
-	GDVIRTUAL_BIND(_get_bar_beats);
 
 	ADD_SIGNAL(MethodInfo("parameter_list_changed"));
 }

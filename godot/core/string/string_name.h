@@ -132,12 +132,9 @@ public:
 		return _data >= p_name._data;
 	}
 	_FORCE_INLINE_ bool operator==(const StringName &p_name) const {
-		// The real magic of all this mess happens here.
-		// This is why path comparisons are very fast.
+		// the real magic of all this mess happens here.
+		// this is why path comparisons are very fast
 		return _data == p_name._data;
-	}
-	_FORCE_INLINE_ bool operator!=(const StringName &p_name) const {
-		return _data != p_name._data;
 	}
 	_FORCE_INLINE_ uint32_t hash() const {
 		if (_data) {
@@ -149,6 +146,7 @@ public:
 	_FORCE_INLINE_ const void *data_unique_pointer() const {
 		return (void *)_data;
 	}
+	bool operator!=(const StringName &p_name) const;
 
 	_FORCE_INLINE_ operator String() const {
 		if (_data) {
@@ -188,22 +186,8 @@ public:
 	};
 
 	StringName &operator=(const StringName &p_name);
-	StringName &operator=(StringName &&p_name) {
-		if (_data == p_name._data) {
-			return *this;
-		}
-
-		unref();
-		_data = p_name._data;
-		p_name._data = nullptr;
-		return *this;
-	}
 	StringName(const char *p_name, bool p_static = false);
 	StringName(const StringName &p_name);
-	StringName(StringName &&p_name) {
-		_data = p_name._data;
-		p_name._data = nullptr;
-	}
 	StringName(const String &p_name, bool p_static = false);
 	StringName(const StaticCString &p_static_string, bool p_static = false);
 	StringName() {}

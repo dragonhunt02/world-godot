@@ -70,7 +70,10 @@ dependencies {
     }
 
     // .NET dependencies
-    monoImplementation fileTree(dir: 'monoLibs', include: ['*.jar'])
+    String jar = '../../../../modules/mono/thirdparty/libSystem.Security.Cryptography.Native.Android.jar'
+    if (file(jar).exists()) {
+        monoImplementation files(jar)
+    }
 }
 
 android {
@@ -250,7 +253,7 @@ task copyAndRenameBinary(type: Copy) {
 
     boolean isAab = exportFormat == "aab"
     boolean isMono = exportEdition == "mono"
-    String filenameSuffix = isAab ? "${exportEdition}-${exportBuildType}" : exportBuildType
+    String filenameSuffix = exportBuildType
     if (isMono) {
         filenameSuffix = isAab ? "${exportEdition}-${exportBuildType}" : "${exportEdition}${exportBuildTypeCapitalized}"
     }

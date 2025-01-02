@@ -29,7 +29,6 @@
 /**************************************************************************/
 
 #include "translation_server.h"
-#include "translation_server.compat.inc"
 
 #include "core/config/project_settings.h"
 #include "core/io/resource_loader.h"
@@ -119,45 +118,36 @@ void TranslationServer::init_locale_info() {
 	}
 }
 
-TranslationServer::Locale::operator String() const {
-	String out = language;
-	if (!script.is_empty()) {
-		out = out + "_" + script;
-	}
-	if (!country.is_empty()) {
-		out = out + "_" + country;
-	}
-	if (!variant.is_empty()) {
-		out = out + "_" + variant;
-	}
-	return out;
+String TranslationServer::standardize_locale(const String &p_locale) const {
+	return _standardize_locale(p_locale, false);
 }
 
-TranslationServer::Locale::Locale(const TranslationServer &p_server, const String &p_locale, bool p_add_defaults) {
+String TranslationServer::_standardize_locale(const String &p_locale, bool p_add_defaults) const {
 	// Replaces '-' with '_' for macOS style locales.
 	String univ_locale = p_locale.replace("-", "_");
 
 	// Extract locale elements.
+	String lang_name, script_name, country_name, variant_name;
 	Vector<String> locale_elements = univ_locale.get_slice("@", 0).split("_");
-	language = locale_elements[0];
+	lang_name = locale_elements[0];
 	if (locale_elements.size() >= 2) {
 		if (locale_elements[1].length() == 4 && is_ascii_upper_case(locale_elements[1][0]) && is_ascii_lower_case(locale_elements[1][1]) && is_ascii_lower_case(locale_elements[1][2]) && is_ascii_lower_case(locale_elements[1][3])) {
-			script = locale_elements[1];
+			script_name = locale_elements[1];
 		}
 		if (locale_elements[1].length() == 2 && is_ascii_upper_case(locale_elements[1][0]) && is_ascii_upper_case(locale_elements[1][1])) {
-			country = locale_elements[1];
+			country_name = locale_elements[1];
 		}
 	}
 	if (locale_elements.size() >= 3) {
 		if (locale_elements[2].length() == 2 && is_ascii_upper_case(locale_elements[2][0]) && is_ascii_upper_case(locale_elements[2][1])) {
-			country = locale_elements[2];
-		} else if (p_server.variant_map.has(locale_elements[2].to_lower()) && p_server.variant_map[locale_elements[2].to_lower()] == language) {
-			variant = locale_elements[2].to_lower();
+			country_name = locale_elements[2];
+		} else if (variant_map.has(locale_elements[2].to_lower()) && variant_map[locale_elements[2].to_lower()] == lang_name) {
+			variant_name = locale_elements[2].to_lower();
 		}
 	}
 	if (locale_elements.size() >= 4) {
-		if (p_server.variant_map.has(locale_elements[3].to_lower()) && p_server.variant_map[locale_elements[3].to_lower()] == language) {
-			variant = locale_elements[3].to_lower();
+		if (variant_map.has(locale_elements[3].to_lower()) && variant_map[locale_elements[3].to_lower()] == lang_name) {
+			variant_name = locale_elements[3].to_lower();
 		}
 	}
 
@@ -165,62 +155,71 @@ TranslationServer::Locale::Locale(const TranslationServer &p_server, const Strin
 	Vector<String> script_extra = univ_locale.get_slice("@", 1).split(";");
 	for (int i = 0; i < script_extra.size(); i++) {
 		if (script_extra[i].to_lower() == "cyrillic") {
-			script = "Cyrl";
+			script_name = "Cyrl";
 			break;
 		} else if (script_extra[i].to_lower() == "latin") {
-			script = "Latn";
+			script_name = "Latn";
 			break;
 		} else if (script_extra[i].to_lower() == "devanagari") {
-			script = "Deva";
+			script_name = "Deva";
 			break;
-		} else if (p_server.variant_map.has(script_extra[i].to_lower()) && p_server.variant_map[script_extra[i].to_lower()] == language) {
-			variant = script_extra[i].to_lower();
+		} else if (variant_map.has(script_extra[i].to_lower()) && variant_map[script_extra[i].to_lower()] == lang_name) {
+			variant_name = script_extra[i].to_lower();
 		}
 	}
 
 	// Handles known non-ISO language names used e.g. on Windows.
-	if (p_server.locale_rename_map.has(language)) {
-		language = p_server.locale_rename_map[language];
+	if (locale_rename_map.has(lang_name)) {
+		lang_name = locale_rename_map[lang_name];
 	}
 
 	// Handle country renames.
-	if (p_server.country_rename_map.has(country)) {
-		country = p_server.country_rename_map[country];
+	if (country_rename_map.has(country_name)) {
+		country_name = country_rename_map[country_name];
 	}
 
 	// Remove unsupported script codes.
-	if (!p_server.script_map.has(script)) {
-		script = "";
+	if (!script_map.has(script_name)) {
+		script_name = "";
 	}
 
 	// Add script code base on language and country codes for some ambiguous cases.
 	if (p_add_defaults) {
-		if (script.is_empty()) {
-			for (int i = 0; i < p_server.locale_script_info.size(); i++) {
-				const LocaleScriptInfo &info = p_server.locale_script_info[i];
-				if (info.name == language) {
-					if (country.is_empty() || info.supported_countries.has(country)) {
-						script = info.script;
+		if (script_name.is_empty()) {
+			for (int i = 0; i < locale_script_info.size(); i++) {
+				const LocaleScriptInfo &info = locale_script_info[i];
+				if (info.name == lang_name) {
+					if (country_name.is_empty() || info.supported_countries.has(country_name)) {
+						script_name = info.script;
 						break;
 					}
 				}
 			}
 		}
-		if (!script.is_empty() && country.is_empty()) {
+		if (!script_name.is_empty() && country_name.is_empty()) {
 			// Add conntry code based on script for some ambiguous cases.
-			for (int i = 0; i < p_server.locale_script_info.size(); i++) {
-				const LocaleScriptInfo &info = p_server.locale_script_info[i];
-				if (info.name == language && info.script == script) {
-					country = info.default_country;
+			for (int i = 0; i < locale_script_info.size(); i++) {
+				const LocaleScriptInfo &info = locale_script_info[i];
+				if (info.name == lang_name && info.script == script_name) {
+					country_name = info.default_country;
 					break;
 				}
 			}
 		}
 	}
-}
 
-String TranslationServer::standardize_locale(const String &p_locale, bool p_add_defaults) const {
-	return Locale(*this, p_locale, p_add_defaults).operator String();
+	// Combine results.
+	String out = lang_name;
+	if (!script_name.is_empty()) {
+		out = out + "_" + script_name;
+	}
+	if (!country_name.is_empty()) {
+		out = out + "_" + country_name;
+	}
+	if (!variant_name.is_empty()) {
+		out = out + "_" + variant_name;
+	}
+	return out;
 }
 
 int TranslationServer::compare_locales(const String &p_locale_a, const String &p_locale_b) const {
@@ -235,8 +234,8 @@ int TranslationServer::compare_locales(const String &p_locale_a, const String &p
 		return *cached_result;
 	}
 
-	Locale locale_a = Locale(*this, p_locale_a, true);
-	Locale locale_b = Locale(*this, p_locale_b, true);
+	String locale_a = _standardize_locale(p_locale_a, true);
+	String locale_b = _standardize_locale(p_locale_b, true);
 
 	if (locale_a == locale_b) {
 		// Exact match.
@@ -244,41 +243,26 @@ int TranslationServer::compare_locales(const String &p_locale_a, const String &p
 		return 10;
 	}
 
-	if (locale_a.language != locale_b.language) {
+	Vector<String> locale_a_elements = locale_a.split("_");
+	Vector<String> locale_b_elements = locale_b.split("_");
+	if (locale_a_elements[0] != locale_b_elements[0]) {
 		// No match.
 		locale_compare_cache.insert(cache_key, 0);
 		return 0;
 	}
 
-	// Matching language, both locales have extra parts. Compare the
-	// remaining elements. If both elements are non-empty, check the
-	// match to increase or decrease the score. If either element or
-	// both are empty, leave the score as is.
-	int score = 5;
-	if (!locale_a.script.is_empty() && !locale_b.script.is_empty()) {
-		if (locale_a.script == locale_b.script) {
-			score++;
-		} else {
-			score--;
+	// Matching language, both locales have extra parts.
+	// Return number of matching elements.
+	int matching_elements = 1;
+	for (int i = 1; i < locale_a_elements.size(); i++) {
+		for (int j = 1; j < locale_b_elements.size(); j++) {
+			if (locale_a_elements[i] == locale_b_elements[j]) {
+				matching_elements++;
+			}
 		}
 	}
-	if (!locale_a.country.is_empty() && !locale_b.country.is_empty()) {
-		if (locale_a.country == locale_b.country) {
-			score++;
-		} else {
-			score--;
-		}
-	}
-	if (!locale_a.variant.is_empty() && !locale_b.variant.is_empty()) {
-		if (locale_a.variant == locale_b.variant) {
-			score++;
-		} else {
-			score--;
-		}
-	}
-
-	locale_compare_cache.insert(cache_key, score);
-	return score;
+	locale_compare_cache.insert(cache_key, matching_elements);
+	return matching_elements;
 }
 
 String TranslationServer::get_locale_name(const String &p_locale) const {
@@ -412,6 +396,8 @@ StringName TranslationServer::translate_plural(const StringName &p_message, cons
 	return main_domain->translate_plural(p_message, p_message_plural, p_n, p_context);
 }
 
+TranslationServer *TranslationServer::singleton = nullptr;
+
 bool TranslationServer::_load_translations(const String &p_from) {
 	if (ProjectSettings::get_singleton()->has_setting(p_from)) {
 		const Vector<String> &translation_names = GLOBAL_GET(p_from);
@@ -483,7 +469,6 @@ void TranslationServer::setup() {
 	main_domain->set_pseudolocalization_skip_placeholders_enabled(GLOBAL_DEF("internationalization/pseudolocalization/skip_placeholders", true));
 
 #ifdef TOOLS_ENABLED
-	ProjectSettings::get_singleton()->set_custom_property_info(PropertyInfo(Variant::STRING, "internationalization/locale/test", PROPERTY_HINT_LOCALE_ID, ""));
 	ProjectSettings::get_singleton()->set_custom_property_info(PropertyInfo(Variant::STRING, "internationalization/locale/fallback", PROPERTY_HINT_LOCALE_ID, ""));
 #endif
 }
@@ -593,7 +578,7 @@ void TranslationServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_tool_locale"), &TranslationServer::get_tool_locale);
 
 	ClassDB::bind_method(D_METHOD("compare_locales", "locale_a", "locale_b"), &TranslationServer::compare_locales);
-	ClassDB::bind_method(D_METHOD("standardize_locale", "locale", "add_defaults"), &TranslationServer::standardize_locale, DEFVAL(false));
+	ClassDB::bind_method(D_METHOD("standardize_locale", "locale"), &TranslationServer::standardize_locale);
 
 	ClassDB::bind_method(D_METHOD("get_all_languages"), &TranslationServer::get_all_languages);
 	ClassDB::bind_method(D_METHOD("get_language_name", "language"), &TranslationServer::get_language_name);

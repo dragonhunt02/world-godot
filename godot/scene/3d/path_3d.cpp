@@ -88,11 +88,11 @@ void Path3D::_update_debug_mesh() {
 		return;
 	}
 
-	if (debug_mesh.is_null()) {
-		debug_mesh.instantiate();
+	if (!debug_mesh.is_valid()) {
+		debug_mesh = Ref<ArrayMesh>(memnew(ArrayMesh));
 	}
 
-	if (curve.is_null()) {
+	if (!(curve.is_valid())) {
 		RS::get_singleton()->instance_set_visible(debug_instance, false);
 		return;
 	}
@@ -222,7 +222,7 @@ void PathFollow3D::update_transform() {
 	}
 
 	Ref<Curve3D> c = path->get_curve();
-	if (c.is_null()) {
+	if (!c.is_valid()) {
 		return;
 	}
 

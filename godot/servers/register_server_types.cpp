@@ -60,9 +60,9 @@
 #include "display/native_menu.h"
 #include "display_server.h"
 #include "movie_writer/movie_writer.h"
-#include "movie_writer/movie_writer_exrwav.h"
 #include "movie_writer/movie_writer_mjpeg.h"
 #include "movie_writer/movie_writer_pngwav.h"
+#include "rendering/renderer_compositor.h"
 #include "rendering/renderer_rd/framebuffer_cache_rd.h"
 #include "rendering/renderer_rd/storage_rd/render_data_rd.h"
 #include "rendering/renderer_rd/storage_rd/render_scene_buffers_rd.h"
@@ -70,7 +70,6 @@
 #include "rendering/renderer_rd/uniform_set_cache_rd.h"
 #include "rendering/rendering_device.h"
 #include "rendering/rendering_device_binds.h"
-#include "rendering/shader_include_db.h"
 #include "rendering/storage/render_data.h"
 #include "rendering/storage/render_scene_buffers.h"
 #include "rendering/storage/render_scene_data.h"
@@ -84,6 +83,7 @@
 #include "navigation_server_2d.h"
 #include "physics_server_2d.h"
 #include "physics_server_2d_dummy.h"
+#include "physics_server_2d_wrap_mt.h"
 #include "servers/extensions/physics_server_2d_extension.h"
 
 // 3D physics and navigation (3D navigation is needed for 2D).
@@ -91,6 +91,7 @@
 #ifndef _3D_DISABLED
 #include "physics_server_3d.h"
 #include "physics_server_3d_dummy.h"
+#include "physics_server_3d_wrap_mt.h"
 #include "servers/extensions/physics_server_3d_extension.h"
 #include "xr/xr_body_tracker.h"
 #include "xr/xr_controller_tracker.h"
@@ -126,7 +127,6 @@ static bool has_server_feature_callback(const String &p_feature) {
 
 static MovieWriterMJPEG *writer_mjpeg = nullptr;
 static MovieWriterPNGWAV *writer_pngwav = nullptr;
-static MovieWriterEXRWAV *writer_exrwav = nullptr;
 
 void register_server_types() {
 	OS::get_singleton()->benchmark_begin_measure("Servers", "Register Extensions");
@@ -210,7 +210,6 @@ void register_server_types() {
 	}
 
 	GDREGISTER_ABSTRACT_CLASS(RenderingDevice);
-	GDREGISTER_CLASS(ShaderIncludeDB);
 	GDREGISTER_CLASS(RDTextureFormat);
 	GDREGISTER_CLASS(RDTextureView);
 	GDREGISTER_CLASS(RDAttachmentFormat);
@@ -332,9 +331,6 @@ void register_server_types() {
 	writer_pngwav = memnew(MovieWriterPNGWAV);
 	MovieWriter::add_writer(writer_pngwav);
 
-	writer_exrwav = memnew(MovieWriterEXRWAV);
-	MovieWriter::add_writer(writer_exrwav);
-
 	OS::get_singleton()->benchmark_end_measure("Servers", "Register Extensions");
 }
 
@@ -345,7 +341,6 @@ void unregister_server_types() {
 	memdelete(shader_types);
 	memdelete(writer_mjpeg);
 	memdelete(writer_pngwav);
-	memdelete(writer_exrwav);
 
 	OS::get_singleton()->benchmark_end_measure("Servers", "Unregister Extensions");
 }

@@ -178,12 +178,12 @@ uint32_t GDScriptLambdaSelfCallable::hash() const {
 
 String GDScriptLambdaSelfCallable::get_as_text() const {
 	if (function == nullptr) {
-		return "<invalid self lambda>";
+		return "<invalid lambda>";
 	}
 	if (function->get_name() != StringName()) {
-		return function->get_name().operator String() + "(self lambda)";
+		return function->get_name().operator String() + "(lambda)";
 	}
-	return "(anonymous self lambda)";
+	return "(anonymous lambda)";
 }
 
 CallableCustom::CompareEqualFunc GDScriptLambdaSelfCallable::get_compare_equal_func() const {

@@ -206,31 +206,25 @@ int Callable::get_bound_arguments_count() const {
 	}
 }
 
-void Callable::get_bound_arguments_ref(Vector<Variant> &r_arguments) const {
+void Callable::get_bound_arguments_ref(Vector<Variant> &r_arguments, int &r_argcount) const {
 	if (!is_null() && is_custom()) {
-		custom->get_bound_arguments(r_arguments);
+		custom->get_bound_arguments(r_arguments, r_argcount);
 	} else {
 		r_arguments.clear();
+		r_argcount = 0;
 	}
 }
 
 Array Callable::get_bound_arguments() const {
 	Vector<Variant> arr;
-	get_bound_arguments_ref(arr);
+	int ac;
+	get_bound_arguments_ref(arr, ac);
 	Array ret;
 	ret.resize(arr.size());
 	for (int i = 0; i < arr.size(); i++) {
 		ret[i] = arr[i];
 	}
 	return ret;
-}
-
-int Callable::get_unbound_arguments_count() const {
-	if (!is_null() && is_custom()) {
-		return custom->get_unbound_arguments_count();
-	} else {
-		return 0;
-	}
 }
 
 CallableCustom *Callable::get_custom() const {
@@ -361,12 +355,8 @@ Callable::operator String() const {
 		if (base) {
 			String class_name = base->get_class();
 			Ref<Script> script = base->get_script();
-			if (script.is_valid()) {
-				if (!script->get_global_name().is_empty()) {
-					class_name += "(" + script->get_global_name() + ")";
-				} else if (script->get_path().is_resource_file()) {
-					class_name += "(" + script->get_path().get_file() + ")";
-				}
+			if (script.is_valid() && script->get_path().is_resource_file()) {
+				class_name += "(" + script->get_path().get_file() + ")";
 			}
 			return class_name + "::" + String(method);
 		} else {
@@ -474,12 +464,9 @@ int CallableCustom::get_bound_arguments_count() const {
 	return 0;
 }
 
-void CallableCustom::get_bound_arguments(Vector<Variant> &r_arguments) const {
-	r_arguments.clear();
-}
-
-int CallableCustom::get_unbound_arguments_count() const {
-	return 0;
+void CallableCustom::get_bound_arguments(Vector<Variant> &r_arguments, int &r_argcount) const {
+	r_arguments = Vector<Variant>();
+	r_argcount = 0;
 }
 
 CallableCustom::CallableCustom() {

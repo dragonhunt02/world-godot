@@ -30,6 +30,9 @@
 
 #include "command_queue_mt.h"
 
+#include "core/config/project_settings.h"
+#include "core/os/os.h"
+
 CommandQueueMT::CommandQueueMT() {
 	command_mem.reserve(DEFAULT_COMMAND_MEM_SIZE_KB * 1024);
 }

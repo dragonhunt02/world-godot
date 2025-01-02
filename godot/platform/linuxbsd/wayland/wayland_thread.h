@@ -67,12 +67,8 @@
 #include "wayland/protocol/wayland.gen.h"
 #include "wayland/protocol/xdg_activation.gen.h"
 #include "wayland/protocol/xdg_decoration.gen.h"
-#include "wayland/protocol/xdg_foreign_v2.gen.h"
+#include "wayland/protocol/xdg_foreign.gen.h"
 #include "wayland/protocol/xdg_shell.gen.h"
-#include "wayland/protocol/xdg_system_bell.gen.h"
-
-// NOTE: Deprecated.
-#include "wayland/protocol/xdg_foreign_v1.gen.h"
 
 #ifdef LIBDECOR_ENABLED
 #ifdef SOWRAP_ENABLED
@@ -152,12 +148,8 @@ public:
 		struct xdg_wm_base *xdg_wm_base = nullptr;
 		uint32_t xdg_wm_base_name = 0;
 
-		// NOTE: Deprecated.
-		struct zxdg_exporter_v1 *xdg_exporter_v1 = nullptr;
-		uint32_t xdg_exporter_v1_name = 0;
-
-		uint32_t xdg_exporter_v2_name = 0;
-		struct zxdg_exporter_v2 *xdg_exporter_v2 = nullptr;
+		struct zxdg_exporter_v1 *xdg_exporter = nullptr;
+		uint32_t xdg_exporter_name = 0;
 
 		// wayland-protocols globals.
 
@@ -169,9 +161,6 @@ public:
 
 		struct zxdg_decoration_manager_v1 *xdg_decoration_manager = nullptr;
 		uint32_t xdg_decoration_manager_name = 0;
-
-		struct xdg_system_bell_v1 *xdg_system_bell = nullptr;
-		uint32_t xdg_system_bell_name = 0;
 
 		struct xdg_activation_v1 *xdg_activation = nullptr;
 		uint32_t xdg_activation_name = 0;
@@ -231,11 +220,7 @@ public:
 
 		struct wp_viewport *wp_viewport = nullptr;
 		struct wp_fractional_scale_v1 *wp_fractional_scale = nullptr;
-
-		// NOTE: Deprecated.
-		struct zxdg_exported_v1 *xdg_exported_v1 = nullptr;
-
-		struct zxdg_exported_v2 *xdg_exported_v2 = nullptr;
+		struct zxdg_exported_v1 *xdg_exported = nullptr;
 
 		String exported_handle;
 
@@ -663,10 +648,7 @@ private:
 
 	static void _xdg_toplevel_decoration_on_configure(void *data, struct zxdg_toplevel_decoration_v1 *xdg_toplevel_decoration, uint32_t mode);
 
-	// NOTE: Deprecated.
-	static void _xdg_exported_v1_on_handle(void *data, zxdg_exported_v1 *exported, const char *handle);
-
-	static void _xdg_exported_v2_on_handle(void *data, zxdg_exported_v2 *exported, const char *handle);
+	static void _xdg_exported_on_exported(void *data, zxdg_exported_v1 *exported, const char *handle);
 
 	static void _xdg_activation_token_on_done(void *data, struct xdg_activation_token_v1 *xdg_activation_token, const char *token);
 
@@ -834,13 +816,8 @@ private:
 		.done = _wp_text_input_on_done,
 	};
 
-	// NOTE: Deprecated.
-	static constexpr struct zxdg_exported_v1_listener xdg_exported_v1_listener = {
-		.handle = _xdg_exported_v1_on_handle,
-	};
-
-	static constexpr struct zxdg_exported_v2_listener xdg_exported_v2_listener = {
-		.handle = _xdg_exported_v2_on_handle,
+	static constexpr struct zxdg_exported_v1_listener xdg_exported_listener = {
+		.handle = _xdg_exported_on_exported
 	};
 
 	static constexpr struct zxdg_toplevel_decoration_v1_listener xdg_toplevel_decoration_listener = {
@@ -949,8 +926,6 @@ public:
 	bool has_message();
 	Ref<Message> pop_message();
 
-	void beep() const;
-
 	void window_create(DisplayServer::WindowID p_window_id, int p_width, int p_height);
 
 	struct wl_surface *window_get_wl_surface(DisplayServer::WindowID p_window_id) const;
@@ -970,8 +945,6 @@ public:
 
 	// Optional - requires xdg_activation_v1
 	void window_request_attention(DisplayServer::WindowID p_window_id);
-
-	void window_start_drag(DisplayServer::WindowID p_window_id);
 
 	// Optional - require idle_inhibit_unstable_v1
 	void window_set_idle_inhibition(DisplayServer::WindowID p_window_id, bool p_enable);

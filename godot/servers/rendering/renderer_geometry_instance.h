@@ -33,6 +33,7 @@
 
 #include "core/math/rect2.h"
 #include "core/math/transform_3d.h"
+#include "core/math/vector3.h"
 #include "core/templates/rid.h"
 #include "storage/utilities.h"
 

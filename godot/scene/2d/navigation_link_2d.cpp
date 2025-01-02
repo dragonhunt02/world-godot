@@ -33,6 +33,7 @@
 #include "core/math/geometry_2d.h"
 #include "scene/resources/world_2d.h"
 #include "servers/navigation_server_2d.h"
+#include "servers/navigation_server_3d.h"
 
 void NavigationLink2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_rid"), &NavigationLink2D::get_rid);
@@ -131,7 +132,7 @@ void NavigationLink2D::_notification(int p_what) {
 	}
 }
 
-#ifdef DEBUG_ENABLED
+#ifdef TOOLS_ENABLED
 Rect2 NavigationLink2D::_edit_get_rect() const {
 	if (!is_inside_tree()) {
 		return Rect2();
@@ -151,7 +152,7 @@ bool NavigationLink2D::_edit_is_selected_on_click(const Point2 &p_point, double 
 	Vector2 closest_point = Geometry2D::get_closest_point_to_segment(p_point, segment);
 	return p_point.distance_to(closest_point) < p_tolerance;
 }
-#endif // DEBUG_ENABLED
+#endif // TOOLS_ENABLED
 
 RID NavigationLink2D::get_rid() const {
 	return link;

@@ -34,6 +34,9 @@
 #include "core/object/ref_counted.h"
 #include "servers/physics_server_3d.h"
 
+class CharacterBody3D;
+class PhysicsBody3D;
+
 class KinematicCollision3D : public RefCounted {
 	GDCLASS(KinematicCollision3D, RefCounted);
 

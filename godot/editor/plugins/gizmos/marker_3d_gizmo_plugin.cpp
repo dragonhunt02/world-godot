@@ -32,10 +32,11 @@
 
 #include "editor/editor_node.h"
 #include "editor/editor_string_names.h"
+#include "editor/plugins/node_3d_editor_plugin.h"
 #include "scene/3d/marker_3d.h"
 
 Marker3DGizmoPlugin::Marker3DGizmoPlugin() {
-	pos3d_mesh.instantiate();
+	pos3d_mesh = Ref<ArrayMesh>(memnew(ArrayMesh));
 
 	Vector<Vector3> cursor_points;
 	Vector<Color> cursor_colors;

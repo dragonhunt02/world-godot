@@ -31,6 +31,10 @@
 #ifndef REVERB_FILTER_H
 #define REVERB_FILTER_H
 
+#include "core/math/audio_frame.h"
+#include "core/os/memory.h"
+#include "core/typedefs.h"
+
 class Reverb {
 public:
 	enum {

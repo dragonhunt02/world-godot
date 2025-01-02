@@ -169,7 +169,7 @@ void GodotPhysicsServer3D::space_set_active(RID p_space, bool p_active) {
 }
 
 bool GodotPhysicsServer3D::space_is_active(RID p_space) const {
-	GodotSpace3D *space = space_owner.get_or_null(p_space);
+	const GodotSpace3D *space = space_owner.get_or_null(p_space);
 	ERR_FAIL_NULL_V(space, false);
 
 	return active_spaces.has(space);
@@ -826,7 +826,7 @@ void GodotPhysicsServer3D::body_set_axis_lock(RID p_body, BodyAxis p_axis, bool 
 
 bool GodotPhysicsServer3D::body_is_axis_locked(RID p_body, BodyAxis p_axis) const {
 	const GodotBody3D *body = body_owner.get_or_null(p_body);
-	ERR_FAIL_NULL_V(body, false);
+	ERR_FAIL_NULL_V(body, 0);
 	return body->is_axis_locked(p_axis);
 }
 
@@ -1638,8 +1638,8 @@ void GodotPhysicsServer3D::step(real_t p_step) {
 	island_count = 0;
 	active_objects = 0;
 	collision_pairs = 0;
-	for (GodotSpace3D *E : active_spaces) {
-		stepper->step(E, p_step);
+	for (const GodotSpace3D *E : active_spaces) {
+		stepper->step(const_cast<GodotSpace3D *>(E), p_step);
 		island_count += E->get_island_count();
 		active_objects += E->get_active_objects();
 		collision_pairs += E->get_collision_pairs();
@@ -1659,8 +1659,8 @@ void GodotPhysicsServer3D::flush_queries() {
 
 	uint64_t time_beg = OS::get_singleton()->get_ticks_usec();
 
-	for (GodotSpace3D *E : active_spaces) {
-		GodotSpace3D *space = E;
+	for (const GodotSpace3D *E : active_spaces) {
+		GodotSpace3D *space = const_cast<GodotSpace3D *>(E);
 		space->call_queries();
 	}
 

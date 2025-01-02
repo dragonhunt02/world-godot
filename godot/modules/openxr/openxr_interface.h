@@ -70,7 +70,6 @@ class OpenXRInterface : public XRInterface {
 private:
 	OpenXRAPI *openxr_api = nullptr;
 	bool initialized = false;
-	bool reference_stage_changing = false;
 	XRInterface::TrackingStatus tracking_state;
 
 	// At a minimum we need a tracker for our head
@@ -185,9 +184,6 @@ public:
 
 	virtual RID get_color_texture() override;
 	virtual RID get_depth_texture() override;
-	virtual RID get_velocity_texture() override;
-	virtual RID get_velocity_depth_texture() override;
-	virtual Size2i get_velocity_target_size() override;
 
 	virtual void process() override;
 	virtual void pre_render() override;
@@ -211,7 +207,7 @@ public:
 	void on_state_stopping();
 	void on_state_loss_pending();
 	void on_state_exiting();
-	void on_reference_space_change_pending();
+	void on_pose_recentered();
 	void on_refresh_rate_changes(float p_new_rate);
 	void tracker_profile_changed(RID p_tracker, RID p_interaction_profile);
 

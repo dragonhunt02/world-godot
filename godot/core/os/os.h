@@ -39,6 +39,7 @@
 #include "core/templates/list.h"
 #include "core/templates/vector.h"
 
+#include <stdarg.h>
 #include <stdlib.h>
 
 class OS {
@@ -62,7 +63,6 @@ class OS {
 	bool _stderr_enabled = true;
 	bool _writing_movie = false;
 	bool _in_editor = false;
-	bool _embedded_in_editor = false;
 
 	CompositeLogger *_logger = nullptr;
 
@@ -94,15 +94,7 @@ public:
 	enum RenderThreadMode {
 		RENDER_THREAD_UNSAFE,
 		RENDER_THREAD_SAFE,
-		RENDER_SEPARATE_THREAD,
-	};
-
-	enum StdHandleType {
-		STD_HANDLE_INVALID,
-		STD_HANDLE_CONSOLE,
-		STD_HANDLE_FILE,
-		STD_HANDLE_PIPE,
-		STD_HANDLE_UNKNOWN,
+		RENDER_SEPARATE_THREAD
 	};
 
 protected:
@@ -111,7 +103,7 @@ protected:
 	friend int test_main(int argc, char *argv[]);
 
 	HasServerFeatureCallback has_server_feature_callback = nullptr;
-	bool _separate_thread_render = false;
+	RenderThreadMode _render_thread_mode = RENDER_THREAD_SAFE;
 
 	// Functions used by Main to initialize/deinitialize the OS.
 	void add_logger(Logger *p_logger);
@@ -154,12 +146,7 @@ public:
 	void print_rich(const char *p_format, ...) _PRINTF_FORMAT_ATTRIBUTE_2_3;
 	void printerr(const char *p_format, ...) _PRINTF_FORMAT_ATTRIBUTE_2_3;
 
-	virtual String get_stdin_string(int64_t p_buffer_size = 1024) = 0;
-	virtual PackedByteArray get_stdin_buffer(int64_t p_buffer_size = 1024) = 0;
-
-	virtual StdHandleType get_stdin_type() const { return STD_HANDLE_UNKNOWN; }
-	virtual StdHandleType get_stdout_type() const { return STD_HANDLE_UNKNOWN; }
-	virtual StdHandleType get_stderr_type() const { return STD_HANDLE_UNKNOWN; }
+	virtual String get_stdin_string() = 0;
 
 	virtual Error get_entropy(uint8_t *r_buffer, int p_bytes) = 0; // Should return cryptographically-safe random bytes.
 	virtual String get_system_ca_certificates() { return ""; } // Concatenated certificates in PEM format.
@@ -216,7 +203,6 @@ public:
 	virtual String get_identifier() const;
 	virtual String get_distribution_name() const = 0;
 	virtual String get_version() const = 0;
-	virtual String get_version_alias() const { return get_version(); }
 	virtual List<String> get_cmdline_args() const { return _cmdline; }
 	virtual List<String> get_cmdline_user_args() const { return _user_args; }
 	virtual List<String> get_cmdline_platform_args() const { return List<String>(); }
@@ -275,7 +261,7 @@ public:
 	virtual uint64_t get_static_memory_peak_usage() const;
 	virtual Dictionary get_memory_info() const;
 
-	bool is_separate_thread_rendering_enabled() const { return _separate_thread_render; }
+	RenderThreadMode get_render_thread_mode() const { return _render_thread_mode; }
 
 	virtual String get_locale() const;
 	String get_locale_language() const;
@@ -288,7 +274,6 @@ public:
 	virtual String get_data_path() const;
 	virtual String get_config_path() const;
 	virtual String get_cache_path() const;
-	virtual String get_temp_path() const;
 	virtual String get_bundle_resource_dir() const;
 	virtual String get_bundle_icon_path() const;
 

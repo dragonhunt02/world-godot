@@ -31,7 +31,7 @@
 #ifndef MULTI_NODE_EDIT_H
 #define MULTI_NODE_EDIT_H
 
-#include "core/object/ref_counted.h"
+#include "scene/main/node.h"
 
 class MultiNodeEdit : public RefCounted {
 	GDCLASS(MultiNodeEdit, RefCounted);

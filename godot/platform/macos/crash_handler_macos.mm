@@ -149,7 +149,6 @@ static void handle_crash(int sig) {
 				args.push_back("-arch");
 				args.push_back("arm64");
 #endif
-				args.push_back("--fullPath");
 				args.push_back("-l");
 				snprintf(str, 1024, "%p", load_addr);
 				args.push_back(str);

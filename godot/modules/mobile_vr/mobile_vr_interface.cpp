@@ -33,7 +33,7 @@
 #include "core/input/input.h"
 #include "core/os/os.h"
 #include "servers/display_server.h"
-#include "servers/rendering/renderer_compositor.h"
+#include "servers/rendering/rendering_server_globals.h"
 
 StringName MobileVRInterface::get_name() const {
 	return "Native mobile";

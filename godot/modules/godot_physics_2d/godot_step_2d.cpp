@@ -32,7 +32,6 @@
 
 #include "core/object/worker_thread_pool.h"
 #include "core/os/os.h"
-#include "godot_constraint_2d.h"
 
 #define BODY_ISLAND_COUNT_RESERVE 128
 #define BODY_ISLAND_SIZE_RESERVE 512
@@ -49,7 +48,7 @@ void GodotStep2D::_populate_island(GodotBody2D *p_body, LocalVector<GodotBody2D 
 	}
 
 	for (const Pair<GodotConstraint2D *, int> &E : p_body->get_constraint_list()) {
-		GodotConstraint2D *constraint = E.first;
+		GodotConstraint2D *constraint = const_cast<GodotConstraint2D *>(E.first);
 		if (constraint->get_island_step() == _step) {
 			continue; // Already processed.
 		}

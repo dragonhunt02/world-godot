@@ -53,7 +53,7 @@ private:
 	PopupMenu *bookmarks_menu = nullptr;
 	PopupMenu *context_menu = nullptr;
 
-	GotoLinePopup *goto_line_popup = nullptr;
+	GotoLineDialog *goto_line_dialog = nullptr;
 
 	enum {
 		EDIT_UNDO,

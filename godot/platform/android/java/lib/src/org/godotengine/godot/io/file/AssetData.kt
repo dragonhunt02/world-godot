@@ -145,8 +145,7 @@ internal class AssetData(context: Context, private val filePath: String, accessF
 		}
 	}
 
-	override fun write(buffer: ByteBuffer): Boolean {
+	override fun write(buffer: ByteBuffer) {
 		Log.w(TAG, "write() is not supported.")
-		return false
 	}
 }

@@ -36,7 +36,6 @@
 
 #include <atomic>
 #include <functional>
-#include <initializer_list>
 #include <type_traits>
 
 // Design goals for these classes:
@@ -225,13 +224,6 @@ public:
 			memdelete_allocator<SafeListNode, A>(tmp);
 		}
 		return true;
-	}
-
-	_FORCE_INLINE_ SafeList() {}
-	_FORCE_INLINE_ SafeList(std::initializer_list<T> p_init) {
-		for (const T &E : p_init) {
-			insert(E);
-		}
 	}
 
 	~SafeList() {

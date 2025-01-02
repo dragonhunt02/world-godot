@@ -32,6 +32,7 @@
 
 #include "core/math/color.h"
 #include "scene/gui/slider.h"
+#include "thirdparty/misc/ok_color.h"
 
 ColorMode::ColorMode(ColorPicker *p_color_picker) {
 	color_picker = p_color_picker;

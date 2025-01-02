@@ -681,12 +681,12 @@ Ref<Image> TextureStorage::_get_gl_image_and_format(const Ref<Image> &p_image, I
 			}
 		} break;
 		default: {
-			ERR_FAIL_V_MSG(Ref<Image>(), vformat("The image format %d is not supported by the Compatibility renderer.", p_format));
+			ERR_FAIL_V_MSG(Ref<Image>(), "The image format " + itos(p_format) + " is not supported by the GL Compatibility rendering backend.");
 		}
 	}
 
 	if (need_decompress || p_force_decompress) {
-		if (image.is_valid()) {
+		if (!image.is_null()) {
 			image = image->duplicate();
 			image->decompress();
 			ERR_FAIL_COND_V(image->is_compressed(), image);
@@ -841,7 +841,7 @@ void TextureStorage::texture_2d_layered_initialize(RID p_texture, const Vector<R
 	ERR_FAIL_COND(p_layers.is_empty());
 
 	ERR_FAIL_COND(p_layered_type == RS::TEXTURE_LAYERED_CUBEMAP && p_layers.size() != 6);
-	ERR_FAIL_COND_MSG(p_layered_type == RS::TEXTURE_LAYERED_CUBEMAP_ARRAY, "Cubemap Arrays are not supported in the Compatibility renderer.");
+	ERR_FAIL_COND_MSG(p_layered_type == RS::TEXTURE_LAYERED_CUBEMAP_ARRAY, "Cubemap Arrays are not supported in the GL Compatibility backend.");
 
 	const Ref<Image> &image = p_layers[0];
 	{
@@ -1099,11 +1099,7 @@ Ref<Image> TextureStorage::texture_2d_get(RID p_texture) const {
 
 		ERR_FAIL_COND_V(data.is_empty(), Ref<Image>());
 		image = Image::create_from_data(texture->alloc_width, texture->alloc_height, texture->mipmaps > 1, texture->real_format, data);
-		if (image->is_empty()) {
-			const String &path_str = texture->path.is_empty() ? "with no path" : vformat("with path '%s'", texture->path);
-			ERR_FAIL_V_MSG(Ref<Image>(), vformat("Texture %s has no data.", path_str));
-		}
-
+		ERR_FAIL_COND_V(image->is_empty(), Ref<Image>());
 		if (texture->format != texture->real_format) {
 			image->convert(texture->format);
 		}
@@ -1159,10 +1155,7 @@ Ref<Image> TextureStorage::texture_2d_get(RID p_texture) const {
 
 		ERR_FAIL_COND_V(data.is_empty(), Ref<Image>());
 		image = Image::create_from_data(texture->alloc_width, texture->alloc_height, false, Image::FORMAT_RGBA8, data);
-		if (image->is_empty()) {
-			const String &path_str = texture->path.is_empty() ? "with no path" : vformat("with path '%s'", texture->path);
-			ERR_FAIL_V_MSG(Ref<Image>(), vformat("Texture %s has no data.", path_str));
-		}
+		ERR_FAIL_COND_V(image->is_empty(), Ref<Image>());
 
 		if (texture->format != Image::FORMAT_RGBA8) {
 			image->convert(texture->format);
@@ -1234,10 +1227,7 @@ Ref<Image> TextureStorage::texture_2d_layer_get(RID p_texture, int p_layer) cons
 
 	ERR_FAIL_COND_V(data.is_empty(), Ref<Image>());
 	Ref<Image> image = Image::create_from_data(texture->width, texture->height, false, Image::FORMAT_RGBA8, data);
-	if (image->is_empty()) {
-		const String &path_str = texture->path.is_empty() ? "with no path" : vformat("with path '%s'", texture->path);
-		ERR_FAIL_V_MSG(Ref<Image>(), vformat("Texture %s has no data.", path_str));
-	}
+	ERR_FAIL_COND_V(image->is_empty(), Ref<Image>());
 
 	if (texture->format != Image::FORMAT_RGBA8) {
 		image->convert(texture->format);
@@ -1633,7 +1623,7 @@ void TextureStorage::_texture_set_3d_data(RID p_texture, const Vector<Ref<Image>
 	Ref<Image> img = _get_gl_image_and_format(p_data[0], p_data[0]->get_format(), real_format, format, internal_format, type, compressed, texture->resize_to_po2);
 	ERR_FAIL_COND(img.is_null());
 
-	ERR_FAIL_COND_MSG(compressed, "Compressed 3D textures are not supported in the Compatibility renderer.");
+	ERR_FAIL_COND_MSG(compressed, "Compressed 3D textures are not supported in the GL Compatibility backend.");
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(texture->target, texture->tex_id);
@@ -2491,7 +2481,7 @@ Size2i TextureStorage::render_target_get_size(RID p_render_target) const {
 	return rt->size;
 }
 
-void TextureStorage::render_target_set_override(RID p_render_target, RID p_color_texture, RID p_depth_texture, RID p_velocity_texture, RID p_velocity_depth_texture) {
+void TextureStorage::render_target_set_override(RID p_render_target, RID p_color_texture, RID p_depth_texture, RID p_velocity_texture) {
 	RenderTarget *rt = render_target_owner.get_or_null(p_render_target);
 	ERR_FAIL_NULL(rt);
 	ERR_FAIL_COND(rt->direct_to_screen);

@@ -32,8 +32,10 @@
 
 #include "core/debugger/engine_debugger.h"
 #include "core/io/json.h"
+#include "core/io/marshalls.h"
 #include "core/io/resource.h"
 #include "core/math/math_funcs.h"
+#include "core/string/print_string.h"
 #include "core/variant/variant_parser.h"
 
 PagedAllocator<Variant::Pools::BucketSmall, true> Variant::Pools::_bucket_small;
@@ -172,18 +174,6 @@ String Variant::get_type_name(Variant::Type p_type) {
 	}
 
 	return "";
-}
-
-Variant::Type Variant::get_type_by_name(const String &p_type_name) {
-	static HashMap<String, Type> type_names;
-	if (unlikely(type_names.is_empty())) {
-		for (int i = 0; i < VARIANT_MAX; i++) {
-			type_names[get_type_name((Type)i)] = (Type)i;
-		}
-	}
-
-	const Type *ptr = type_names.getptr(p_type_name);
-	return (ptr == nullptr) ? VARIANT_MAX : *ptr;
 }
 
 bool Variant::can_convert(Variant::Type p_type_from, Variant::Type p_type_to) {
@@ -961,7 +951,7 @@ bool Variant::is_zero() const {
 			return *reinterpret_cast<const ::RID *>(_data._mem) == ::RID();
 		}
 		case OBJECT: {
-			return get_validated_object() == nullptr;
+			return _get_obj().obj == nullptr;
 		}
 		case CALLABLE: {
 			return reinterpret_cast<const Callable *>(_data._mem)->is_null();
@@ -1492,11 +1482,11 @@ Variant::operator int64_t() const {
 		case BOOL:
 			return _data._bool ? 1 : 0;
 		case INT:
-			return int64_t(_data._int);
+			return _data._int;
 		case FLOAT:
-			return int64_t(_data._float);
+			return _data._float;
 		case STRING:
-			return int64_t(operator String().to_int());
+			return operator String().to_int();
 		default: {
 			return 0;
 		}
@@ -1510,11 +1500,11 @@ Variant::operator int32_t() const {
 		case BOOL:
 			return _data._bool ? 1 : 0;
 		case INT:
-			return int32_t(_data._int);
+			return _data._int;
 		case FLOAT:
-			return int32_t(_data._float);
+			return _data._float;
 		case STRING:
-			return int32_t(operator String().to_int());
+			return operator String().to_int();
 		default: {
 			return 0;
 		}
@@ -1528,11 +1518,11 @@ Variant::operator int16_t() const {
 		case BOOL:
 			return _data._bool ? 1 : 0;
 		case INT:
-			return int16_t(_data._int);
+			return _data._int;
 		case FLOAT:
-			return int16_t(_data._float);
+			return _data._float;
 		case STRING:
-			return int16_t(operator String().to_int());
+			return operator String().to_int();
 		default: {
 			return 0;
 		}
@@ -1546,11 +1536,11 @@ Variant::operator int8_t() const {
 		case BOOL:
 			return _data._bool ? 1 : 0;
 		case INT:
-			return int8_t(_data._int);
+			return _data._int;
 		case FLOAT:
-			return int8_t(_data._float);
+			return _data._float;
 		case STRING:
-			return int8_t(operator String().to_int());
+			return operator String().to_int();
 		default: {
 			return 0;
 		}
@@ -1564,11 +1554,11 @@ Variant::operator uint64_t() const {
 		case BOOL:
 			return _data._bool ? 1 : 0;
 		case INT:
-			return uint64_t(_data._int);
+			return _data._int;
 		case FLOAT:
-			return uint64_t(_data._float);
+			return _data._float;
 		case STRING:
-			return uint64_t(operator String().to_int());
+			return operator String().to_int();
 		default: {
 			return 0;
 		}
@@ -1582,11 +1572,11 @@ Variant::operator uint32_t() const {
 		case BOOL:
 			return _data._bool ? 1 : 0;
 		case INT:
-			return uint32_t(_data._int);
+			return _data._int;
 		case FLOAT:
-			return uint32_t(_data._float);
+			return _data._float;
 		case STRING:
-			return uint32_t(operator String().to_int());
+			return operator String().to_int();
 		default: {
 			return 0;
 		}
@@ -1600,11 +1590,11 @@ Variant::operator uint16_t() const {
 		case BOOL:
 			return _data._bool ? 1 : 0;
 		case INT:
-			return uint16_t(_data._int);
+			return _data._int;
 		case FLOAT:
-			return uint16_t(_data._float);
+			return _data._float;
 		case STRING:
-			return uint16_t(operator String().to_int());
+			return operator String().to_int();
 		default: {
 			return 0;
 		}
@@ -1618,11 +1608,11 @@ Variant::operator uint8_t() const {
 		case BOOL:
 			return _data._bool ? 1 : 0;
 		case INT:
-			return uint8_t(_data._int);
+			return _data._int;
 		case FLOAT:
-			return uint8_t(_data._float);
+			return _data._float;
 		case STRING:
-			return uint8_t(operator String().to_int());
+			return operator String().to_int();
 		default: {
 			return 0;
 		}
@@ -1746,7 +1736,7 @@ String Variant::stringify(int recursion_count) const {
 		case INT:
 			return itos(_data._int);
 		case FLOAT:
-			return String::num_real(_data._float, true);
+			return rtos(_data._float);
 		case STRING:
 			return *reinterpret_cast<const String *>(_data._mem);
 		case VECTOR2:
@@ -2482,22 +2472,22 @@ Variant::Variant(int8_t p_int8) :
 
 Variant::Variant(uint64_t p_uint64) :
 		type(INT) {
-	_data._int = int64_t(p_uint64);
+	_data._int = p_uint64;
 }
 
 Variant::Variant(uint32_t p_uint32) :
 		type(INT) {
-	_data._int = int64_t(p_uint32);
+	_data._int = p_uint32;
 }
 
 Variant::Variant(uint16_t p_uint16) :
 		type(INT) {
-	_data._int = int64_t(p_uint16);
+	_data._int = p_uint16;
 }
 
 Variant::Variant(uint8_t p_uint8) :
 		type(INT) {
-	_data._int = int64_t(p_uint8);
+	_data._int = p_uint8;
 }
 
 Variant::Variant(float p_float) :
@@ -2512,7 +2502,7 @@ Variant::Variant(double p_double) :
 
 Variant::Variant(const ObjectID &p_id) :
 		type(INT) {
-	_data._int = int64_t(p_id);
+	_data._int = p_id;
 }
 
 Variant::Variant(const StringName &p_string) :
@@ -2729,7 +2719,8 @@ Variant::Variant(const Vector<Plane> &p_array) :
 	}
 }
 
-Variant::Variant(const Vector<Face3> &p_face_array) {
+Variant::Variant(const Vector<Face3> &p_face_array) :
+		type(NIL) {
 	PackedVector3Array vertices;
 	int face_count = p_face_array.size();
 	vertices.resize(face_count * 3);
@@ -2748,7 +2739,8 @@ Variant::Variant(const Vector<Face3> &p_face_array) {
 	*this = vertices;
 }
 
-Variant::Variant(const Vector<Variant> &p_array) {
+Variant::Variant(const Vector<Variant> &p_array) :
+		type(NIL) {
 	Array arr;
 	arr.resize(p_array.size());
 	for (int i = 0; i < p_array.size(); i++) {
@@ -2757,7 +2749,8 @@ Variant::Variant(const Vector<Variant> &p_array) {
 	*this = arr;
 }
 
-Variant::Variant(const Vector<StringName> &p_array) {
+Variant::Variant(const Vector<StringName> &p_array) :
+		type(NIL) {
 	PackedStringArray v;
 	int len = p_array.size();
 	v.resize(len);
@@ -2915,7 +2908,8 @@ Variant::Variant(const IPAddress &p_address) :
 	memnew_placement(_data._mem, String(p_address));
 }
 
-Variant::Variant(const Variant &p_variant) {
+Variant::Variant(const Variant &p_variant) :
+		type(NIL) {
 	reference(p_variant);
 }
 
@@ -3570,6 +3564,9 @@ bool Variant::is_ref_counted() const {
 	return type == OBJECT && _get_obj().id.is_ref_counted();
 }
 
+void Variant::static_assign(const Variant &p_variant) {
+}
+
 bool Variant::is_type_shared(Variant::Type p_type) {
 	switch (p_type) {
 		case OBJECT:
@@ -3671,20 +3668,18 @@ String Variant::get_call_error_text(Object *p_base, const StringName &p_method, 
 
 String Variant::get_callable_error_text(const Callable &p_callable, const Variant **p_argptrs, int p_argcount, const Callable::CallError &ce) {
 	Vector<Variant> binds;
-	p_callable.get_bound_arguments_ref(binds);
-
-	int args_unbound = p_callable.get_unbound_arguments_count();
-
-	if (p_argcount - args_unbound < 0) {
-		return "Callable unbinds " + itos(args_unbound) + " arguments, but called with " + itos(p_argcount);
+	int args_bound;
+	p_callable.get_bound_arguments_ref(binds, args_bound);
+	if (args_bound <= 0) {
+		return get_call_error_text(p_callable.get_object(), p_callable.get_method(), p_argptrs, MAX(0, p_argcount + args_bound), ce);
 	} else {
 		Vector<const Variant *> argptrs;
-		argptrs.resize(p_argcount - args_unbound + binds.size());
-		for (int i = 0; i < p_argcount - args_unbound; i++) {
+		argptrs.resize(p_argcount + binds.size());
+		for (int i = 0; i < p_argcount; i++) {
 			argptrs.write[i] = p_argptrs[i];
 		}
 		for (int i = 0; i < binds.size(); i++) {
-			argptrs.write[i + p_argcount - args_unbound] = &binds[i];
+			argptrs.write[i + p_argcount] = &binds[i];
 		}
 		return get_call_error_text(p_callable.get_object(), p_callable.get_method(), (const Variant **)argptrs.ptr(), argptrs.size(), ce);
 	}

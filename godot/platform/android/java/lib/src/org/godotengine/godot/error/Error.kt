@@ -92,7 +92,7 @@ enum class Error(private val description: String) {
 		}
 	}
 
-	fun toNativeValue(): Int = this.ordinal
+	internal fun toNativeValue(): Int = this.ordinal
 
 	override fun toString(): String {
 		return description

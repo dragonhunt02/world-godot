@@ -38,7 +38,7 @@ body {
 }
 
 #status {
-	background-color: $GODOT_SPLASH_COLOR;
+	background-color: #242424;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
@@ -140,7 +140,7 @@ const engine = new Engine(GODOT_CONFIG);
 		} else if (typeof err === 'string') {
 			setStatusNotice(err);
 		} else {
-			setStatusNotice('An unknown error occurred.');
+			setStatusNotice('An unknown error occured');
 		}
 		setStatusMode('notice');
 		initializing = false;
@@ -152,15 +152,9 @@ const engine = new Engine(GODOT_CONFIG);
 
 	if (missing.length !== 0) {
 		if (GODOT_CONFIG['serviceWorker'] && GODOT_CONFIG['ensureCrossOriginIsolationHeaders'] && 'serviceWorker' in navigator) {
-			let serviceWorkerRegistrationPromise;
-			try {
-				serviceWorkerRegistrationPromise = navigator.serviceWorker.getRegistration();
-			} catch (err) {
-				serviceWorkerRegistrationPromise = Promise.reject(new Error('Service worker registration failed.'));
-			}
 			// There's a chance that installing the service worker would fix the issue
 			Promise.race([
-				serviceWorkerRegistrationPromise.then((registration) => {
+				navigator.serviceWorker.getRegistration().then((registration) => {
 					if (registration != null) {
 						return Promise.reject(new Error('Service worker already exists.'));
 					}

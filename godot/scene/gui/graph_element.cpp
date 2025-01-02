@@ -30,6 +30,7 @@
 
 #include "graph_element.h"
 
+#include "core/string/translation.h"
 #include "scene/gui/graph_edit.h"
 #include "scene/theme/theme_db.h"
 

@@ -140,8 +140,8 @@ void FileAccessAndroid::flush() {
 	ERR_FAIL();
 }
 
-bool FileAccessAndroid::store_buffer(const uint8_t *p_src, uint64_t p_length) {
-	ERR_FAIL_V(false);
+void FileAccessAndroid::store_buffer(const uint8_t *p_src, uint64_t p_length) {
+	ERR_FAIL();
 }
 
 bool FileAccessAndroid::file_exists(const String &p_path) {

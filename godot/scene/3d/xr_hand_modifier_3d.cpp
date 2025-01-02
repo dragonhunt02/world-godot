@@ -31,6 +31,7 @@
 #include "xr_hand_modifier_3d.h"
 
 #include "core/config/project_settings.h"
+#include "servers/xr/xr_pose.h"
 #include "servers/xr_server.h"
 
 void XRHandModifier3D::_bind_methods() {

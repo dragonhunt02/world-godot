@@ -1,3 +1,2 @@
 GDTEST_ANALYZER_ERROR
->> ERROR at line 2: Cannot include a value of type "String" as "int".
->> ERROR at line 2: Cannot have a key of type "String" in a dictionary of type "Dictionary[int, int]".
+Cannot include a value of type "String" as "int".

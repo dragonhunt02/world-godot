@@ -1,3 +1,4 @@
+
 #define OGRE_imageLoad2D(inImage, iuv) imageLoad(inImage, int2(iuv))
 #define OGRE_imageLoad2DArray(inImage, iuvw) imageLoad(inImage, int3(iuvw))
 

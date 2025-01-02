@@ -31,8 +31,10 @@
 #ifndef EDITOR_HELP_SEARCH_H
 #define EDITOR_HELP_SEARCH_H
 
+#include "core/templates/rb_map.h"
+#include "editor/code_editor.h"
+#include "editor/editor_help.h"
 #include "editor/plugins/editor_plugin.h"
-#include "scene/gui/dialogs.h"
 #include "scene/gui/option_button.h"
 #include "scene/gui/tree.h"
 

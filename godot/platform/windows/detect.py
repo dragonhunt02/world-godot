@@ -68,23 +68,23 @@ def can_build():
 
 
 def get_mingw_bin_prefix(prefix, arch):
-    bin_prefix = (os.path.normpath(os.path.join(prefix, "bin")) + os.sep) if prefix else ""
-    ARCH_PREFIXES = {
-        "x86_64": "x86_64-w64-mingw32-",
-        "x86_32": "i686-w64-mingw32-",
-        "arm32": "armv7-w64-mingw32-",
-        "arm64": "aarch64-w64-mingw32-",
-    }
-    arch_prefix = ARCH_PREFIXES[arch] if arch else ""
-    return bin_prefix + arch_prefix
+    if not prefix:
+        mingw_bin_prefix = ""
+    elif prefix[-1] != "/":
+        mingw_bin_prefix = prefix + "/bin/"
+    else:
+        mingw_bin_prefix = prefix + "bin/"
 
+    if arch == "x86_64":
+        mingw_bin_prefix += "x86_64-w64-mingw32-"
+    elif arch == "x86_32":
+        mingw_bin_prefix += "i686-w64-mingw32-"
+    elif arch == "arm32":
+        mingw_bin_prefix += "armv7-w64-mingw32-"
+    elif arch == "arm64":
+        mingw_bin_prefix += "aarch64-w64-mingw32-"
 
-def get_detected(env: "SConsEnvironment", tool: str) -> str:
-    checks = [
-        get_mingw_bin_prefix(env["mingw_prefix"], env["arch"]) + tool,
-        get_mingw_bin_prefix(env["mingw_prefix"], "") + tool,
-    ]
-    return str(env.Detect(checks))
+    return mingw_bin_prefix
 
 
 def detect_build_env_arch():
@@ -245,6 +245,41 @@ def get_flags():
     }
 
 
+def build_res_file(target, source, env: "SConsEnvironment"):
+    arch_aliases = {
+        "x86_32": "pe-i386",
+        "x86_64": "pe-x86-64",
+        "arm32": "armv7-w64-mingw32",
+        "arm64": "aarch64-w64-mingw32",
+    }
+    cmdbase = "windres --include-dir . --target=" + arch_aliases[env["arch"]]
+
+    mingw_bin_prefix = get_mingw_bin_prefix(env["mingw_prefix"], env["arch"])
+
+    for x in range(len(source)):
+        ok = True
+        # Try prefixed executable (MinGW on Linux).
+        cmd = mingw_bin_prefix + cmdbase + " -i " + str(source[x]) + " -o " + str(target[x])
+        try:
+            out = subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE).communicate()
+            if len(out[1]):
+                ok = False
+        except Exception:
+            ok = False
+
+        # Try generic executable (MSYS2).
+        if not ok:
+            cmd = cmdbase + " -i " + str(source[x]) + " -o " + str(target[x])
+            try:
+                out = subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE).communicate()
+                if len(out[1]):
+                    return -1
+            except Exception:
+                return -1
+
+    return 0
+
+
 def setup_msvc_manual(env: "SConsEnvironment"):
     """Running from VCVARS environment"""
 
@@ -326,10 +361,6 @@ def setup_mingw(env: "SConsEnvironment"):
         print_error("No valid compilers found, use MINGW_PREFIX environment variable to set MinGW path.")
         sys.exit(255)
 
-    env.Tool("mingw")
-    env.AppendUnique(CCFLAGS=env.get("ccflags", "").split())
-    env.AppendUnique(RCFLAGS=env.get("rcflags", "").split())
-
     print("Using MinGW, arch %s" % (env["arch"]))
 
 
@@ -358,11 +389,6 @@ def configure_msvc(env: "SConsEnvironment", vcvars_msvc_config):
 
         env.AppendUnique(CPPDEFINES=["R128_STDC_ONLY"])
         env.extra_suffix = ".llvm" + env.extra_suffix
-
-        # Ensure intellisense tools like `compile_commands.json` play nice with MSVC syntax.
-        env["CPPDEFPREFIX"] = "-D"
-        env["INCPREFIX"] = "-I"
-        env.AppendUnique(CPPDEFINES=[("alloca", "_alloca")])
 
     if env["silence_msvc"] and not env.GetOption("clean"):
         from tempfile import mkstemp
@@ -680,13 +706,6 @@ def configure_mingw(env: "SConsEnvironment"):
     # https://www.scons.org/wiki/LongCmdLinesOnWin32
     env.use_windows_spawn_fix()
 
-    # HACK: For some reason, Windows-native shells have their MinGW tools
-    # frequently fail as a result of parsing path separators incorrectly.
-    # For some other reason, this issue is circumvented entirely if the
-    # `mingw_prefix` bin is prepended to PATH.
-    if os.sep == "\\":
-        env.PrependENVPath("PATH", os.path.join(env["mingw_prefix"], "bin"))
-
     # In case the command line to AR is too long, use a response file.
     env["ARCOM_ORIG"] = env["ARCOM"]
     env["ARCOM"] = "${TEMPFILE('$ARCOM_ORIG', '$ARCOMSTR')}"
@@ -706,7 +725,11 @@ def configure_mingw(env: "SConsEnvironment"):
         print("Detected GCC to be a wrapper for Clang.")
         env["use_llvm"] = True
 
-    if env.dev_build:
+    # TODO: Re-evaluate the need for this / streamline with common config.
+    if env["target"] == "template_release":
+        if env["arch"] != "arm64":
+            env.Append(CCFLAGS=["-msse2"])
+    elif env.dev_build:
         # Allow big objects. It's supposed not to have drawbacks but seems to break
         # GCC LTO, so enabling for debug builds only (which are not built with LTO
         # and are the only ones with too big objects).
@@ -719,6 +742,9 @@ def configure_mingw(env: "SConsEnvironment"):
         env.AppendUnique(CPPDEFINES=["WINDOWS_SUBSYSTEM_CONSOLE"])
 
     ## Compiler configuration
+
+    if os.name != "nt":
+        env["PROGSUFFIX"] = env["PROGSUFFIX"] + ".exe"  # for linux cross-compilation
 
     if env["arch"] == "x86_32":
         if env["use_static_cpp"]:
@@ -734,31 +760,29 @@ def configure_mingw(env: "SConsEnvironment"):
 
     env.Append(CCFLAGS=["-ffp-contract=off"])
 
+    mingw_bin_prefix = get_mingw_bin_prefix(env["mingw_prefix"], env["arch"])
+
     if env["use_llvm"]:
-        env["CC"] = get_detected(env, "clang")
-        env["CXX"] = get_detected(env, "clang++")
-        env["AR"] = get_detected(env, "ar")
-        env["RANLIB"] = get_detected(env, "ranlib")
-        env.Append(ASFLAGS=["-c"])
+        env["CC"] = mingw_bin_prefix + "clang"
+        env["CXX"] = mingw_bin_prefix + "clang++"
+        if try_cmd("as --version", env["mingw_prefix"], env["arch"]):
+            env["AS"] = mingw_bin_prefix + "as"
+            env.Append(ASFLAGS=["-c"])
+        if try_cmd("ar --version", env["mingw_prefix"], env["arch"]):
+            env["AR"] = mingw_bin_prefix + "ar"
+        if try_cmd("ranlib --version", env["mingw_prefix"], env["arch"]):
+            env["RANLIB"] = mingw_bin_prefix + "ranlib"
         env.extra_suffix = ".llvm" + env.extra_suffix
     else:
-        env["CC"] = get_detected(env, "gcc")
-        env["CXX"] = get_detected(env, "g++")
-        env["AR"] = get_detected(env, "gcc-ar" if os.name != "nt" else "ar")
-        env["RANLIB"] = get_detected(env, "gcc-ranlib")
-
-    env["RC"] = get_detected(env, "windres")
-    ARCH_TARGETS = {
-        "x86_32": "pe-i386",
-        "x86_64": "pe-x86-64",
-        "arm32": "armv7-w64-mingw32",
-        "arm64": "aarch64-w64-mingw32",
-    }
-    env.AppendUnique(RCFLAGS=f"--target={ARCH_TARGETS[env['arch']]}")
-
-    env["AS"] = get_detected(env, "as")
-    env["OBJCOPY"] = get_detected(env, "objcopy")
-    env["STRIP"] = get_detected(env, "strip")
+        env["CC"] = mingw_bin_prefix + "gcc"
+        env["CXX"] = mingw_bin_prefix + "g++"
+        if try_cmd("as --version", env["mingw_prefix"], env["arch"]):
+            env["AS"] = mingw_bin_prefix + "as"
+        ar = "ar" if os.name == "nt" else "gcc-ar"
+        if try_cmd(f"{ar} --version", env["mingw_prefix"], env["arch"]):
+            env["AR"] = mingw_bin_prefix + ar
+        if try_cmd("gcc-ranlib --version", env["mingw_prefix"], env["arch"]):
+            env["RANLIB"] = mingw_bin_prefix + "gcc-ranlib"
 
     ## LTO
 
@@ -812,7 +836,7 @@ def configure_mingw(env: "SConsEnvironment"):
         env.Append(CCFLAGS=san_flags)
         env.Append(LINKFLAGS=san_flags)
 
-    if env["use_llvm"] and os.name == "nt" and methods._can_color:
+    if env["use_llvm"] and os.name == "nt" and methods._colorize:
         env.Append(CCFLAGS=["$(-fansi-escape-codes$)", "$(-fcolor-diagnostics$)"])
 
     if get_is_ar_thin_supported(env):
@@ -899,6 +923,9 @@ def configure_mingw(env: "SConsEnvironment"):
         env.Prepend(CPPPATH=["#thirdparty/angle/include"])
 
     env.Append(CPPDEFINES=["MINGW_ENABLED", ("MINGW_HAS_SECURE_API", 1)])
+
+    # resrc
+    env.Append(BUILDERS={"RES": env.Builder(action=build_res_file, suffix=".o", src_suffix=".rc")})
 
 
 def configure(env: "SConsEnvironment"):

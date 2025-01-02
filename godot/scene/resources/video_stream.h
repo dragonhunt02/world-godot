@@ -31,6 +31,7 @@
 #ifndef VIDEO_STREAM_H
 #define VIDEO_STREAM_H
 
+#include "core/io/file_access.h"
 #include "scene/resources/texture.h"
 
 class VideoStreamPlayback : public Resource {

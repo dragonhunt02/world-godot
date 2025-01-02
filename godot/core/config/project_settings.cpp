@@ -39,6 +39,7 @@
 #include "core/io/marshalls.h"
 #include "core/io/resource_uid.h"
 #include "core/object/script_language.h"
+#include "core/os/keyboard.h"
 #include "core/templates/rb_set.h"
 #include "core/variant/typed_array.h"
 #include "core/variant/variant_parser.h"
@@ -193,7 +194,7 @@ String ProjectSettings::localize_path(const String &p_path) const {
 
 		return cwd.replace_first(res_path, "res://");
 	} else {
-		int sep = path.rfind_char('/');
+		int sep = path.rfind("/");
 		if (sep == -1) {
 			return "res://" + path;
 		}
@@ -213,36 +214,36 @@ String ProjectSettings::localize_path(const String &p_path) const {
 }
 
 void ProjectSettings::set_initial_value(const String &p_name, const Variant &p_value) {
-	ERR_FAIL_COND_MSG(!props.has(p_name), vformat("Request for nonexistent project setting: '%s'.", p_name));
+	ERR_FAIL_COND_MSG(!props.has(p_name), "Request for nonexistent project setting: " + p_name + ".");
 
 	// Duplicate so that if value is array or dictionary, changing the setting will not change the stored initial value.
 	props[p_name].initial = p_value.duplicate();
 }
 
 void ProjectSettings::set_restart_if_changed(const String &p_name, bool p_restart) {
-	ERR_FAIL_COND_MSG(!props.has(p_name), vformat("Request for nonexistent project setting: '%s'.", p_name));
+	ERR_FAIL_COND_MSG(!props.has(p_name), "Request for nonexistent project setting: " + p_name + ".");
 	props[p_name].restart_if_changed = p_restart;
 }
 
 void ProjectSettings::set_as_basic(const String &p_name, bool p_basic) {
-	ERR_FAIL_COND_MSG(!props.has(p_name), vformat("Request for nonexistent project setting: '%s'.", p_name));
+	ERR_FAIL_COND_MSG(!props.has(p_name), "Request for nonexistent project setting: " + p_name + ".");
 	props[p_name].basic = p_basic;
 }
 
 void ProjectSettings::set_as_internal(const String &p_name, bool p_internal) {
-	ERR_FAIL_COND_MSG(!props.has(p_name), vformat("Request for nonexistent project setting: '%s'.", p_name));
+	ERR_FAIL_COND_MSG(!props.has(p_name), "Request for nonexistent project setting: " + p_name + ".");
 	props[p_name].internal = p_internal;
 }
 
 void ProjectSettings::set_ignore_value_in_docs(const String &p_name, bool p_ignore) {
-	ERR_FAIL_COND_MSG(!props.has(p_name), vformat("Request for nonexistent project setting: '%s'.", p_name));
+	ERR_FAIL_COND_MSG(!props.has(p_name), "Request for nonexistent project setting: " + p_name + ".");
 #ifdef DEBUG_METHODS_ENABLED
 	props[p_name].ignore_value_in_docs = p_ignore;
 #endif
 }
 
 bool ProjectSettings::get_ignore_value_in_docs(const String &p_name) const {
-	ERR_FAIL_COND_V_MSG(!props.has(p_name), false, vformat("Request for nonexistent project setting: '%s'.", p_name));
+	ERR_FAIL_COND_V_MSG(!props.has(p_name), false, "Request for nonexistent project setting: " + p_name + ".");
 #ifdef DEBUG_METHODS_ENABLED
 	return props[p_name].ignore_value_in_docs;
 #else
@@ -261,12 +262,6 @@ String ProjectSettings::globalize_path(const String &p_path) const {
 			return p_path.replace("res:/", resource_path);
 		}
 		return p_path.replace("res://", "");
-	} else if (p_path.begins_with("uid://")) {
-		const String path = ResourceUID::uid_to_path(p_path);
-		if (!resource_path.is_empty()) {
-			return path.replace("res:/", resource_path);
-		}
-		return path.replace("res://", "");
 	} else if (p_path.begins_with("user://")) {
 		String data_dir = OS::get_singleton()->get_user_data_dir();
 		if (!data_dir.is_empty()) {
@@ -305,7 +300,7 @@ bool ProjectSettings::_set(const StringName &p_name, const Variant &p_value) {
 		}
 
 		{ // Feature overrides.
-			int dot = p_name.operator String().find_char('.');
+			int dot = p_name.operator String().find(".");
 			if (dot != -1) {
 				Vector<String> s = p_name.operator String().split(".");
 
@@ -376,7 +371,7 @@ Variant ProjectSettings::get_setting_with_override(const StringName &p_name) con
 	}
 
 	if (!props.has(name)) {
-		WARN_PRINT(vformat("Property not found: '%s'.", String(name)));
+		WARN_PRINT("Property not found: " + String(name));
 		return Variant();
 	}
 	return props[name].variant;
@@ -440,7 +435,7 @@ void ProjectSettings::_get_property_list(List<PropertyInfo> *p_list) const {
 
 	for (const _VCSort &E : vclist) {
 		String prop_info_name = E.name;
-		int dot = prop_info_name.find_char('.');
+		int dot = prop_info_name.find(".");
 		if (dot != -1 && !custom_prop_info.has(prop_info_name)) {
 			prop_info_name = prop_info_name.substr(0, dot);
 		}
@@ -513,19 +508,16 @@ void ProjectSettings::_convert_to_last_version(int p_from_version) {
 			}
 		}
 	}
-	if (p_from_version == 5) {
-		// Converts the device in events from -3 to -1.
-		// -3 was introduced in GH-97707 as a way to prevent a clash in device IDs, but as reported in GH-99243, this leads to problems.
-		// -3 was used during dev-releases, so this conversion helps to revert such affected projects.
-		// This conversion doesn't affect any other projects, since -3 is not used otherwise.
+	if (p_from_version <= 5) {
+		// Converts the device in events from -1 (emulated events) to -3 (all events).
 		for (KeyValue<StringName, ProjectSettings::VariantContainer> &E : props) {
 			if (String(E.key).begins_with("input/")) {
 				Dictionary action = E.value.variant;
 				Array events = action["events"];
 				for (int i = 0; i < events.size(); i++) {
 					Ref<InputEvent> ev = events[i];
-					if (ev.is_valid() && ev->get_device() == -3) {
-						ev->set_device(-1);
+					if (ev.is_valid() && ev->get_device() == -1) { // -1 was the previous value (GH-97707).
+						ev->set_device(InputEvent::DEVICE_ID_ALL_DEVICES);
 					}
 				}
 			}
@@ -573,7 +565,7 @@ Error ProjectSettings::_setup(const String &p_path, const String &p_main_pack, b
 
 	if (!p_main_pack.is_empty()) {
 		bool ok = _load_resource_pack(p_main_pack);
-		ERR_FAIL_COND_V_MSG(!ok, ERR_CANT_OPEN, vformat("Cannot open resource pack '%s'.", p_main_pack));
+		ERR_FAIL_COND_V_MSG(!ok, ERR_CANT_OPEN, "Cannot open resource pack '" + p_main_pack + "'.");
 
 		Error err = _load_settings_text_or_binary("res://project.godot", "res://project.binary");
 		if (err == OK && !p_ignore_override) {
@@ -652,7 +644,7 @@ Error ProjectSettings::_setup(const String &p_path, const String &p_main_pack, b
 	// or, if requested (`p_upwards`) in parent directories.
 
 	Ref<DirAccess> d = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
-	ERR_FAIL_COND_V_MSG(d.is_null(), ERR_CANT_CREATE, vformat("Cannot create DirAccess for path '%s'.", p_path));
+	ERR_FAIL_COND_V_MSG(d.is_null(), ERR_CANT_CREATE, "Cannot create DirAccess for path '" + p_path + "'.");
 	d->change_dir(p_path);
 
 	String current_dir = d->get_current_dir();
@@ -748,7 +740,7 @@ Error ProjectSettings::_load_settings_binary(const String &p_path) {
 		cs[slen] = 0;
 		f->get_buffer((uint8_t *)cs.ptr(), slen);
 		String key;
-		key.parse_utf8(cs.ptr(), slen);
+		key.parse_utf8(cs.ptr());
 
 		uint32_t vlen = f->get_32();
 		Vector<uint8_t> d;
@@ -756,7 +748,7 @@ Error ProjectSettings::_load_settings_binary(const String &p_path) {
 		f->get_buffer(d.ptrw(), vlen);
 		Variant value;
 		err = decode_variant(value, d.ptr(), d.size(), nullptr, true);
-		ERR_CONTINUE_MSG(err != OK, vformat("Error decoding property: '%s'.", key));
+		ERR_CONTINUE_MSG(err != OK, "Error decoding property: " + key + ".");
 		set(key, value);
 	}
 
@@ -798,7 +790,7 @@ Error ProjectSettings::_load_settings_text(const String &p_path) {
 			last_save_time = FileAccess::get_modified_time(get_resource_path().path_join("project.godot"));
 			return OK;
 		}
-		ERR_FAIL_COND_V_MSG(err != OK, err, vformat("Error parsing '%s' at line %d: %s File might be corrupted.", p_path, lines, error_text));
+		ERR_FAIL_COND_V_MSG(err != OK, err, "Error parsing " + p_path + " at line " + itos(lines) + ": " + error_text + " File might be corrupted.");
 
 		if (!assign.is_empty()) {
 			if (section.is_empty() && assign == "config_version") {
@@ -824,7 +816,7 @@ Error ProjectSettings::_load_settings_text_or_binary(const String &p_text_path, 
 		return OK;
 	} else if (err != ERR_FILE_NOT_FOUND) {
 		// If the file exists but can't be loaded, we want to know it.
-		ERR_PRINT(vformat("Couldn't load file '%s', error code %d.", p_bin_path, err));
+		ERR_PRINT("Couldn't load file '" + p_bin_path + "', error code " + itos(err) + ".");
 	}
 
 	// Fallback to text-based project.godot file if binary was not found.
@@ -832,7 +824,7 @@ Error ProjectSettings::_load_settings_text_or_binary(const String &p_text_path, 
 	if (err == OK) {
 		return OK;
 	} else if (err != ERR_FILE_NOT_FOUND) {
-		ERR_PRINT(vformat("Couldn't load file '%s', error code %d.", p_text_path, err));
+		ERR_PRINT("Couldn't load file '" + p_text_path + "', error code " + itos(err) + ".");
 	}
 
 	return err;
@@ -846,17 +838,17 @@ Error ProjectSettings::load_custom(const String &p_path) {
 }
 
 int ProjectSettings::get_order(const String &p_name) const {
-	ERR_FAIL_COND_V_MSG(!props.has(p_name), -1, vformat("Request for nonexistent project setting: '%s'.", p_name));
+	ERR_FAIL_COND_V_MSG(!props.has(p_name), -1, "Request for nonexistent project setting: " + p_name + ".");
 	return props[p_name].order;
 }
 
 void ProjectSettings::set_order(const String &p_name, int p_order) {
-	ERR_FAIL_COND_MSG(!props.has(p_name), vformat("Request for nonexistent project setting: '%s'.", p_name));
+	ERR_FAIL_COND_MSG(!props.has(p_name), "Request for nonexistent project setting: " + p_name + ".");
 	props[p_name].order = p_order;
 }
 
 void ProjectSettings::set_builtin_order(const String &p_name) {
-	ERR_FAIL_COND_MSG(!props.has(p_name), vformat("Request for nonexistent project setting: '%s'.", p_name));
+	ERR_FAIL_COND_MSG(!props.has(p_name), "Request for nonexistent project setting: " + p_name + ".");
 	if (props[p_name].order >= NO_BUILTIN_ORDER_BASE) {
 		props[p_name].order = last_builtin_order++;
 	}
@@ -864,12 +856,12 @@ void ProjectSettings::set_builtin_order(const String &p_name) {
 
 bool ProjectSettings::is_builtin_setting(const String &p_name) const {
 	// Return true because a false negative is worse than a false positive.
-	ERR_FAIL_COND_V_MSG(!props.has(p_name), true, vformat("Request for nonexistent project setting: '%s'.", p_name));
+	ERR_FAIL_COND_V_MSG(!props.has(p_name), true, "Request for nonexistent project setting: " + p_name + ".");
 	return props[p_name].order < NO_BUILTIN_ORDER_BASE;
 }
 
 void ProjectSettings::clear(const String &p_name) {
-	ERR_FAIL_COND_MSG(!props.has(p_name), vformat("Request for nonexistent project setting: '%s'.", p_name));
+	ERR_FAIL_COND_MSG(!props.has(p_name), "Request for nonexistent project setting: " + p_name + ".");
 	props.erase(p_name);
 }
 
@@ -884,7 +876,7 @@ Error ProjectSettings::save() {
 Error ProjectSettings::_save_settings_binary(const String &p_file, const RBMap<String, List<String>> &p_props, const CustomMap &p_custom, const String &p_custom_features) {
 	Error err;
 	Ref<FileAccess> file = FileAccess::open(p_file, FileAccess::WRITE, &err);
-	ERR_FAIL_COND_V_MSG(err != OK, err, vformat("Couldn't save project.binary at '%s'.", p_file));
+	ERR_FAIL_COND_V_MSG(err != OK, err, "Couldn't save project.binary at " + p_file + ".");
 
 	uint8_t hdr[4] = { 'E', 'C', 'F', 'G' };
 	file->store_buffer(hdr, 4);
@@ -897,7 +889,7 @@ Error ProjectSettings::_save_settings_binary(const String &p_file, const RBMap<S
 
 	if (!p_custom_features.is_empty()) {
 		// Store how many properties are saved, add one for custom features, which must always go first.
-		file->store_32(uint32_t(count + 1));
+		file->store_32(count + 1);
 		String key = CoreStringName(_custom_features);
 		file->store_pascal_string(key);
 
@@ -910,12 +902,12 @@ Error ProjectSettings::_save_settings_binary(const String &p_file, const RBMap<S
 
 		err = encode_variant(p_custom_features, buff.ptrw(), len, false);
 		ERR_FAIL_COND_V(err != OK, err);
-		file->store_32(uint32_t(len));
+		file->store_32(len);
 		file->store_buffer(buff.ptr(), buff.size());
 
 	} else {
 		// Store how many properties are saved.
-		file->store_32(uint32_t(count));
+		file->store_32(count);
 	}
 
 	for (const KeyValue<String, List<String>> &E : p_props) {
@@ -942,7 +934,7 @@ Error ProjectSettings::_save_settings_binary(const String &p_file, const RBMap<S
 
 			err = encode_variant(value, buff.ptrw(), len, true);
 			ERR_FAIL_COND_V_MSG(err != OK, ERR_INVALID_DATA, "Error when trying to encode Variant.");
-			file->store_32(uint32_t(len));
+			file->store_32(len);
 			file->store_buffer(buff.ptr(), buff.size());
 		}
 	}
@@ -954,7 +946,7 @@ Error ProjectSettings::_save_settings_text(const String &p_file, const RBMap<Str
 	Error err;
 	Ref<FileAccess> file = FileAccess::open(p_file, FileAccess::WRITE, &err);
 
-	ERR_FAIL_COND_V_MSG(err != OK, err, vformat("Couldn't save project.godot - %s.", p_file));
+	ERR_FAIL_COND_V_MSG(err != OK, err, "Couldn't save project.godot - " + p_file + ".");
 
 	file->store_line("; Engine configuration file.");
 	file->store_line("; It's best edited using the editor UI and not directly,");
@@ -1100,7 +1092,7 @@ Error ProjectSettings::save_custom(const String &p_path, const CustomMap &p_cust
 		String category = E.name;
 		String name = E.name;
 
-		int div = category.find_char('/');
+		int div = category.find("/");
 
 		if (div < 0) {
 			category = "";
@@ -1127,7 +1119,7 @@ Error ProjectSettings::save_custom(const String &p_path, const CustomMap &p_cust
 	} else if (p_path.ends_with(".binary")) {
 		return _save_settings_binary(p_path, save_props, p_custom, save_features);
 	} else {
-		ERR_FAIL_V_MSG(ERR_FILE_UNRECOGNIZED, vformat("Unknown config file format: '%s'.", p_path));
+		ERR_FAIL_V_MSG(ERR_FILE_UNRECOGNIZED, "Unknown config file format: " + p_path);
 	}
 }
 
@@ -1416,7 +1408,7 @@ void ProjectSettings::_add_builtin_input_map() {
 			}
 
 			Dictionary action;
-			action["deadzone"] = Variant(InputMap::DEFAULT_DEADZONE);
+			action["deadzone"] = Variant(0.2f);
 			action["events"] = events;
 
 			String action_name = "input/" + E.key;
@@ -1515,11 +1507,7 @@ ProjectSettings::ProjectSettings() {
 	GLOBAL_DEF("display/window/frame_pacing/android/enable_frame_pacing", true);
 	GLOBAL_DEF(PropertyInfo(Variant::INT, "display/window/frame_pacing/android/swappy_mode", PROPERTY_HINT_ENUM, "pipeline_forced_on,auto_fps_pipeline_forced_on,auto_fps_auto_pipeline"), 2);
 
-#ifdef DISABLE_DEPRECATED
-	custom_prop_info["rendering/driver/threads/thread_model"] = PropertyInfo(Variant::INT, "rendering/driver/threads/thread_model", PROPERTY_HINT_ENUM, "Safe:1,Separate");
-#else
-	custom_prop_info["rendering/driver/threads/thread_model"] = PropertyInfo(Variant::INT, "rendering/driver/threads/thread_model", PROPERTY_HINT_ENUM, "Unsafe (deprecated),Safe,Separate");
-#endif
+	custom_prop_info["rendering/driver/threads/thread_model"] = PropertyInfo(Variant::INT, "rendering/driver/threads/thread_model", PROPERTY_HINT_ENUM, "Single-Unsafe,Single-Safe,Multi-Threaded");
 	GLOBAL_DEF("physics/2d/run_on_separate_thread", false);
 	GLOBAL_DEF("physics/3d/run_on_separate_thread", false);
 
@@ -1562,7 +1550,6 @@ ProjectSettings::ProjectSettings() {
 	GLOBAL_DEF(PropertyInfo(Variant::INT, "rendering/rendering_device/staging_buffer/block_size_kb", PROPERTY_HINT_RANGE, "4,2048,1,or_greater"), 256);
 	GLOBAL_DEF(PropertyInfo(Variant::INT, "rendering/rendering_device/staging_buffer/max_size_mb", PROPERTY_HINT_RANGE, "1,1024,1,or_greater"), 128);
 	GLOBAL_DEF(PropertyInfo(Variant::INT, "rendering/rendering_device/staging_buffer/texture_upload_region_size_px", PROPERTY_HINT_RANGE, "1,256,1,or_greater"), 64);
-	GLOBAL_DEF(PropertyInfo(Variant::INT, "rendering/rendering_device/staging_buffer/texture_download_region_size_px", PROPERTY_HINT_RANGE, "1,256,1,or_greater"), 64);
 	GLOBAL_DEF_RST(PropertyInfo(Variant::BOOL, "rendering/rendering_device/pipeline_cache/enable"), true);
 	GLOBAL_DEF(PropertyInfo(Variant::FLOAT, "rendering/rendering_device/pipeline_cache/save_chunk_size_mb", PROPERTY_HINT_RANGE, "0.000001,64.0,0.001,or_greater"), 3.0);
 	GLOBAL_DEF(PropertyInfo(Variant::INT, "rendering/rendering_device/vulkan/max_descriptors_per_pool", PROPERTY_HINT_RANGE, "1,256,1,or_greater"), 64);

@@ -34,12 +34,17 @@
 #include "core/math/color.h"
 #include "core/math/math_funcs.h"
 #include "core/object/object.h"
+#include "core/os/memory.h"
 #include "core/string/print_string.h"
 #include "core/string/string_name.h"
 #include "core/string/translation_server.h"
 #include "core/string/ucaps.h"
 #include "core/variant/variant.h"
 #include "core/version_generated.gen.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <cstdint>
 
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS // to disable build-time warning which suggested to use strcpy_s instead strcpy
@@ -241,27 +246,27 @@ Error String::parse_url(String &r_scheme, String &r_host, int &r_port, String &r
 			base = base.substr(pos + 3, base.length() - pos - 3);
 		}
 	}
-	pos = base.find_char('#');
+	pos = base.find("#");
 	// Fragment
 	if (pos != -1) {
 		r_fragment = base.substr(pos + 1);
 		base = base.substr(0, pos);
 	}
-	pos = base.find_char('/');
+	pos = base.find("/");
 	// Path
 	if (pos != -1) {
 		r_path = base.substr(pos, base.length() - pos);
 		base = base.substr(0, pos);
 	}
 	// Host
-	pos = base.find_char('@');
+	pos = base.find("@");
 	if (pos != -1) {
 		// Strip credentials
 		base = base.substr(pos + 1, base.length() - pos - 1);
 	}
 	if (base.begins_with("[")) {
 		// Literal IPv6
-		pos = base.rfind_char(']');
+		pos = base.rfind("]");
 		if (pos == -1) {
 			return ERR_INVALID_PARAMETER;
 		}
@@ -272,7 +277,7 @@ Error String::parse_url(String &r_scheme, String &r_host, int &r_port, String &r
 		if (base.get_slice_count(":") > 2) {
 			return ERR_INVALID_PARAMETER;
 		}
-		pos = base.rfind_char(':');
+		pos = base.rfind(":");
 		if (pos == -1) {
 			r_host = base;
 			base = "";
@@ -299,35 +304,98 @@ Error String::parse_url(String &r_scheme, String &r_host, int &r_port, String &r
 	return OK;
 }
 
-void String::parse_latin1(const StrRange<char> &p_cstr) {
-	if (p_cstr.len == 0) {
+void String::copy_from(const char *p_cstr) {
+	// copy Latin-1 encoded c-string directly
+	if (!p_cstr) {
 		resize(0);
 		return;
 	}
 
-	resize(p_cstr.len + 1); // include 0
+	const size_t len = strlen(p_cstr);
 
-	const char *src = p_cstr.c_str;
-	const char *end = src + p_cstr.len;
+	if (len == 0) {
+		resize(0);
+		return;
+	}
+
+	resize(len + 1); // include 0
+
 	char32_t *dst = ptrw();
 
-	for (; src < end; ++src, ++dst) {
-		// If char is int8_t, a set sign bit will be reinterpreted as 256 - val implicitly.
-		*dst = static_cast<uint8_t>(*src);
+	for (size_t i = 0; i <= len; i++) {
+#if CHAR_MIN == 0
+		uint8_t c = p_cstr[i];
+#else
+		uint8_t c = p_cstr[i] >= 0 ? p_cstr[i] : uint8_t(256 + p_cstr[i]);
+#endif
+		if (c == 0 && i < len) {
+			print_unicode_error("NUL character", true);
+			dst[i] = _replacement_char;
+		} else {
+			dst[i] = c;
+		}
 	}
-	*dst = 0;
 }
 
-void String::parse_utf32(const StrRange<char32_t> &p_cstr) {
-	if (p_cstr.len == 0) {
+void String::copy_from(const char *p_cstr, const int p_clip_to) {
+	// copy Latin-1 encoded c-string directly
+	if (!p_cstr) {
 		resize(0);
 		return;
 	}
 
-	copy_from_unchecked(p_cstr.c_str, p_cstr.len);
+	int len = 0;
+	const char *ptr = p_cstr;
+	while ((p_clip_to < 0 || len < p_clip_to) && *(ptr++) != 0) {
+		len++;
+	}
+
+	if (len == 0) {
+		resize(0);
+		return;
+	}
+
+	resize(len + 1); // include 0
+
+	char32_t *dst = ptrw();
+
+	for (int i = 0; i < len; i++) {
+#if CHAR_MIN == 0
+		uint8_t c = p_cstr[i];
+#else
+		uint8_t c = p_cstr[i] >= 0 ? p_cstr[i] : uint8_t(256 + p_cstr[i]);
+#endif
+		if (c == 0) {
+			print_unicode_error("NUL character", true);
+			dst[i] = _replacement_char;
+		} else {
+			dst[i] = c;
+		}
+	}
+	dst[len] = 0;
 }
 
-void String::parse_utf32(const char32_t &p_char) {
+void String::copy_from(const wchar_t *p_cstr) {
+#ifdef WINDOWS_ENABLED
+	// wchar_t is 16-bit, parse as UTF-16
+	parse_utf16((const char16_t *)p_cstr);
+#else
+	// wchar_t is 32-bit, copy directly
+	copy_from((const char32_t *)p_cstr);
+#endif
+}
+
+void String::copy_from(const wchar_t *p_cstr, const int p_clip_to) {
+#ifdef WINDOWS_ENABLED
+	// wchar_t is 16-bit, parse as UTF-16
+	parse_utf16((const char16_t *)p_cstr, p_clip_to);
+#else
+	// wchar_t is 32-bit, copy directly
+	copy_from((const char32_t *)p_cstr, p_clip_to);
+#endif
+}
+
+void String::copy_from(const char32_t &p_char) {
 	if (p_char == 0) {
 		print_unicode_error("NUL character", true);
 		return;
@@ -350,31 +418,85 @@ void String::parse_utf32(const char32_t &p_char) {
 	dst[1] = 0;
 }
 
+void String::copy_from(const char32_t *p_cstr) {
+	if (!p_cstr) {
+		resize(0);
+		return;
+	}
+
+	int len = 0;
+	const char32_t *ptr = p_cstr;
+	while (*(ptr++) != 0) {
+		len++;
+	}
+
+	if (len == 0) {
+		resize(0);
+		return;
+	}
+
+	copy_from_unchecked(p_cstr, len);
+}
+
+void String::copy_from(const char32_t *p_cstr, const int p_clip_to) {
+	if (!p_cstr) {
+		resize(0);
+		return;
+	}
+
+	int len = 0;
+	const char32_t *ptr = p_cstr;
+	while ((p_clip_to < 0 || len < p_clip_to) && *(ptr++) != 0) {
+		len++;
+	}
+
+	if (len == 0) {
+		resize(0);
+		return;
+	}
+
+	copy_from_unchecked(p_cstr, len);
+}
+
 // assumes the following have already been validated:
 // p_char != nullptr
 // p_length > 0
 // p_length <= p_char strlen
 void String::copy_from_unchecked(const char32_t *p_char, const int p_length) {
 	resize(p_length + 1);
-
-	const char32_t *end = p_char + p_length;
 	char32_t *dst = ptrw();
+	dst[p_length] = 0;
 
-	for (; p_char < end; ++p_char, ++dst) {
-		const char32_t chr = *p_char;
-		if ((chr & 0xfffff800) == 0xd800) {
-			print_unicode_error(vformat("Unpaired surrogate (%x)", (uint32_t)chr));
-			*dst = _replacement_char;
+	for (int i = 0; i < p_length; i++) {
+		if (p_char[i] == 0) {
+			print_unicode_error("NUL character", true);
+			dst[i] = _replacement_char;
 			continue;
 		}
-		if (chr > 0x10ffff) {
-			print_unicode_error(vformat("Invalid unicode codepoint (%x)", (uint32_t)chr));
-			*dst = _replacement_char;
+		if ((p_char[i] & 0xfffff800) == 0xd800) {
+			print_unicode_error(vformat("Unpaired surrogate (%x)", (uint32_t)p_char[i]));
+			dst[i] = _replacement_char;
 			continue;
 		}
-		*dst = chr;
+		if (p_char[i] > 0x10ffff) {
+			print_unicode_error(vformat("Invalid unicode codepoint (%x)", (uint32_t)p_char[i]));
+			dst[i] = _replacement_char;
+			continue;
+		}
+		dst[i] = p_char[i];
 	}
-	*dst = 0;
+}
+
+void String::operator=(const char *p_str) {
+	copy_from(p_str);
+}
+
+void String::operator=(const char32_t *p_str) {
+	copy_from(p_str);
+}
+
+void String::operator=(const wchar_t *p_str) {
+	copy_from(p_str);
 }
 
 String String::operator+(const String &p_str) const {
@@ -507,7 +629,12 @@ String &String::operator+=(char32_t p_char) {
 
 bool String::operator==(const char *p_str) const {
 	// compare Latin-1 encoded c-string
-	int len = strlen(p_str);
+	int len = 0;
+	const char *aux = p_str;
+
+	while (*(aux++) != 0) {
+		len++;
+	}
 
 	if (length() != len) {
 		return false;
@@ -541,7 +668,12 @@ bool String::operator==(const wchar_t *p_str) const {
 }
 
 bool String::operator==(const char32_t *p_str) const {
-	const int len = strlen(p_str);
+	int len = 0;
+	const char32_t *aux = p_str;
+
+	while (*(aux++) != 0) {
+		len++;
+	}
 
 	if (length() != len) {
 		return false;
@@ -587,7 +719,7 @@ bool String::operator==(const String &p_str) const {
 	return true;
 }
 
-bool String::operator==(const StrRange<char32_t> &p_str_range) const {
+bool String::operator==(const StrRange &p_str_range) const {
 	int len = p_str_range.len;
 
 	if (length() != len) {
@@ -977,21 +1109,17 @@ String String::_camelcase_to_underscore() const {
 	String new_string;
 	int start_index = 0;
 
-	if (length() == 0) {
-		return *this;
-	}
+	for (int i = 1; i < size(); i++) {
+		bool is_prev_upper = is_unicode_upper_case(cstr[i - 1]);
+		bool is_prev_lower = is_unicode_lower_case(cstr[i - 1]);
+		bool is_prev_digit = is_digit(cstr[i - 1]);
 
-	bool is_prev_upper = is_unicode_upper_case(cstr[0]);
-	bool is_prev_lower = is_unicode_lower_case(cstr[0]);
-	bool is_prev_digit = is_digit(cstr[0]);
-
-	for (int i = 1; i < length(); i++) {
-		const bool is_curr_upper = is_unicode_upper_case(cstr[i]);
-		const bool is_curr_lower = is_unicode_lower_case(cstr[i]);
-		const bool is_curr_digit = is_digit(cstr[i]);
+		bool is_curr_upper = is_unicode_upper_case(cstr[i]);
+		bool is_curr_lower = is_unicode_lower_case(cstr[i]);
+		bool is_curr_digit = is_digit(cstr[i]);
 
 		bool is_next_lower = false;
-		if (i + 1 < length()) {
+		if (i + 1 < size()) {
 			is_next_lower = is_unicode_lower_case(cstr[i + 1]);
 		}
 
@@ -1004,10 +1132,6 @@ String String::_camelcase_to_underscore() const {
 			new_string += substr(start_index, i - start_index) + "_";
 			start_index = i;
 		}
-
-		is_prev_upper = is_curr_upper;
-		is_prev_lower = is_curr_lower;
-		is_prev_digit = is_curr_digit;
 	}
 
 	new_string += substr(start_index, size() - start_index);
@@ -1154,7 +1278,7 @@ String String::get_slice(const char *p_splitter, int p_slice) const {
 	}
 
 	int i = 0;
-	const int splitter_length = strlen(p_splitter);
+	int splitter_length = strlen(p_splitter);
 	while (true) {
 		pos = find(p_splitter, pos);
 		if (pos == -1) {
@@ -1305,7 +1429,6 @@ Vector<String> String::split(const char *p_splitter, bool p_allow_empty, int p_m
 
 	int from = 0;
 	int len = length();
-	const int splitter_length = strlen(p_splitter);
 
 	while (true) {
 		int end;
@@ -1336,7 +1459,7 @@ Vector<String> String::split(const char *p_splitter, bool p_allow_empty, int p_m
 			break;
 		}
 
-		from = end + splitter_length;
+		from = end + strlen(p_splitter);
 	}
 
 	return ret;
@@ -1696,7 +1819,7 @@ String String::num(double p_num, int p_decimals) {
 #endif
 
 	buf[324] = 0;
-	// Destroy trailing zeroes, except one after period.
+	//destroy trailing zeroes
 	{
 		bool period = false;
 		int z = 0;
@@ -1713,7 +1836,7 @@ String String::num(double p_num, int p_decimals) {
 				if (buf[z] == '0') {
 					buf[z] = 0;
 				} else if (buf[z] == '.') {
-					buf[z + 1] = '0';
+					buf[z] = 0;
 					break;
 				} else {
 					break;
@@ -1799,10 +1922,6 @@ String String::num_uint64(uint64_t p_num, int base, bool capitalize_hex) {
 }
 
 String String::num_real(double p_num, bool p_trailing) {
-	if (Math::is_nan(p_num) || Math::is_inf(p_num)) {
-		return num(p_num, 0);
-	}
-
 	if (p_num == (double)(int64_t)p_num) {
 		if (p_trailing) {
 			return num_int64((int64_t)p_num) + ".0";
@@ -1810,34 +1929,14 @@ String String::num_real(double p_num, bool p_trailing) {
 			return num_int64((int64_t)p_num);
 		}
 	}
-
+#ifdef REAL_T_IS_DOUBLE
 	int decimals = 14;
-	// We want to align the digits to the above sane default, so we only need
-	// to subtract log10 for numbers with a positive power of ten magnitude.
-	const double abs_num = Math::abs(p_num);
-	if (abs_num > 10) {
-		decimals -= (int)floor(log10(abs_num));
-	}
-
-	return num(p_num, decimals);
-}
-
-String String::num_real(float p_num, bool p_trailing) {
-	if (Math::is_nan(p_num) || Math::is_inf(p_num)) {
-		return num(p_num, 0);
-	}
-
-	if (p_num == (float)(int64_t)p_num) {
-		if (p_trailing) {
-			return num_int64((int64_t)p_num) + ".0";
-		} else {
-			return num_int64((int64_t)p_num);
-		}
-	}
+#else
 	int decimals = 6;
+#endif
 	// We want to align the digits to the above sane default, so we only need
 	// to subtract log10 for numbers with a positive power of ten magnitude.
-	const float abs_num = Math::abs(p_num);
+	double abs_num = Math::abs(p_num);
 	if (abs_num > 10) {
 		decimals -= (int)floor(log10(abs_num));
 	}
@@ -1845,8 +1944,16 @@ String String::num_real(float p_num, bool p_trailing) {
 }
 
 String String::num_scientific(double p_num) {
-	if (Math::is_nan(p_num) || Math::is_inf(p_num)) {
-		return num(p_num, 0);
+	if (Math::is_nan(p_num)) {
+		return "nan";
+	}
+
+	if (Math::is_inf(p_num)) {
+		if (signbit(p_num)) {
+			return "-inf";
+		} else {
+			return "inf";
+		}
 	}
 
 	char buf[256];
@@ -1944,7 +2051,7 @@ CharString String::ascii(bool p_allow_extended) const {
 	for (int i = 0; i < size(); i++) {
 		char32_t c = this_ptr[i];
 		if ((c <= 0x7f) || (c <= 0xff && p_allow_extended)) {
-			cs_ptrw[i] = char(c);
+			cs_ptrw[i] = c;
 		} else {
 			print_unicode_error(vformat("Invalid unicode codepoint (%x), cannot represent as ASCII/Latin-1", (uint32_t)c));
 			cs_ptrw[i] = 0x20; // ASCII doesn't have a replacement character like unicode, 0x1a is sometimes used but is kinda arcane.
@@ -2404,6 +2511,37 @@ Char16String String::utf16() const {
 	return utf16s;
 }
 
+String::String(const char *p_str) {
+	copy_from(p_str);
+}
+
+String::String(const wchar_t *p_str) {
+	copy_from(p_str);
+}
+
+String::String(const char32_t *p_str) {
+	copy_from(p_str);
+}
+
+String::String(const char *p_str, int p_clip_to_len) {
+	copy_from(p_str, p_clip_to_len);
+}
+
+String::String(const wchar_t *p_str, int p_clip_to_len) {
+	copy_from(p_str, p_clip_to_len);
+}
+
+String::String(const char32_t *p_str, int p_clip_to_len) {
+	copy_from(p_str, p_clip_to_len);
+}
+
+String::String(const StrRange &p_range) {
+	if (!p_range.c_str) {
+		return;
+	}
+	copy_from(p_range.c_str, p_range.len);
+}
+
 int64_t String::hex_to_int() const {
 	int len = length();
 	if (len == 0) {
@@ -2484,50 +2622,30 @@ int64_t String::bin_to_int() const {
 	return binary * sign;
 }
 
-template <typename C, typename T>
-_ALWAYS_INLINE_ int64_t _to_int(const T &p_in, int to) {
-	// Accumulate the total number in an unsigned integer as the range is:
-	// +9223372036854775807 to -9223372036854775808 and the smallest negative
-	// number does not fit inside an int64_t. So we accumulate the positive
-	// number in an unsigned, and then at the very end convert to its signed
-	// form.
-	uint64_t integer = 0;
-	uint8_t digits = 0;
-	bool positive = true;
-
-	for (int i = 0; i < to; i++) {
-		C c = p_in[i];
-		if (is_digit(c)) {
-			// No need to do expensive checks unless we're approaching INT64_MAX / INT64_MIN.
-			if (unlikely(digits > 18)) {
-				bool overflow = (integer > INT64_MAX / 10) || (integer == INT64_MAX / 10 && ((positive && c > '7') || (!positive && c > '8')));
-				ERR_FAIL_COND_V_MSG(overflow, positive ? INT64_MAX : INT64_MIN, "Cannot represent " + String(p_in) + " as a 64-bit signed integer, since the value is " + (positive ? "too large." : "too small."));
-			}
-
-			integer *= 10;
-			integer += c - '0';
-			++digits;
-
-		} else if (integer == 0 && c == '-') {
-			positive = !positive;
-		}
-	}
-
-	if (positive) {
-		return int64_t(integer);
-	} else {
-		return int64_t(integer * uint64_t(-1));
-	}
-}
-
 int64_t String::to_int() const {
 	if (length() == 0) {
 		return 0;
 	}
 
-	int to = (find_char('.') >= 0) ? find_char('.') : length();
+	int to = (find(".") >= 0) ? find(".") : length();
 
-	return _to_int<char32_t>(*this, to);
+	int64_t integer = 0;
+	int64_t sign = 1;
+
+	for (int i = 0; i < to; i++) {
+		char32_t c = operator[](i);
+		if (is_digit(c)) {
+			bool overflow = (integer > INT64_MAX / 10) || (integer == INT64_MAX / 10 && ((sign == 1 && c > '7') || (sign == -1 && c > '8')));
+			ERR_FAIL_COND_V_MSG(overflow, sign == 1 ? INT64_MAX : INT64_MIN, "Cannot represent " + *this + " as a 64-bit signed integer, since the value is " + (sign == 1 ? "too large." : "too small."));
+			integer *= 10;
+			integer += c - '0';
+
+		} else if (integer == 0 && c == '-') {
+			sign = -sign;
+		}
+	}
+
+	return integer * sign;
 }
 
 int64_t String::to_int(const char *p_str, int p_len) {
@@ -2540,7 +2658,25 @@ int64_t String::to_int(const char *p_str, int p_len) {
 		}
 	}
 
-	return _to_int<char>(p_str, to);
+	int64_t integer = 0;
+	int64_t sign = 1;
+
+	for (int i = 0; i < to; i++) {
+		char c = p_str[i];
+		if (is_digit(c)) {
+			bool overflow = (integer > INT64_MAX / 10) || (integer == INT64_MAX / 10 && ((sign == 1 && c > '7') || (sign == -1 && c > '8')));
+			ERR_FAIL_COND_V_MSG(overflow, sign == 1 ? INT64_MAX : INT64_MIN, "Cannot represent " + String(p_str).substr(0, to) + " as a 64-bit signed integer, since the value is " + (sign == 1 ? "too large." : "too small."));
+			integer *= 10;
+			integer += c - '0';
+
+		} else if (c == '-' && integer == 0) {
+			sign = -sign;
+		} else if (c != ' ') {
+			break;
+		}
+	}
+
+	return integer * sign;
 }
 
 int64_t String::to_int(const wchar_t *p_str, int p_len) {
@@ -2553,7 +2689,25 @@ int64_t String::to_int(const wchar_t *p_str, int p_len) {
 		}
 	}
 
-	return _to_int<wchar_t>(p_str, to);
+	int64_t integer = 0;
+	int64_t sign = 1;
+
+	for (int i = 0; i < to; i++) {
+		wchar_t c = p_str[i];
+		if (is_digit(c)) {
+			bool overflow = (integer > INT64_MAX / 10) || (integer == INT64_MAX / 10 && ((sign == 1 && c > '7') || (sign == -1 && c > '8')));
+			ERR_FAIL_COND_V_MSG(overflow, sign == 1 ? INT64_MAX : INT64_MIN, "Cannot represent " + String(p_str).substr(0, to) + " as a 64-bit signed integer, since the value is " + (sign == 1 ? "too large." : "too small."));
+			integer *= 10;
+			integer += c - '0';
+
+		} else if (c == '-' && integer == 0) {
+			sign = -sign;
+		} else if (c != ' ') {
+			break;
+		}
+	}
+
+	return integer * sign;
 }
 
 bool String::is_numeric() const {
@@ -3142,10 +3296,6 @@ int String::find(const String &p_str, int p_from) const {
 		return -1; // won't find anything!
 	}
 
-	if (src_len == 1) {
-		return find_char(p_str[0], p_from); // Optimize with single-char find.
-	}
-
 	const char32_t *src = get_data();
 	const char32_t *str = p_str.get_data();
 
@@ -3186,10 +3336,6 @@ int String::find(const char *p_str, int p_from) const {
 		return -1; // won't find anything!
 	}
 
-	if (src_len == 1) {
-		return find_char(*p_str, p_from); // Optimize with single-char find.
-	}
-
 	const char32_t *src = get_data();
 
 	if (src_len == 1) {
@@ -3227,7 +3373,7 @@ int String::find(const char *p_str, int p_from) const {
 	return -1;
 }
 
-int String::find_char(char32_t p_char, int p_from) const {
+int String::find_char(const char32_t &p_char, int p_from) const {
 	return _cowdata.find(p_char, p_from);
 }
 
@@ -3464,10 +3610,6 @@ int String::rfind(const char *p_str, int p_from) const {
 	return -1;
 }
 
-int String::rfind_char(char32_t p_char, int p_from) const {
-	return _cowdata.rfind(p_char, p_from);
-}
-
 int String::rfindn(const String &p_str, int p_from) const {
 	// establish a limit
 	int limit = length() - p_str.length();
@@ -3681,15 +3823,6 @@ bool String::is_quoted() const {
 	return is_enclosed_in("\"") || is_enclosed_in("'");
 }
 
-bool String::is_lowercase() const {
-	for (const char32_t *str = &operator[](0); *str; str++) {
-		if (is_unicode_upper_case(*str)) {
-			return false;
-		}
-	}
-	return true;
-}
-
 int String::_count(const String &p_string, int p_from, int p_to, bool p_case_insensitive) const {
 	if (p_string.is_empty()) {
 		return 0;
@@ -3716,12 +3849,14 @@ int String::_count(const String &p_string, int p_from, int p_to, bool p_case_ins
 		return 0;
 	}
 	int c = 0;
-	int idx = 0;
-	while ((idx = p_case_insensitive ? str.findn(p_string, idx) : str.find(p_string, idx)) != -1) {
-		// Skip the occurrence itself.
-		idx += slen;
-		++c;
-	}
+	int idx = -1;
+	do {
+		idx = p_case_insensitive ? str.findn(p_string) : str.find(p_string);
+		if (idx != -1) {
+			str = str.substr(idx + slen, str.length() - slen);
+			++c;
+		}
+	} while (idx != -1);
 	return c;
 }
 
@@ -3753,12 +3888,14 @@ int String::_count(const char *p_string, int p_from, int p_to, bool p_case_insen
 		return 0;
 	}
 	int c = 0;
-	int idx = 0;
-	while ((idx = p_case_insensitive ? str.findn(p_string, idx) : str.find(p_string, idx)) != -1) {
-		// Skip the occurrence itself.
-		idx += substring_length;
-		++c;
-	}
+	int idx = -1;
+	do {
+		idx = p_case_insensitive ? str.findn(p_string) : str.find(p_string);
+		if (idx != -1) {
+			str = str.substr(idx + substring_length, str.length() - substring_length);
+			++c;
+		}
+	} while (idx != -1);
 	return c;
 }
 
@@ -3837,17 +3974,17 @@ float String::similarity(const String &p_string) const {
 		return 0.0f;
 	}
 
-	const int src_size = length() - 1;
-	const int tgt_size = p_string.length() - 1;
+	Vector<String> src_bigrams = bigrams();
+	Vector<String> tgt_bigrams = p_string.bigrams();
 
-	const int sum = src_size + tgt_size;
+	int src_size = src_bigrams.size();
+	int tgt_size = tgt_bigrams.size();
+
+	int sum = src_size + tgt_size;
 	int inter = 0;
 	for (int i = 0; i < src_size; i++) {
-		const char32_t i0 = get(i);
-		const char32_t i1 = get(i + 1);
-
 		for (int j = 0; j < tgt_size; j++) {
-			if (i0 == p_string.get(j) && i1 == p_string.get(j + 1)) {
+			if (src_bigrams[i] == tgt_bigrams[j]) {
 				inter++;
 				break;
 			}
@@ -3913,7 +4050,7 @@ String String::format(const Variant &values, const String &placeholder) const {
 				Variant v_val = values_arr[i];
 				String val = v_val;
 
-				if (placeholder.contains_char('_')) {
+				if (placeholder.contains("_")) {
 					new_string = new_string.replace(placeholder.replace("_", i_as_str), val);
 				} else {
 					new_string = new_string.replace_first(placeholder, val);
@@ -3950,7 +4087,7 @@ static String _replace_common(const String &p_this, const String &p_key, const S
 		return p_this;
 	}
 
-	const size_t key_length = p_key.length();
+	const int key_length = p_key.length();
 
 	int search_from = 0;
 	int result = 0;
@@ -3959,7 +4096,6 @@ static String _replace_common(const String &p_this, const String &p_key, const S
 
 	while ((result = (p_case_insensitive ? p_this.findn(p_key, search_from) : p_this.find(p_key, search_from))) >= 0) {
 		found.push_back(result);
-		ERR_FAIL_COND_V_MSG((result + key_length) > INT32_MAX, p_this, "Key length too long");
 		search_from = result + key_length;
 	}
 
@@ -3972,7 +4108,7 @@ static String _replace_common(const String &p_this, const String &p_key, const S
 	const int with_length = p_with.length();
 	const int old_length = p_this.length();
 
-	new_string.resize(old_length + int(found.size()) * (with_length - key_length) + 1);
+	new_string.resize(old_length + found.size() * (with_length - key_length) + 1);
 
 	char32_t *new_ptrw = new_string.ptrw();
 	const char32_t *old_ptr = p_this.ptr();
@@ -4003,7 +4139,7 @@ static String _replace_common(const String &p_this, const String &p_key, const S
 }
 
 static String _replace_common(const String &p_this, char const *p_key, char const *p_with, bool p_case_insensitive) {
-	size_t key_length = strlen(p_key);
+	int key_length = strlen(p_key);
 
 	if (key_length == 0 || p_this.is_empty()) {
 		return p_this;
@@ -4016,7 +4152,6 @@ static String _replace_common(const String &p_this, char const *p_key, char cons
 
 	while ((result = (p_case_insensitive ? p_this.findn(p_key, search_from) : p_this.find(p_key, search_from))) >= 0) {
 		found.push_back(result);
-		ERR_FAIL_COND_V_MSG((result + key_length) > INT32_MAX, p_this, "Key length too long");
 		search_from = result + key_length;
 	}
 
@@ -4031,7 +4166,7 @@ static String _replace_common(const String &p_this, char const *p_key, char cons
 	const int with_length = with_string.length();
 	const int old_length = p_this.length();
 
-	new_string.resize(old_length + int(found.size()) * (with_length - key_length) + 1);
+	new_string.resize(old_length + found.size() * (with_length - key_length) + 1);
 
 	char32_t *new_ptrw = new_string.ptrw();
 	const char32_t *old_ptr = p_this.ptr();
@@ -4418,7 +4553,7 @@ String String::simplify_path() const {
 			if (p == -1) {
 				p = s.find(":\\");
 			}
-			if (p != -1 && p < s.find_char('/')) {
+			if (p != -1 && p < s.find("/")) {
 				drive = s.substr(0, p + 2);
 				s = s.substr(p + 2);
 			}
@@ -4442,7 +4577,7 @@ String String::simplify_path() const {
 			dirs.remove_at(i);
 			i--;
 		} else if (d == "..") {
-			if (i != 0 && dirs[i - 1] != "..") {
+			if (i != 0) {
 				dirs.remove_at(i);
 				dirs.remove_at(i - 1);
 				i -= 2;
@@ -4481,7 +4616,7 @@ String String::humanize_size(uint64_t p_size) {
 	}
 
 	if (magnitude == 0) {
-		return String::num_uint64(p_size) + " " + RTR("B");
+		return String::num(p_size) + " " + RTR("B");
 	} else {
 		String suffix;
 		switch (magnitude) {
@@ -4622,9 +4757,8 @@ bool String::is_valid_string() const {
 String String::uri_encode() const {
 	const CharString temp = utf8();
 	String res;
-
 	for (int i = 0; i < temp.length(); ++i) {
-		uint8_t ord = uint8_t(temp[i]);
+		uint8_t ord = temp[i];
 		if (ord == '.' || ord == '-' || ord == '~' || is_ascii_identifier_char(ord)) {
 			res += ord;
 		} else {
@@ -4864,7 +4998,7 @@ String String::xml_unescape() const {
 
 String String::pad_decimals(int p_digits) const {
 	String s = *this;
-	int c = s.find_char('.');
+	int c = s.find(".");
 
 	if (c == -1) {
 		if (p_digits <= 0) {
@@ -4888,7 +5022,7 @@ String String::pad_decimals(int p_digits) const {
 
 String String::pad_zeros(int p_digits) const {
 	String s = *this;
-	int end = s.find_char('.');
+	int end = s.find(".");
 
 	if (end == -1) {
 		end = s.length();
@@ -5124,7 +5258,7 @@ bool String::is_valid_html_color() const {
 }
 
 // Changes made to the set of invalid filename characters must also be reflected in the String documentation for is_valid_filename.
-static const char *invalid_filename_characters[] = { ":", "/", "\\", "?", "*", "\"", "|", "%", "<", ">" };
+static const char *invalid_filename_characters = ": / \\ ? * \" | % < >";
 
 bool String::is_valid_filename() const {
 	String stripped = strip_edges();
@@ -5136,7 +5270,8 @@ bool String::is_valid_filename() const {
 		return false;
 	}
 
-	for (const char *ch : invalid_filename_characters) {
+	Vector<String> chars = String(invalid_filename_characters).split(" ");
+	for (const String &ch : chars) {
 		if (contains(ch)) {
 			return false;
 		}
@@ -5145,15 +5280,16 @@ bool String::is_valid_filename() const {
 }
 
 String String::validate_filename() const {
+	Vector<String> chars = String(invalid_filename_characters).split(" ");
 	String name = strip_edges();
-	for (const char *ch : invalid_filename_characters) {
-		name = name.replace(ch, "_");
+	for (int i = 0; i < chars.size(); i++) {
+		name = name.replace(chars[i], "_");
 	}
 	return name;
 }
 
 bool String::is_valid_ip_address() const {
-	if (find_char(':') >= 0) {
+	if (find(":") >= 0) {
 		Vector<String> ip = split(":");
 		for (int i = 0; i < ip.size(); i++) {
 			const String &n = ip[i];
@@ -5223,13 +5359,13 @@ String String::get_base_dir() const {
 	// Windows UNC network share path.
 	if (end == 0) {
 		if (is_network_share_path()) {
-			basepos = find_char('/', 2);
+			basepos = find("/", 2);
 			if (basepos == -1) {
-				basepos = find_char('\\', 2);
+				basepos = find("\\", 2);
 			}
-			int servpos = find_char('/', basepos + 1);
+			int servpos = find("/", basepos + 1);
 			if (servpos == -1) {
-				servpos = find_char('\\', basepos + 1);
+				servpos = find("\\", basepos + 1);
 			}
 			if (servpos != -1) {
 				end = servpos + 1;
@@ -5253,7 +5389,7 @@ String String::get_base_dir() const {
 		rs = *this;
 	}
 
-	int sep = MAX(rs.rfind_char('/'), rs.rfind_char('\\'));
+	int sep = MAX(rs.rfind("/"), rs.rfind("\\"));
 	if (sep == -1) {
 		return base;
 	}
@@ -5262,7 +5398,7 @@ String String::get_base_dir() const {
 }
 
 String String::get_file() const {
-	int sep = MAX(rfind_char('/'), rfind_char('\\'));
+	int sep = MAX(rfind("/"), rfind("\\"));
 	if (sep == -1) {
 		return *this;
 	}
@@ -5271,8 +5407,8 @@ String String::get_file() const {
 }
 
 String String::get_extension() const {
-	int pos = rfind_char('.');
-	if (pos < 0 || pos < MAX(rfind_char('/'), rfind_char('\\'))) {
+	int pos = rfind(".");
+	if (pos < 0 || pos < MAX(rfind("/"), rfind("\\"))) {
 		return "";
 	}
 
@@ -5370,8 +5506,8 @@ String String::validate_node_name() const {
 }
 
 String String::get_basename() const {
-	int pos = rfind_char('.');
-	if (pos < 0 || pos < MAX(rfind_char('/'), rfind_char('\\'))) {
+	int pos = rfind(".");
+	if (pos < 0 || pos < MAX(rfind("/"), rfind("\\"))) {
 		return *this;
 	}
 

@@ -35,7 +35,6 @@
 
 #include "effects/copy_effects.h"
 #include "effects/cubemap_filter.h"
-#include "effects/feed_effects.h"
 #include "effects/glow.h"
 #include "effects/post_effects.h"
 #include "environment/fog.h"
@@ -79,7 +78,6 @@ protected:
 	GLES3::CubemapFilter *cubemap_filter = nullptr;
 	GLES3::Glow *glow = nullptr;
 	GLES3::PostEffects *post_effects = nullptr;
-	GLES3::FeedEffects *feed_effects = nullptr;
 	RasterizerCanvasGLES3 *canvas = nullptr;
 	RasterizerSceneGLES3 *scene = nullptr;
 	static RasterizerGLES3 *singleton;

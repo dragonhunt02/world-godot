@@ -32,6 +32,7 @@
 #define EQ_FILTER_H
 
 #include "core/templates/vector.h"
+#include "core/typedefs.h"
 
 class EQ {
 public:

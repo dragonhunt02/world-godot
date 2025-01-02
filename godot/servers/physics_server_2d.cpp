@@ -31,6 +31,7 @@
 #include "physics_server_2d.h"
 
 #include "core/config/project_settings.h"
+#include "core/string/print_string.h"
 #include "core/variant/typed_array.h"
 
 PhysicsServer2D *PhysicsServer2D::singleton = nullptr;
@@ -329,7 +330,7 @@ void PhysicsShapeQueryParameters2D::_bind_methods() {
 ///////////////////////////////////////////////////////
 
 Dictionary PhysicsDirectSpaceState2D::_intersect_ray(const Ref<PhysicsRayQueryParameters2D> &p_ray_query) {
-	ERR_FAIL_COND_V(p_ray_query.is_null(), Dictionary());
+	ERR_FAIL_COND_V(!p_ray_query.is_valid(), Dictionary());
 
 	RayResult result;
 	bool res = intersect_ray(p_ray_query->get_parameters(), result);
@@ -375,7 +376,7 @@ TypedArray<Dictionary> PhysicsDirectSpaceState2D::_intersect_point(const Ref<Phy
 }
 
 TypedArray<Dictionary> PhysicsDirectSpaceState2D::_intersect_shape(const Ref<PhysicsShapeQueryParameters2D> &p_shape_query, int p_max_results) {
-	ERR_FAIL_COND_V(p_shape_query.is_null(), TypedArray<Dictionary>());
+	ERR_FAIL_COND_V(!p_shape_query.is_valid(), TypedArray<Dictionary>());
 
 	Vector<ShapeResult> sr;
 	sr.resize(p_max_results);
@@ -395,7 +396,7 @@ TypedArray<Dictionary> PhysicsDirectSpaceState2D::_intersect_shape(const Ref<Phy
 }
 
 Vector<real_t> PhysicsDirectSpaceState2D::_cast_motion(const Ref<PhysicsShapeQueryParameters2D> &p_shape_query) {
-	ERR_FAIL_COND_V(p_shape_query.is_null(), Vector<real_t>());
+	ERR_FAIL_COND_V(!p_shape_query.is_valid(), Vector<real_t>());
 
 	real_t closest_safe, closest_unsafe;
 	bool res = cast_motion(p_shape_query->get_parameters(), closest_safe, closest_unsafe);
@@ -410,7 +411,7 @@ Vector<real_t> PhysicsDirectSpaceState2D::_cast_motion(const Ref<PhysicsShapeQue
 }
 
 TypedArray<Vector2> PhysicsDirectSpaceState2D::_collide_shape(const Ref<PhysicsShapeQueryParameters2D> &p_shape_query, int p_max_results) {
-	ERR_FAIL_COND_V(p_shape_query.is_null(), TypedArray<Vector2>());
+	ERR_FAIL_COND_V(!p_shape_query.is_valid(), TypedArray<Vector2>());
 
 	Vector<Vector2> ret;
 	ret.resize(p_max_results * 2);
@@ -428,7 +429,7 @@ TypedArray<Vector2> PhysicsDirectSpaceState2D::_collide_shape(const Ref<PhysicsS
 }
 
 Dictionary PhysicsDirectSpaceState2D::_get_rest_info(const Ref<PhysicsShapeQueryParameters2D> &p_shape_query) {
-	ERR_FAIL_COND_V(p_shape_query.is_null(), Dictionary());
+	ERR_FAIL_COND_V(!p_shape_query.is_valid(), Dictionary());
 
 	ShapeRestInfo sri;
 
@@ -606,7 +607,7 @@ void PhysicsTestMotionResult2D::_bind_methods() {
 ///////////////////////////////////////
 
 bool PhysicsServer2D::_body_test_motion(RID p_body, const Ref<PhysicsTestMotionParameters2D> &p_parameters, const Ref<PhysicsTestMotionResult2D> &p_result) {
-	ERR_FAIL_COND_V(p_parameters.is_null(), false);
+	ERR_FAIL_COND_V(!p_parameters.is_valid(), false);
 
 	MotionResult *result_ptr = nullptr;
 	if (p_result.is_valid()) {
@@ -925,7 +926,6 @@ void PhysicsServer2DManager::on_servers_changed() {
 	}
 	ProjectSettings::get_singleton()->set_custom_property_info(PropertyInfo(Variant::STRING, setting_property_name, PROPERTY_HINT_ENUM, physics_servers));
 	ProjectSettings::get_singleton()->set_restart_if_changed(setting_property_name, true);
-	ProjectSettings::get_singleton()->set_as_basic(setting_property_name, true);
 }
 
 void PhysicsServer2DManager::_bind_methods() {

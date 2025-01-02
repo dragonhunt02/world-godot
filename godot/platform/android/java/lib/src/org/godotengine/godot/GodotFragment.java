@@ -474,7 +474,7 @@ public class GodotFragment extends Fragment implements IDownloaderClient, GodotH
 		if (parentHost != null) {
 			return parentHost.onNewGodotInstanceRequested(args);
 		}
-		return -1;
+		return 0;
 	}
 
 	@Override

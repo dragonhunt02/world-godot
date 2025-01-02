@@ -30,17 +30,20 @@
 
 #include "editor_import_collada.h"
 
-#include "core/config/project_settings.h"
+#include "core/os/os.h"
+#include "editor/editor_node.h"
 #include "editor/import/3d/collada.h"
 #include "scene/3d/camera_3d.h"
 #include "scene/3d/importer_mesh_instance_3d.h"
 #include "scene/3d/light_3d.h"
+#include "scene/3d/mesh_instance_3d.h"
 #include "scene/3d/node_3d.h"
 #include "scene/3d/path_3d.h"
 #include "scene/3d/skeleton_3d.h"
 #include "scene/animation/animation_player.h"
 #include "scene/resources/3d/importer_mesh.h"
 #include "scene/resources/animation.h"
+#include "scene/resources/packed_scene.h"
 #include "scene/resources/surface_tool.h"
 
 struct ColladaImport {
@@ -1260,7 +1263,7 @@ Error ColladaImport::_create_resources(Collada::Node *p_node, bool p_use_compres
 					//bleh, must ignore invalid
 
 					ERR_FAIL_COND_V(!collada.state.mesh_data_map.has(meshid), ERR_INVALID_DATA);
-					mesh.instantiate();
+					mesh = Ref<ImporterMesh>(memnew(ImporterMesh));
 					const Collada::MeshData &meshdata = collada.state.mesh_data_map[meshid];
 					String name = meshdata.name;
 					if (name.is_empty()) {
@@ -1287,7 +1290,7 @@ Error ColladaImport::_create_resources(Collada::Node *p_node, bool p_use_compres
 				}
 			}
 
-			if (mesh.is_valid()) {
+			if (!mesh.is_null()) {
 				mi->set_mesh(mesh);
 				if (!use_mesh_builtin_materials) {
 					const Collada::MeshData &meshdata = collada.state.mesh_data_map[meshid];

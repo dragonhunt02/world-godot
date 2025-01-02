@@ -112,14 +112,6 @@ int EditorImportPlugin::get_import_order() const {
 	ERR_FAIL_V_MSG(-1, "Unimplemented _get_import_order in add-on.");
 }
 
-int EditorImportPlugin::get_format_version() const {
-	int ret = 0;
-	if (GDVIRTUAL_CALL(_get_format_version, ret)) {
-		return ret;
-	}
-	return 0;
-}
-
 void EditorImportPlugin::get_import_options(const String &p_path, List<ResourceImporter::ImportOption> *r_options, int p_preset) const {
 	Array needed;
 	needed.push_back("name");
@@ -171,7 +163,7 @@ bool EditorImportPlugin::get_option_visibility(const String &p_path, const Strin
 	ERR_FAIL_V_MSG(false, "Unimplemented _get_option_visibility in add-on.");
 }
 
-Error EditorImportPlugin::import(ResourceUID::ID p_source_id, const String &p_source_file, const String &p_save_path, const HashMap<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata) {
+Error EditorImportPlugin::import(const String &p_source_file, const String &p_save_path, const HashMap<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata) {
 	Dictionary options;
 	TypedArray<String> platform_variants, gen_files;
 
@@ -228,7 +220,6 @@ void EditorImportPlugin::_bind_methods() {
 	GDVIRTUAL_BIND(_get_resource_type)
 	GDVIRTUAL_BIND(_get_priority)
 	GDVIRTUAL_BIND(_get_import_order)
-	GDVIRTUAL_BIND(_get_format_version)
 	GDVIRTUAL_BIND(_get_option_visibility, "path", "option_name", "options")
 	GDVIRTUAL_BIND(_import, "source_file", "save_path", "options", "platform_variants", "gen_files");
 	GDVIRTUAL_BIND(_can_import_threaded);

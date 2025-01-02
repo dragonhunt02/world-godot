@@ -31,6 +31,7 @@
 #include "packed_scene.h"
 
 #include "core/config/engine.h"
+#include "core/config/project_settings.h"
 #include "core/io/missing_resource.h"
 #include "core/io/resource_loader.h"
 #include "core/templates/local_vector.h"
@@ -194,7 +195,7 @@ Node *SceneState::instantiate(GenEditState p_edit_state) const {
 		if (i == 0 && base_scene_idx >= 0) {
 			// Scene inheritance on root node.
 			Ref<PackedScene> sdata = props[base_scene_idx];
-			ERR_FAIL_COND_V(sdata.is_null(), nullptr);
+			ERR_FAIL_COND_V(!sdata.is_valid(), nullptr);
 			node = sdata->instantiate(p_edit_state == GEN_EDIT_STATE_DISABLED ? PackedScene::GEN_EDIT_STATE_DISABLED : PackedScene::GEN_EDIT_STATE_INSTANCE); //only main gets main edit state
 			ERR_FAIL_NULL_V(node, nullptr);
 			if (p_edit_state != GEN_EDIT_STATE_DISABLED) {
@@ -767,7 +768,7 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Has
 		} else {
 			//must instance ourselves
 			Ref<PackedScene> instance = ResourceLoader::load(p_node->get_scene_file_path());
-			if (instance.is_null()) {
+			if (!instance.is_valid()) {
 				return ERR_CANT_OPEN;
 			}
 
@@ -785,7 +786,7 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Has
 	Dictionary missing_resource_properties = p_node->get_meta(META_MISSING_RESOURCES, Dictionary());
 
 	for (const PropertyInfo &E : plist) {
-		if (!(E.usage & PROPERTY_USAGE_STORAGE) && !missing_resource_properties.has(E.name)) {
+		if (!(E.usage & PROPERTY_USAGE_STORAGE)) {
 			continue;
 		}
 
@@ -821,10 +822,10 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Has
 				value = missing_resource_properties[E.name];
 			}
 		} else if (E.type == Variant::ARRAY && E.hint == PROPERTY_HINT_TYPE_STRING) {
-			int hint_subtype_separator = E.hint_string.find_char(':');
+			int hint_subtype_separator = E.hint_string.find(":");
 			if (hint_subtype_separator >= 0) {
 				String subtype_string = E.hint_string.substr(0, hint_subtype_separator);
-				int slash_pos = subtype_string.find_char('/');
+				int slash_pos = subtype_string.find("/");
 				PropertyHint subtype_hint = PropertyHint::PROPERTY_HINT_NONE;
 				if (slash_pos >= 0) {
 					subtype_hint = PropertyHint(subtype_string.get_slice("/", 1).to_int());
@@ -850,11 +851,11 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Has
 				}
 			}
 		} else if (E.type == Variant::DICTIONARY && E.hint == PROPERTY_HINT_TYPE_STRING) {
-			int key_value_separator = E.hint_string.find_char(';');
+			int key_value_separator = E.hint_string.find(";");
 			if (key_value_separator >= 0) {
-				int key_subtype_separator = E.hint_string.find_char(':');
+				int key_subtype_separator = E.hint_string.find(":");
 				String key_subtype_string = E.hint_string.substr(0, key_subtype_separator);
-				int key_slash_pos = key_subtype_string.find_char('/');
+				int key_slash_pos = key_subtype_string.find("/");
 				PropertyHint key_subtype_hint = PropertyHint::PROPERTY_HINT_NONE;
 				if (key_slash_pos >= 0) {
 					key_subtype_hint = PropertyHint(key_subtype_string.get_slice("/", 1).to_int());
@@ -863,9 +864,9 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Has
 				Variant::Type key_subtype = Variant::Type(key_subtype_string.to_int());
 				bool convert_key = key_subtype == Variant::OBJECT && key_subtype_hint == PROPERTY_HINT_NODE_TYPE;
 
-				int value_subtype_separator = E.hint_string.find_char(':', key_value_separator) - (key_value_separator + 1);
+				int value_subtype_separator = E.hint_string.find(":", key_value_separator) - (key_value_separator + 1);
 				String value_subtype_string = E.hint_string.substr(key_value_separator + 1, value_subtype_separator);
-				int value_slash_pos = value_subtype_string.find_char('/');
+				int value_slash_pos = value_subtype_string.find("/");
 				PropertyHint value_subtype_hint = PropertyHint::PROPERTY_HINT_NONE;
 				if (value_slash_pos >= 0) {
 					value_subtype_hint = PropertyHint(value_subtype_string.get_slice("/", 1).to_int());
@@ -1033,7 +1034,6 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Has
 }
 
 Error SceneState::_parse_connections(Node *p_owner, Node *p_node, HashMap<StringName, int> &name_map, HashMap<Variant, int, VariantHasher, VariantComparator> &variant_map, HashMap<Node *, int> &node_map, HashMap<Node *, int> &nodepath_map) {
-	// Ignore nodes that are within a scene instance.
 	if (p_node != p_owner && p_node->get_owner() && p_node->get_owner() != p_owner && !p_owner->is_editable_instance(p_node->get_owner())) {
 		return OK;
 	}
@@ -1054,8 +1054,7 @@ Error SceneState::_parse_connections(Node *p_owner, Node *p_node, HashMap<String
 		for (const Node::Connection &F : conns) {
 			const Node::Connection &c = F;
 
-			// Don't save connections that are not persistent.
-			if (!(c.flags & CONNECT_PERSIST)) {
+			if (!(c.flags & CONNECT_PERSIST)) { //only persistent connections get saved
 				continue;
 			}
 
@@ -1221,10 +1220,9 @@ Error SceneState::_parse_connections(Node *p_owner, Node *p_node, HashMap<String
 		}
 	}
 
-	// Recursively parse child connections.
 	for (int i = 0; i < p_node->get_child_count(); i++) {
-		Node *child = p_node->get_child(i);
-		Error err = _parse_connections(p_owner, child, name_map, variant_map, node_map, nodepath_map);
+		Node *c = p_node->get_child(i);
+		Error err = _parse_connections(p_owner, c, name_map, variant_map, node_map, nodepath_map);
 		if (err) {
 			return err;
 		}
@@ -2146,7 +2144,7 @@ void PackedScene::reload_from_file() {
 	}
 
 	Ref<PackedScene> s = ResourceLoader::load(ResourceLoader::path_remap(path), get_class(), ResourceFormatLoader::CACHE_MODE_IGNORE);
-	if (s.is_null()) {
+	if (!s.is_valid()) {
 		return;
 	}
 
@@ -2197,7 +2195,7 @@ void PackedScene::replace_state(Ref<SceneState> p_by) {
 }
 
 void PackedScene::recreate_state() {
-	state.instantiate();
+	state = Ref<SceneState>(memnew(SceneState));
 	state->set_path(get_path());
 #ifdef TOOLS_ENABLED
 	state->set_last_modified_time(get_last_modified_time());
@@ -2288,5 +2286,5 @@ void PackedScene::_bind_methods() {
 }
 
 PackedScene::PackedScene() {
-	state.instantiate();
+	state = Ref<SceneState>(memnew(SceneState));
 }

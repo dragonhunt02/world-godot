@@ -323,17 +323,7 @@ namespace GodotTools.Export
                                 {
                                     if (platform == OS.Platforms.Android)
                                     {
-                                        string fileName = Path.GetFileName(path);
-
-                                        if (fileName.EndsWith(".jar"))
-                                        {
-                                            // We exclude jar files from the export since they should
-                                            // already be included in the Godot templates, adding them
-                                            // again would cause conflicts.
-                                            return;
-                                        }
-
-                                        if (IsSharedObject(fileName))
+                                        if (IsSharedObject(Path.GetFileName(path)))
                                         {
                                             AddSharedObject(path, tags: new string[] { arch },
                                                 Path.Join(projectDataDirName,
@@ -346,7 +336,7 @@ namespace GodotTools.Export
                                         static bool IsSharedObject(string fileName)
                                         {
                                             if (fileName.EndsWith(".so") || fileName.EndsWith(".a")
-                                             || fileName.EndsWith(".dex"))
+                                             || fileName.EndsWith(".jar") || fileName.EndsWith(".dex"))
                                             {
                                                 return true;
                                             }

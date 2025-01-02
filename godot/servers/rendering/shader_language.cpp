@@ -31,6 +31,7 @@
 #include "shader_language.h"
 
 #include "core/os/os.h"
+#include "core/string/print_string.h"
 #include "core/templates/local_vector.h"
 #include "servers/rendering/renderer_compositor.h"
 #include "servers/rendering_server.h"
@@ -38,7 +39,7 @@
 
 #define HAS_WARNING(flag) (warning_flags & flag)
 
-SafeNumeric<int> ShaderLanguage::instance_counter;
+int ShaderLanguage::instance_counter = 0;
 
 String ShaderLanguage::get_operator_text(Operator p_op) {
 	static const char *op_names[OP_MAX] = { "==",
@@ -127,7 +128,6 @@ const char *ShaderLanguage::token_names[TK_MAX] = {
 	"TYPE_USAMPLER3D",
 	"TYPE_SAMPLERCUBE",
 	"TYPE_SAMPLERCUBEARRAY",
-	"TYPE_SAMPLEREXT",
 	"INTERPOLATION_FLAT",
 	"INTERPOLATION_SMOOTH",
 	"CONST",
@@ -5062,7 +5062,7 @@ bool ShaderLanguage::_validate_varying_assign(ShaderNode::Varying &p_varying, St
 		case ShaderNode::Varying::STAGE_UNKNOWN: // first assign
 			if (current_function == varying_function_names.vertex) {
 				if (p_varying.type < TYPE_INT) {
-					*r_message = vformat(RTR("Varying with '%s' data type may only be assigned in the '%s' function."), get_datatype_name(p_varying.type), "fragment");
+					*r_message = vformat(RTR("Varying with '%s' data type may only be assigned in the 'fragment' function."), get_datatype_name(p_varying.type));
 					return false;
 				}
 				p_varying.stage = ShaderNode::Varying::STAGE_VERTEX;
@@ -5070,15 +5070,17 @@ bool ShaderLanguage::_validate_varying_assign(ShaderNode::Varying &p_varying, St
 				p_varying.stage = ShaderNode::Varying::STAGE_FRAGMENT;
 			}
 			break;
+		case ShaderNode::Varying::STAGE_VERTEX_TO_FRAGMENT_LIGHT:
 		case ShaderNode::Varying::STAGE_VERTEX:
 			if (current_function == varying_function_names.fragment) {
-				*r_message = vformat(RTR("Varyings which assigned in '%s' function may not be reassigned in '%s' or '%s'."), "vertex", "fragment", "light");
+				*r_message = RTR("Varyings which assigned in 'vertex' function may not be reassigned in 'fragment' or 'light'.");
 				return false;
 			}
 			break;
+		case ShaderNode::Varying::STAGE_FRAGMENT_TO_LIGHT:
 		case ShaderNode::Varying::STAGE_FRAGMENT:
 			if (current_function == varying_function_names.vertex) {
-				*r_message = vformat(RTR("Varyings which assigned in '%s' function may not be reassigned in '%s' or '%s'."), "fragment", "vertex", "light");
+				*r_message = RTR("Varyings which assigned in 'fragment' function may not be reassigned in 'vertex' or 'light'.");
 				return false;
 			}
 			break;
@@ -6036,11 +6038,15 @@ ShaderLanguage::Node *ShaderLanguage::_parse_expression(BlockNode *p_block, cons
 														error = true;
 													}
 													break;
+												case ShaderNode::Varying::STAGE_VERTEX_TO_FRAGMENT_LIGHT:
+													[[fallthrough]];
 												case ShaderNode::Varying::STAGE_VERTEX:
 													if (is_out_arg && current_function != varying_function_names.vertex) { // inout/out
 														error = true;
 													}
 													break;
+												case ShaderNode::Varying::STAGE_FRAGMENT_TO_LIGHT:
+													[[fallthrough]];
 												case ShaderNode::Varying::STAGE_FRAGMENT:
 													if (!is_out_arg) {
 														if (current_function != varying_function_names.fragment && current_function != varying_function_names.light) {
@@ -6240,14 +6246,36 @@ ShaderLanguage::Node *ShaderLanguage::_parse_expression(BlockNode *p_block, cons
 								return nullptr;
 							}
 						} else {
-							if (var.stage == ShaderNode::Varying::STAGE_UNKNOWN && var.type < TYPE_INT) {
-								if (current_function == varying_function_names.vertex) {
-									_set_error(vformat(RTR("Varying with '%s' data type may only be used in the '%s' function."), get_datatype_name(var.type), "fragment"));
-								} else {
-									_set_error(vformat(RTR("Varying '%s' must be assigned in the '%s' function first."), identifier, "fragment"));
-								}
-								return nullptr;
+							switch (var.stage) {
+								case ShaderNode::Varying::STAGE_UNKNOWN: {
+									if (var.type < TYPE_INT) {
+										if (current_function == varying_function_names.vertex) {
+											_set_error(vformat(RTR("Varying with '%s' data type may only be used in the 'fragment' function."), get_datatype_name(var.type)));
+										} else {
+											_set_error(vformat(RTR("Varying '%s' must be assigned in the 'fragment' function first."), identifier));
+										}
+										return nullptr;
+									}
+								} break;
+								case ShaderNode::Varying::STAGE_VERTEX:
+									if (current_function == varying_function_names.fragment || current_function == varying_function_names.light) {
+										var.stage = ShaderNode::Varying::STAGE_VERTEX_TO_FRAGMENT_LIGHT;
+									}
+									break;
+								case ShaderNode::Varying::STAGE_FRAGMENT:
+									if (current_function == varying_function_names.light) {
+										var.stage = ShaderNode::Varying::STAGE_FRAGMENT_TO_LIGHT;
+									}
+									break;
+								default:
+									break;
 							}
+						}
+
+						if ((var.stage != ShaderNode::Varying::STAGE_FRAGMENT && var.stage != ShaderNode::Varying::STAGE_FRAGMENT_TO_LIGHT) && var.type < TYPE_FLOAT && var.interpolation != INTERPOLATION_FLAT) {
+							_set_tkpos(var.tkpos);
+							_set_error(RTR("Varying with integer data type must be declared with `flat` interpolation qualifier."));
+							return nullptr;
 						}
 					}
 
@@ -9142,7 +9170,7 @@ Error ShaderLanguage::_parse_shader(const HashMap<StringName, FunctionInfo> &p_f
 						}
 					}
 #endif // DEBUG_ENABLED
-					if (shader_type_identifier != StringName() && String(shader_type_identifier) != "spatial" && String(shader_type_identifier) != "canvas_item") {
+					if (shader_type_identifier != StringName() && String(shader_type_identifier) != "spatial") {
 						_set_error(vformat(RTR("Uniform instances are not yet implemented for '%s' shaders."), shader_type_identifier));
 						return ERR_PARSE_ERROR;
 					}
@@ -9658,7 +9686,7 @@ Error ShaderLanguage::_parse_shader(const HashMap<StringName, FunctionInfo> &p_f
 									--texture_uniforms;
 									--texture_binding;
 									if (OS::get_singleton()->get_current_rendering_method() != "forward_plus") {
-										_set_error(RTR("'hint_normal_roughness_texture' is only available when using the Forward+ renderer."));
+										_set_error(RTR("'hint_normal_roughness_texture' is only available when using the Forward+ backend."));
 										return ERR_PARSE_ERROR;
 									}
 									if (shader_type_identifier != StringName() && String(shader_type_identifier) != "spatial") {
@@ -10669,14 +10697,6 @@ Error ShaderLanguage::_parse_shader(const HashMap<StringName, FunctionInfo> &p_f
 		tk = _get_token();
 	}
 
-	for (const KeyValue<StringName, ShaderNode::Varying> &kv : shader->varyings) {
-		if (kv.value.stage != ShaderNode::Varying::STAGE_FRAGMENT && (kv.value.type > TYPE_BVEC4 && kv.value.type < TYPE_FLOAT) && kv.value.interpolation != INTERPOLATION_FLAT) {
-			_set_tkpos(kv.value.tkpos);
-			_set_error(vformat(RTR("Varying with integer data type must be declared with `%s` interpolation qualifier."), "flat"));
-			return ERR_PARSE_ERROR;
-		}
-	}
-
 #ifdef DEBUG_ENABLED
 	if (check_device_limit_warnings && uniform_buffer_exceeded_line != -1) {
 		_add_warning(ShaderWarning::DEVICE_LIMIT_EXCEEDED, uniform_buffer_exceeded_line, RTR("uniform buffer"), { uniform_buffer_size, max_uniform_buffer_size });
@@ -11577,7 +11597,7 @@ ShaderLanguage::ShaderLanguage() {
 	nodes = nullptr;
 	completion_class = TAG_GLOBAL;
 
-	if (instance_counter.get() == 0) {
+	if (instance_counter == 0) {
 		int idx = 0;
 		while (builtin_func_defs[idx].name) {
 			if (builtin_func_defs[idx].tag == SubClassTag::TAG_GLOBAL) {
@@ -11586,7 +11606,7 @@ ShaderLanguage::ShaderLanguage() {
 			idx++;
 		}
 	}
-	instance_counter.increment();
+	instance_counter++;
 
 #ifdef DEBUG_ENABLED
 	warnings_check_map.insert(ShaderWarning::UNUSED_CONSTANT, &used_constants);
@@ -11601,8 +11621,8 @@ ShaderLanguage::ShaderLanguage() {
 
 ShaderLanguage::~ShaderLanguage() {
 	clear();
-	instance_counter.decrement();
-	if (instance_counter.get() == 0) {
+	instance_counter--;
+	if (instance_counter == 0) {
 		global_func_set.clear();
 	}
 }

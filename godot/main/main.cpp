@@ -47,7 +47,6 @@
 #include "core/io/ip.h"
 #include "core/io/resource_loader.h"
 #include "core/object/message_queue.h"
-#include "core/object/script_language.h"
 #include "core/os/os.h"
 #include "core/os/time.h"
 #include "core/register_core_types.h"
@@ -66,7 +65,6 @@
 #include "scene/register_scene_types.h"
 #include "scene/resources/packed_scene.h"
 #include "scene/theme/theme_db.h"
-#include "servers/audio/audio_driver_dummy.h"
 #include "servers/audio_server.h"
 #include "servers/camera_server.h"
 #include "servers/display_server.h"
@@ -228,7 +226,6 @@ static bool init_always_on_top = false;
 static bool init_use_custom_pos = false;
 static bool init_use_custom_screen = false;
 static Vector2 init_custom_pos;
-static int64_t init_embed_parent_window_id = 0;
 
 // Debug
 
@@ -563,11 +560,7 @@ void Main::print_help(const char *p_binary) {
 	print_help_option("--path <directory>", "Path to a project (<directory> must contain a \"project.godot\" file).\n");
 	print_help_option("-u, --upwards", "Scan folders upwards for project.godot file.\n");
 	print_help_option("--main-pack <file>", "Path to a pack (.pck) file to load.\n");
-#ifdef DISABLE_DEPRECATED
-	print_help_option("--render-thread <mode>", "Render thread mode (\"safe\", \"separate\").\n");
-#else
-	print_help_option("--render-thread <mode>", "Render thread mode (\"unsafe\" [deprecated], \"safe\", \"separate\").\n");
-#endif
+	print_help_option("--render-thread <mode>", "Render thread mode (\"unsafe\", \"safe\", \"separate\").\n");
 	print_help_option("--remote-fs <address>", "Remote filesystem (<host/IP>[:<port>] address).\n");
 	print_help_option("--remote-fs-password <password>", "Password for remote filesystem.\n");
 
@@ -624,7 +617,6 @@ void Main::print_help(const char *p_binary) {
 #ifndef _3D_DISABLED
 	print_help_option("--xr-mode <mode>", "Select XR (Extended Reality) mode [\"default\", \"off\", \"on\"].\n");
 #endif
-	print_help_option("--wid <window_id>", "Request parented to window.\n");
 
 	print_help_title("Debug options");
 	print_help_option("-d, --debug", "Debug (local stdout debugger).\n");
@@ -661,7 +653,7 @@ void Main::print_help(const char *p_binary) {
 	print_help_option("--delta-smoothing <enable>", "Enable or disable frame delta smoothing [\"enable\", \"disable\"].\n");
 	print_help_option("--print-fps", "Print the frames per second to the stdout.\n");
 #ifdef TOOLS_ENABLED
-	print_help_option("--editor-pseudolocalization", "Enable pseudolocalization for the editor and the project manager.\n", CLI_OPTION_AVAILABILITY_EDITOR);
+	print_help_option("--editor-pseudolocalization", "Enable pseudolocalization for the editor and the project manager.\n");
 #endif
 
 	print_help_title("Standalone tools");
@@ -741,7 +733,6 @@ Error Main::test_setup() {
 	physics_server_2d_manager = memnew(PhysicsServer2DManager);
 
 	// From `Main::setup2()`.
-	register_early_core_singletons();
 	initialize_modules(MODULE_INITIALIZATION_LEVEL_CORE);
 	register_core_extensions();
 
@@ -1011,7 +1002,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	bool skip_breakpoints = false;
 	String main_pack;
 	bool quiet_stdout = false;
-	int separate_thread_render = -1; // Tri-state: -1 = not set, 0 = false, 1 = true.
+	int rtm = -1;
 
 	String remotefs;
 	String remotefs_pass;
@@ -1294,7 +1285,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			if (N) {
 				String vm = N->get();
 
-				if (!vm.contains_char('x')) { // invalid parameter format
+				if (!vm.contains("x")) { // invalid parameter format
 
 					OS::get_singleton()->print("Invalid resolution '%s', it should be e.g. '1280x720'.\n",
 							vm.utf8().get_data());
@@ -1337,7 +1328,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			if (N) {
 				String vm = N->get();
 
-				if (!vm.contains_char(',')) { // invalid parameter format
+				if (!vm.contains(",")) { // invalid parameter format
 
 					OS::get_singleton()->print("Invalid position '%s', it should be e.g. '80,128'.\n",
 							vm.utf8().get_data());
@@ -1406,21 +1397,13 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 			if (N) {
 				if (N->get() == "safe") {
-					separate_thread_render = 0;
-#ifndef DISABLE_DEPRECATED
+					rtm = OS::RENDER_THREAD_SAFE;
 				} else if (N->get() == "unsafe") {
-					OS::get_singleton()->print("The --render-thread unsafe option is unsupported in Godot 4 and will be removed.\n");
-					separate_thread_render = 0;
-#endif
+					rtm = OS::RENDER_THREAD_UNSAFE;
 				} else if (N->get() == "separate") {
-					separate_thread_render = 1;
+					rtm = OS::RENDER_SEPARATE_THREAD;
 				} else {
-					OS::get_singleton()->print("Unknown render thread mode, aborting.\n");
-#ifdef DISABLE_DEPRECATED
-					OS::get_singleton()->print("Valid options are 'safe' and 'separate'.\n");
-#else
-					OS::get_singleton()->print("Valid options are 'unsafe', 'safe' and 'separate'.\n");
-#endif
+					OS::get_singleton()->print("Unknown render thread mode, aborting.\nValid options are 'unsafe', 'safe' and 'separate'.\n");
 					goto error;
 				}
 
@@ -1615,7 +1598,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		} else if (arg.ends_with("project.godot")) {
 			String path;
 			String file = arg;
-			int sep = MAX(file.rfind_char('/'), file.rfind_char('\\'));
+			int sep = MAX(file.rfind("/"), file.rfind("\\"));
 			if (sep == -1) {
 				path = ".";
 			} else {
@@ -1815,23 +1798,6 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 				goto error;
 			}
 #endif // TOOLS_ENABLED
-		} else if (arg == "--wid") {
-			if (N) {
-				init_embed_parent_window_id = N->get().to_int();
-				if (init_embed_parent_window_id == 0) {
-					OS::get_singleton()->print("<window_id> argument for --wid <window_id> must be different then 0.\n");
-					goto error;
-				}
-
-				OS::get_singleton()->_embedded_in_editor = true;
-				Engine::get_singleton()->set_embedded_in_editor(true);
-
-				N = N->next();
-			} else {
-				OS::get_singleton()->print("Missing <window_id> argument for --wid <window_id>.\n");
-				goto error;
-			}
-
 		} else if (arg == "--" || arg == "++") {
 			adding_user_args = true;
 		} else {
@@ -1853,7 +1819,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	// 'project.godot' file which will only be available through the network if this is enabled
 	if (!remotefs.is_empty()) {
 		int port;
-		if (remotefs.contains_char(':')) {
+		if (remotefs.contains(":")) {
 			port = remotefs.get_slicec(':', 1).to_int();
 			remotefs = remotefs.get_slicec(':', 0);
 		} else {
@@ -1903,55 +1869,12 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	if (editor) {
 		Engine::get_singleton()->set_editor_hint(true);
 		Engine::get_singleton()->set_extension_reloading_enabled(true);
-
-		main_args.push_back("--editor");
-		if (!init_windowed && !init_fullscreen) {
-			init_maximized = true;
-			window_mode = DisplayServer::WINDOW_MODE_MAXIMIZED;
-		}
-	}
-
-	if (!project_manager && !editor) {
-		// If we didn't find a project, we fall back to the project manager.
-		project_manager = !found_project && !cmdline_tool;
-	}
-
-	if (project_manager) {
-		Engine::get_singleton()->set_project_manager_hint(true);
 	}
 #endif
-
-	OS::get_singleton()->set_cmdline(execpath, main_args, user_args);
-
-	Engine::get_singleton()->set_physics_ticks_per_second(GLOBAL_DEF_BASIC(PropertyInfo(Variant::INT, "physics/common/physics_ticks_per_second", PROPERTY_HINT_RANGE, "1,1000,1"), 60));
-	Engine::get_singleton()->set_max_physics_steps_per_frame(GLOBAL_DEF_BASIC(PropertyInfo(Variant::INT, "physics/common/max_physics_steps_per_frame", PROPERTY_HINT_RANGE, "1,100,1"), 8));
-	Engine::get_singleton()->set_physics_jitter_fix(GLOBAL_DEF("physics/common/physics_jitter_fix", 0.5));
-	Engine::get_singleton()->set_max_fps(GLOBAL_DEF(PropertyInfo(Variant::INT, "application/run/max_fps", PROPERTY_HINT_RANGE, "0,1000,1"), 0));
-	if (max_fps >= 0) {
-		Engine::get_singleton()->set_max_fps(max_fps);
-	}
 
 	// Initialize user data dir.
 	OS::get_singleton()->ensure_user_data_dir();
 
-	OS::get_singleton()->set_low_processor_usage_mode(GLOBAL_DEF("application/run/low_processor_mode", false));
-	OS::get_singleton()->set_low_processor_usage_mode_sleep_usec(
-			GLOBAL_DEF(PropertyInfo(Variant::INT, "application/run/low_processor_mode_sleep_usec", PROPERTY_HINT_RANGE, "0,33200,1,or_greater"), 6900)); // Roughly 144 FPS
-
-	GLOBAL_DEF("application/run/delta_smoothing", true);
-	if (!delta_smoothing_override) {
-		OS::get_singleton()->set_delta_smoothing(GLOBAL_GET("application/run/delta_smoothing"));
-	}
-
-	GLOBAL_DEF("debug/settings/stdout/print_fps", false);
-	GLOBAL_DEF("debug/settings/stdout/print_gpu_profile", false);
-	GLOBAL_DEF("debug/settings/stdout/verbose_stdout", false);
-	GLOBAL_DEF("debug/settings/physics_interpolation/enable_warnings", true);
-	if (!OS::get_singleton()->_verbose_stdout) { // Not manually overridden.
-		OS::get_singleton()->_verbose_stdout = GLOBAL_GET("debug/settings/stdout/verbose_stdout");
-	}
-
-	register_early_core_singletons();
 	initialize_modules(MODULE_INITIALIZATION_LEVEL_CORE);
 	register_core_extensions(); // core extensions must be registered after globals setup and before display
 
@@ -1976,6 +1899,20 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 #ifdef TOOLS_ENABLED
 	if (editor) {
 		packed_data->set_disabled(true);
+		main_args.push_back("--editor");
+		if (!init_windowed && !init_fullscreen) {
+			init_maximized = true;
+			window_mode = DisplayServer::WINDOW_MODE_MAXIMIZED;
+		}
+	}
+
+	if (!project_manager && !editor) {
+		// If we didn't find a project, we fall back to the project manager.
+		project_manager = !found_project && !cmdline_tool;
+	}
+
+	if (project_manager) {
+		Engine::get_singleton()->set_project_manager_hint(true);
 	}
 #endif
 
@@ -2046,6 +1983,8 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	}
 
 	Logger::set_flush_stdout_on_print(GLOBAL_GET("application/run/flush_stdout_on_print"));
+
+	OS::get_singleton()->set_cmdline(execpath, main_args, user_args);
 
 	{
 		String driver_hints = "";
@@ -2535,18 +2474,20 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	}
 #endif
 
-	if (separate_thread_render == -1) {
-		separate_thread_render = (int)GLOBAL_DEF("rendering/driver/threads/thread_model", OS::RENDER_THREAD_SAFE) == OS::RENDER_SEPARATE_THREAD;
+	if (rtm == -1) {
+		rtm = GLOBAL_DEF("rendering/driver/threads/thread_model", OS::RENDER_THREAD_SAFE);
 	}
 
-	if (editor || project_manager) {
-		// Editor and project manager cannot run with rendering in a separate thread (they will crash on startup).
-		separate_thread_render = 0;
-	}
+	if (rtm >= 0 && rtm < 3) {
+		if (editor || project_manager) {
+			// Editor and project manager cannot run with rendering in a separate thread (they will crash on startup).
+			rtm = OS::RENDER_THREAD_SAFE;
+		}
 #if !defined(THREADS_ENABLED)
-	separate_thread_render = 0;
+		rtm = OS::RENDER_THREAD_SAFE;
 #endif
-	OS::get_singleton()->_separate_thread_render = separate_thread_render;
+		OS::get_singleton()->_render_thread_mode = OS::RenderThreadMode(rtm);
+	}
 
 	/* Determine audio and video drivers */
 
@@ -2603,6 +2544,10 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			window_vsync_mode = DisplayServer::VSyncMode::VSYNC_DISABLED;
 		}
 	}
+	Engine::get_singleton()->set_physics_ticks_per_second(GLOBAL_DEF_BASIC(PropertyInfo(Variant::INT, "physics/common/physics_ticks_per_second", PROPERTY_HINT_RANGE, "1,1000,1"), 60));
+	Engine::get_singleton()->set_max_physics_steps_per_frame(GLOBAL_DEF_BASIC(PropertyInfo(Variant::INT, "physics/common/max_physics_steps_per_frame", PROPERTY_HINT_RANGE, "1,100,1"), 8));
+	Engine::get_singleton()->set_physics_jitter_fix(GLOBAL_DEF("physics/common/physics_jitter_fix", 0.5));
+	Engine::get_singleton()->set_max_fps(GLOBAL_DEF(PropertyInfo(Variant::INT, "application/run/max_fps", PROPERTY_HINT_RANGE, "0,1000,1"), 0));
 
 	GLOBAL_DEF_RST(PropertyInfo(Variant::INT, "audio/driver/output_latency", PROPERTY_HINT_RANGE, "1,100,1"), 15);
 	// Use a safer default output_latency for web to avoid audio cracking on low-end devices, especially mobile.
@@ -2610,9 +2555,22 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 	Engine::get_singleton()->set_audio_output_latency(GLOBAL_GET("audio/driver/output_latency"));
 
+	GLOBAL_DEF("debug/settings/stdout/print_fps", false);
+	GLOBAL_DEF("debug/settings/stdout/print_gpu_profile", false);
+	GLOBAL_DEF("debug/settings/stdout/verbose_stdout", false);
+	GLOBAL_DEF("debug/settings/physics_interpolation/enable_warnings", true);
+
+	if (!OS::get_singleton()->_verbose_stdout) { // Not manually overridden.
+		OS::get_singleton()->_verbose_stdout = GLOBAL_GET("debug/settings/stdout/verbose_stdout");
+	}
+
 #if defined(MACOS_ENABLED) || defined(IOS_ENABLED)
 	OS::get_singleton()->set_environment("MVK_CONFIG_LOG_LEVEL", OS::get_singleton()->_verbose_stdout ? "3" : "1"); // 1 = Errors only, 3 = Info
 #endif
+
+	if (max_fps >= 0) {
+		Engine::get_singleton()->set_max_fps(max_fps);
+	}
 
 	if (frame_delay == 0) {
 		frame_delay = GLOBAL_DEF(PropertyInfo(Variant::INT, "application/run/frame_delay_msec", PROPERTY_HINT_RANGE, "0,100,1,or_greater"), 0);
@@ -2623,6 +2581,15 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 	if (audio_output_latency >= 1) {
 		Engine::get_singleton()->set_audio_output_latency(audio_output_latency);
+	}
+
+	OS::get_singleton()->set_low_processor_usage_mode(GLOBAL_DEF("application/run/low_processor_mode", false));
+	OS::get_singleton()->set_low_processor_usage_mode_sleep_usec(
+			GLOBAL_DEF(PropertyInfo(Variant::INT, "application/run/low_processor_mode_sleep_usec", PROPERTY_HINT_RANGE, "0,33200,1,or_greater"), 6900)); // Roughly 144 FPS
+
+	GLOBAL_DEF("application/run/delta_smoothing", true);
+	if (!delta_smoothing_override) {
+		OS::get_singleton()->set_delta_smoothing(GLOBAL_GET("application/run/delta_smoothing"));
 	}
 
 	GLOBAL_DEF("display/window/ios/allow_high_refresh_rate", true);
@@ -2651,11 +2618,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	GLOBAL_DEF_BASIC("xr/openxr/extensions/hand_tracking_unobstructed_data_source", false); // XR_HAND_TRACKING_DATA_SOURCE_UNOBSTRUCTED_EXT
 	GLOBAL_DEF_BASIC("xr/openxr/extensions/hand_tracking_controller_data_source", false); // XR_HAND_TRACKING_DATA_SOURCE_CONTROLLER_EXT
 	GLOBAL_DEF_RST_BASIC("xr/openxr/extensions/hand_interaction_profile", false);
-	GLOBAL_DEF_RST_BASIC("xr/openxr/extensions/eye_gaze_interaction", false);
-
-	// OpenXR Binding modifier settings
-	GLOBAL_DEF_BASIC("xr/openxr/binding_modifiers/analog_threshold", false);
-	GLOBAL_DEF_RST_BASIC("xr/openxr/binding_modifiers/dpad_binding", false);
+	GLOBAL_DEF_BASIC("xr/openxr/extensions/eye_gaze_interaction", false);
 
 #ifdef TOOLS_ENABLED
 	// Disabled for now, using XR inside of the editor we'll be working on during the coming months.
@@ -2995,16 +2958,9 @@ Error Main::setup2(bool p_show_boot_logo) {
 			context = DisplayServer::CONTEXT_ENGINE;
 		}
 
-		if (init_embed_parent_window_id) {
-			// Reset flags and other settings to be sure it's borderless and windowed. The position and size should have been initialized correctly
-			// from --position and --resolution parameters.
-			window_mode = DisplayServer::WINDOW_MODE_WINDOWED;
-			window_flags = DisplayServer::WINDOW_FLAG_BORDERLESS_BIT;
-		}
-
 		// rendering_driver now held in static global String in main and initialized in setup()
 		Error err;
-		display_server = DisplayServer::create(display_driver_idx, rendering_driver, window_mode, window_vsync_mode, window_flags, window_position, window_size, init_screen, context, init_embed_parent_window_id, err);
+		display_server = DisplayServer::create(display_driver_idx, rendering_driver, window_mode, window_vsync_mode, window_flags, window_position, window_size, init_screen, context, err);
 		if (err != OK || display_server == nullptr) {
 			String last_name = DisplayServer::get_create_function_name(display_driver_idx);
 
@@ -3018,7 +2974,7 @@ Error Main::setup2(bool p_show_boot_logo) {
 				String name = DisplayServer::get_create_function_name(i);
 				WARN_PRINT(vformat("Display driver %s failed, falling back to %s.", last_name, name));
 
-				display_server = DisplayServer::create(i, rendering_driver, window_mode, window_vsync_mode, window_flags, window_position, window_size, init_screen, context, init_embed_parent_window_id, err);
+				display_server = DisplayServer::create(i, rendering_driver, window_mode, window_vsync_mode, window_flags, window_position, window_size, init_screen, context, err);
 				if (err == OK && display_server != nullptr) {
 					break;
 				}
@@ -3059,12 +3015,6 @@ Error Main::setup2(bool p_show_boot_logo) {
 		}
 
 		OS::get_singleton()->benchmark_end_measure("Servers", "Display");
-	}
-
-	// Max FPS needs to be set after the DisplayServer is created.
-	RenderingDevice *rd = RenderingDevice::get_singleton();
-	if (rd) {
-		rd->_set_max_fps(engine->get_max_fps());
 	}
 
 #ifdef TOOLS_ENABLED
@@ -3109,10 +3059,10 @@ Error Main::setup2(bool p_show_boot_logo) {
 		}
 	}
 
-	if (OS::get_singleton()->_separate_thread_render) {
-		WARN_PRINT("The separate rendering thread feature is experimental. Feel free to try it since it will eventually become a stable feature.\n"
+	if (OS::get_singleton()->_render_thread_mode == OS::RENDER_SEPARATE_THREAD) {
+		WARN_PRINT("The Multi-Threaded rendering thread model is experimental. Feel free to try it since it will eventually become a stable feature.\n"
 				   "However, bear in mind that at the moment it can lead to project crashes or instability.\n"
-				   "So, unless you want to test the engine, set the \"rendering/driver/threads/thread_model\" project setting to 'Safe'.");
+				   "So, unless you want to test the engine, use the Single-Safe option in the project settings instead.");
 	}
 
 	/* Initialize Pen Tablet Driver */
@@ -3151,7 +3101,7 @@ Error Main::setup2(bool p_show_boot_logo) {
 	{
 		OS::get_singleton()->benchmark_begin_measure("Servers", "Rendering");
 
-		rendering_server = memnew(RenderingServerDefault(OS::get_singleton()->is_separate_thread_rendering_enabled()));
+		rendering_server = memnew(RenderingServerDefault(OS::get_singleton()->get_render_thread_mode() == OS::RENDER_SEPARATE_THREAD));
 
 		rendering_server->init();
 		//rendering_server->call_set_use_vsync(OS::get_singleton()->_use_vsync);
@@ -3221,17 +3171,15 @@ Error Main::setup2(bool p_show_boot_logo) {
 
 		MAIN_PRINT("Main: Setup Logo");
 
-		if (!init_embed_parent_window_id) {
-			if (init_windowed) {
-				//do none..
-			} else if (init_maximized) {
-				DisplayServer::get_singleton()->window_set_mode(DisplayServer::WINDOW_MODE_MAXIMIZED);
-			} else if (init_fullscreen) {
-				DisplayServer::get_singleton()->window_set_mode(DisplayServer::WINDOW_MODE_FULLSCREEN);
-			}
-			if (init_always_on_top) {
-				DisplayServer::get_singleton()->window_set_flag(DisplayServer::WINDOW_FLAG_ALWAYS_ON_TOP, true);
-			}
+		if (init_windowed) {
+			//do none..
+		} else if (init_maximized) {
+			DisplayServer::get_singleton()->window_set_mode(DisplayServer::WINDOW_MODE_MAXIMIZED);
+		} else if (init_fullscreen) {
+			DisplayServer::get_singleton()->window_set_mode(DisplayServer::WINDOW_MODE_FULLSCREEN);
+		}
+		if (init_always_on_top) {
+			DisplayServer::get_singleton()->window_set_flag(DisplayServer::WINDOW_FLAG_ALWAYS_ON_TOP, true);
 		}
 
 		Color clear = GLOBAL_DEF_BASIC("rendering/environment/defaults/default_clear_color", Color(0.3, 0.3, 0.3));
@@ -3309,7 +3257,7 @@ Error Main::setup2(bool p_show_boot_logo) {
 				// Dummy text driver cannot draw any text, making the editor unusable if selected.
 				continue;
 			}
-			if (!text_driver_options.is_empty() && !text_driver_options.contains_char(',')) {
+			if (!text_driver_options.is_empty() && !text_driver_options.contains(",")) {
 				// Not the first option; add a comma before it as a separator for the property hint.
 				text_driver_options += ",";
 			}
@@ -3500,7 +3448,7 @@ void Main::setup_boot_logo() {
 
 	if (show_logo) { //boot logo!
 		const bool boot_logo_image = GLOBAL_DEF_BASIC("application/boot_splash/show_image", true);
-		const String boot_logo_path = ResourceUID::ensure_path(GLOBAL_DEF_BASIC(PropertyInfo(Variant::STRING, "application/boot_splash/image", PROPERTY_HINT_FILE, "*.png"), String())).strip_edges();
+		const String boot_logo_path = String(GLOBAL_DEF_BASIC(PropertyInfo(Variant::STRING, "application/boot_splash/image", PROPERTY_HINT_FILE, "*.png"), String())).strip_edges();
 		const bool boot_logo_scale = GLOBAL_DEF_BASIC("application/boot_splash/fullsize", true);
 		const bool boot_logo_filter = GLOBAL_DEF_BASIC("application/boot_splash/use_filter", true);
 
@@ -3847,8 +3795,8 @@ int Main::start() {
 
 #endif // TOOLS_ENABLED
 
-	if (script.is_empty() && game_path.is_empty()) {
-		game_path = ResourceUID::ensure_path(GLOBAL_GET("application/run/main_scene"));
+	if (script.is_empty() && game_path.is_empty() && String(GLOBAL_GET("application/run/main_scene")) != "") {
+		game_path = GLOBAL_GET("application/run/main_scene");
 	}
 
 #ifdef TOOLS_ENABLED
@@ -4007,7 +3955,7 @@ int Main::start() {
 						scn.instantiate();
 						scn->set_path(info.path);
 						scn->reload_from_file();
-						ERR_CONTINUE_MSG(scn.is_null(), vformat("Failed to instantiate an autoload, can't load from path: %s.", info.path));
+						ERR_CONTINUE_MSG(!scn.is_valid(), vformat("Failed to instantiate an autoload, can't load from path: %s.", info.path));
 
 						if (scn.is_valid()) {
 							n = scn->instantiate();
@@ -4085,12 +4033,12 @@ int Main::start() {
 		EditorNode *editor_node = nullptr;
 		if (editor) {
 			OS::get_singleton()->benchmark_begin_measure("Startup", "Editor");
+			editor_node = memnew(EditorNode);
 
 			if (editor_pseudolocalization) {
 				translation_server->get_editor_domain()->set_pseudolocalization_enabled(true);
 			}
 
-			editor_node = memnew(EditorNode);
 			sml->get_root()->add_child(editor_node);
 
 			if (!_export_preset.is_empty()) {
@@ -4195,7 +4143,7 @@ int Main::start() {
 						local_game_path = "res://" + local_game_path;
 
 					} else {
-						int sep = local_game_path.rfind_char('/');
+						int sep = local_game_path.rfind("/");
 
 						if (sep == -1) {
 							Ref<DirAccess> da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
@@ -4282,14 +4230,13 @@ int Main::start() {
 		if (project_manager) {
 			OS::get_singleton()->benchmark_begin_measure("Startup", "Project Manager");
 			Engine::get_singleton()->set_editor_hint(true);
+			ProjectManager *pmanager = memnew(ProjectManager);
+			ProgressDialog *progress_dialog = memnew(ProgressDialog);
+			pmanager->add_child(progress_dialog);
 
 			if (editor_pseudolocalization) {
 				translation_server->get_editor_domain()->set_pseudolocalization_enabled(true);
 			}
-
-			ProjectManager *pmanager = memnew(ProjectManager);
-			ProgressDialog *progress_dialog = memnew(ProgressDialog);
-			pmanager->add_child(progress_dialog);
 
 			sml->get_root()->add_child(pmanager);
 			OS::get_singleton()->benchmark_end_measure("Startup", "Project Manager");
@@ -4475,20 +4422,15 @@ bool Main::iteration() {
 
 	RenderingServer::get_singleton()->sync(); //sync if still drawing from previous frames.
 
-	const bool has_pending_resources_for_processing = RD::get_singleton() && RD::get_singleton()->has_pending_resources_for_processing();
-	bool wants_present = (DisplayServer::get_singleton()->can_any_window_draw() ||
-								 DisplayServer::get_singleton()->has_additional_outputs()) &&
-			RenderingServer::get_singleton()->is_render_loop_enabled();
-
-	if (wants_present || has_pending_resources_for_processing) {
-		wants_present |= force_redraw_requested;
+	if ((DisplayServer::get_singleton()->can_any_window_draw() || DisplayServer::get_singleton()->has_additional_outputs()) &&
+			RenderingServer::get_singleton()->is_render_loop_enabled()) {
 		if ((!force_redraw_requested) && OS::get_singleton()->is_in_low_processor_usage_mode()) {
 			if (RenderingServer::get_singleton()->has_changed()) {
-				RenderingServer::get_singleton()->draw(wants_present, scaled_step); // flush visual commands
+				RenderingServer::get_singleton()->draw(true, scaled_step); // flush visual commands
 				Engine::get_singleton()->increment_frames_drawn();
 			}
 		} else {
-			RenderingServer::get_singleton()->draw(wants_present, scaled_step); // flush visual commands
+			RenderingServer::get_singleton()->draw(true, scaled_step); // flush visual commands
 			Engine::get_singleton()->increment_frames_drawn();
 			force_redraw_requested = false;
 		}

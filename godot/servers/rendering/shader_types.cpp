@@ -29,6 +29,7 @@
 /**************************************************************************/
 
 #include "shader_types.h"
+#include "core/math/math_defs.h"
 
 const HashMap<StringName, ShaderLanguage::FunctionInfo> &ShaderTypes::get_functions(RS::ShaderMode p_mode) const {
 	return shader_modes[p_mode].functions;
@@ -200,7 +201,6 @@ ShaderTypes::ShaderTypes() {
 	shader_modes[RS::SHADER_SPATIAL].functions["light"].built_ins["DIFFUSE_LIGHT"] = ShaderLanguage::TYPE_VEC3;
 	shader_modes[RS::SHADER_SPATIAL].functions["light"].built_ins["SPECULAR_LIGHT"] = ShaderLanguage::TYPE_VEC3;
 	shader_modes[RS::SHADER_SPATIAL].functions["light"].built_ins["ALPHA"] = ShaderLanguage::TYPE_FLOAT;
-	shader_modes[RS::SHADER_SPATIAL].functions["light"].built_ins["SCREEN_UV"] = constt(ShaderLanguage::TYPE_VEC2);
 
 	shader_modes[RS::SHADER_SPATIAL].functions["light"].can_discard = true;
 	shader_modes[RS::SHADER_SPATIAL].functions["light"].main_function = true;

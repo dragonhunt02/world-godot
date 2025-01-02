@@ -105,7 +105,6 @@ ScriptEditorDebugger *EditorDebuggerNode::_add_debugger() {
 	node->connect("breakpoint_selected", callable_mp(this, &EditorDebuggerNode::_error_selected).bind(id));
 	node->connect("clear_execution", callable_mp(this, &EditorDebuggerNode::_clear_execution));
 	node->connect("breaked", callable_mp(this, &EditorDebuggerNode::_breaked).bind(id));
-	node->connect("remote_tree_select_requested", callable_mp(this, &EditorDebuggerNode::_remote_tree_select_requested).bind(id));
 	node->connect("remote_tree_updated", callable_mp(this, &EditorDebuggerNode::_remote_tree_updated).bind(id));
 	node->connect("remote_object_updated", callable_mp(this, &EditorDebuggerNode::_remote_object_updated).bind(id));
 	node->connect("remote_object_property_updated", callable_mp(this, &EditorDebuggerNode::_remote_object_property_updated).bind(id));
@@ -120,7 +119,7 @@ ScriptEditorDebugger *EditorDebuggerNode::_add_debugger() {
 
 	tabs->add_child(node);
 
-	node->set_name(vformat(TTR("Session %d"), tabs->get_tab_count()));
+	node->set_name("Session " + itos(tabs->get_tab_count()));
 	if (tabs->get_tab_count() > 1) {
 		node->clear_style();
 		tabs->set_tabs_visible(true);
@@ -160,9 +159,9 @@ void EditorDebuggerNode::_text_editor_stack_goto(const ScriptEditorDebugger *p_d
 	} else {
 		// If the script is built-in, it can be opened only if the scene is loaded in memory.
 		int i = file.find("::");
-		int j = file.rfind_char('(', i);
+		int j = file.rfind("(", i);
 		if (j > -1) { // If the script is named, the string is "name (file)", so we need to extract the path.
-			file = file.substr(j + 1, file.find_char(')', i) - j - 1);
+			file = file.substr(j + 1, file.find(")", i) - j - 1);
 		}
 		Ref<PackedScene> ps = ResourceLoader::load(file.get_slice("::", 0));
 		stack_script = ResourceLoader::load(file);
@@ -183,9 +182,9 @@ void EditorDebuggerNode::_text_editor_stack_clear(const ScriptEditorDebugger *p_
 	} else {
 		// If the script is built-in, it can be opened only if the scene is loaded in memory.
 		int i = file.find("::");
-		int j = file.rfind_char('(', i);
+		int j = file.rfind("(", i);
 		if (j > -1) { // If the script is named, the string is "name (file)", so we need to extract the path.
-			file = file.substr(j + 1, file.find_char(')', i) - j - 1);
+			file = file.substr(j + 1, file.find(")", i) - j - 1);
 		}
 		Ref<PackedScene> ps = ResourceLoader::load(file.get_slice("::", 0));
 		stack_script = ResourceLoader::load(file);
@@ -331,7 +330,7 @@ void EditorDebuggerNode::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_PROCESS: {
-			if (server.is_null()) {
+			if (!server.is_valid()) {
 				return;
 			}
 
@@ -636,13 +635,6 @@ String EditorDebuggerNode::get_var_value(const String &p_var) const {
 // LiveEdit/Inspector
 void EditorDebuggerNode::request_remote_tree() {
 	get_current_debugger()->request_remote_tree();
-}
-
-void EditorDebuggerNode::_remote_tree_select_requested(ObjectID p_id, int p_debugger) {
-	if (p_debugger != tabs->get_current_tab()) {
-		return;
-	}
-	remote_scene_tree->select_node(p_id);
 }
 
 void EditorDebuggerNode::_remote_tree_updated(int p_debugger) {

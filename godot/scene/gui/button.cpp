@@ -210,13 +210,6 @@ void Button::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_DRAW: {
-			// Reshape and update size min. if text is invalidated by an external source (e.g., oversampling).
-			if (text_buf.is_valid() && !TS->shaped_text_is_ready(text_buf->get_rid())) {
-				_shape();
-
-				update_minimum_size();
-			}
-
 			const RID ci = get_canvas_item();
 			const Size2 size = get_size();
 
@@ -495,7 +488,7 @@ Size2 Button::get_minimum_size_for_text_and_icon(const String &p_text, Ref<Textu
 		paragraph = text_buf;
 	} else {
 		paragraph.instantiate();
-		_shape(paragraph, p_text);
+		const_cast<Button *>(this)->_shape(paragraph, p_text);
 	}
 
 	Size2 minsize = paragraph->get_size();
@@ -534,7 +527,7 @@ Size2 Button::get_minimum_size_for_text_and_icon(const String &p_text, Ref<Textu
 	return (theme_cache.align_to_largest_stylebox ? _get_largest_stylebox_size() : _get_current_stylebox()->get_minimum_size()) + minsize;
 }
 
-void Button::_shape(Ref<TextParagraph> p_paragraph, String p_text) const {
+void Button::_shape(Ref<TextParagraph> p_paragraph, String p_text) {
 	if (p_paragraph.is_null()) {
 		p_paragraph = text_buf;
 	}
@@ -568,7 +561,6 @@ void Button::_shape(Ref<TextParagraph> p_paragraph, String p_text) const {
 	}
 	autowrap_flags = autowrap_flags | TextServer::BREAK_TRIM_EDGE_SPACES;
 	p_paragraph->set_break_flags(autowrap_flags);
-	p_paragraph->set_line_spacing(theme_cache.line_spacing);
 
 	if (text_direction == Control::TEXT_DIRECTION_INHERITED) {
 		p_paragraph->set_direction(is_layout_rtl() ? TextServer::DIRECTION_RTL : TextServer::DIRECTION_LTR);
@@ -841,7 +833,6 @@ void Button::_bind_methods() {
 	BIND_THEME_ITEM(Theme::DATA_TYPE_CONSTANT, Button, icon_max_width);
 
 	BIND_THEME_ITEM(Theme::DATA_TYPE_CONSTANT, Button, align_to_largest_stylebox);
-	BIND_THEME_ITEM(Theme::DATA_TYPE_CONSTANT, Button, line_spacing);
 }
 
 Button::Button(const String &p_text) {

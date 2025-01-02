@@ -109,7 +109,9 @@ struct BVHHandle {
 template <typename T>
 class BVH_IterativeInfo {
 public:
-	constexpr static const size_t ALLOCA_STACK_SIZE = 128;
+	enum {
+		ALLOCA_STACK_SIZE = 128
+	};
 
 	int32_t depth = 1;
 	int32_t threshold = ALLOCA_STACK_SIZE - 2;

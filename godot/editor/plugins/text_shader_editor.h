@@ -33,6 +33,7 @@
 
 #include "editor/code_editor.h"
 #include "editor/plugins/shader/shader_editor.h"
+#include "scene/gui/margin_container.h"
 #include "scene/gui/menu_button.h"
 #include "scene/gui/rich_text_label.h"
 #include "servers/rendering/shader_warnings.h"
@@ -144,7 +145,7 @@ class TextShaderEditor : public ShaderEditor {
 	RichTextLabel *warnings_panel = nullptr;
 	uint64_t idle = 0;
 
-	GotoLinePopup *goto_line_popup = nullptr;
+	GotoLineDialog *goto_line_dialog = nullptr;
 	ConfirmationDialog *erase_tab_confirm = nullptr;
 	ConfirmationDialog *disk_changed = nullptr;
 

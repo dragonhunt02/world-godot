@@ -1,5 +1,5 @@
 /* read.c -- File views without mmap.
-   Copyright (C) 2012-2024 Free Software Foundation, Inc.
+   Copyright (C) 2012-2021 Free Software Foundation, Inc.
    Written by Ian Lance Taylor, Google.
 
 Redistribution and use in source and binary forms, with or without
@@ -52,9 +52,14 @@ backtrace_get_view (struct backtrace_state *state, int descriptor,
 {
   uint64_t got;
   ssize_t r;
-/* GODOT start */
-  if (_lseeki64 (descriptor, offset, SEEK_SET) < 0)
-/* GODOT end */
+
+  if ((uint64_t) (size_t) size != size)
+    {
+      error_callback (data, "file size too large", 0);
+      return 0;
+    }
+
+  if (lseek (descriptor, offset, SEEK_SET) < 0)
     {
       error_callback (data, "lseek", errno);
       return 0;
@@ -69,13 +74,7 @@ backtrace_get_view (struct backtrace_state *state, int descriptor,
   got = 0;
   while (got < size)
     {
-/* GODOT start */
-      uint64_t sz = size - got;
-      if (sz > INT_MAX) {
-        sz = INT_MAX;
-      }
-      r = _read (descriptor, view->base, sz);
-/* GODOT end */
+      r = read (descriptor, view->base, size - got);
       if (r < 0)
 	{
 	  error_callback (data, "read", errno);
@@ -85,9 +84,6 @@ backtrace_get_view (struct backtrace_state *state, int descriptor,
       if (r == 0)
 	break;
       got += (uint64_t) r;
-/* GODOT start */
-      view->base += r;
-/* GODOT end */
     }
 
   if (got < size)

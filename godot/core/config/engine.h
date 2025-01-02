@@ -34,6 +34,7 @@
 #include "core/os/main_loop.h"
 #include "core/string/ustring.h"
 #include "core/templates/list.h"
+#include "core/templates/vector.h"
 
 template <typename T>
 class TypedArray;
@@ -86,7 +87,6 @@ private:
 	bool editor_hint = false;
 	bool project_manager_hint = false;
 	bool extension_reloading = false;
-	bool embedded_in_editor = false;
 
 	bool _print_header = true;
 
@@ -98,8 +98,6 @@ private:
 	static constexpr int SERVER_SYNC_FRAME_COUNT_WARNING = 5;
 	int server_syncs = 0;
 	bool frame_server_synced = false;
-
-	bool freeze_time_scale = false;
 
 public:
 	static Engine *get_singleton();
@@ -132,7 +130,6 @@ public:
 
 	void set_time_scale(double p_scale);
 	double get_time_scale() const;
-	double get_unfrozen_time_scale() const;
 
 	void set_print_to_stdout(bool p_enabled);
 	bool is_printing_to_stdout() const;
@@ -199,10 +196,6 @@ public:
 
 	void increment_frames_drawn();
 	bool notify_frame_server_synced();
-
-	void set_freeze_time_scale(bool p_frozen);
-	void set_embedded_in_editor(bool p_enabled);
-	bool is_embedded_in_editor() const;
 
 	Engine();
 	virtual ~Engine();

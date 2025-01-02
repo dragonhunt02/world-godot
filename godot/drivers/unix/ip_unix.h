@@ -31,9 +31,9 @@
 #ifndef IP_UNIX_H
 #define IP_UNIX_H
 
-#if defined(UNIX_ENABLED) && !defined(UNIX_SOCKET_UNAVAILABLE)
-
 #include "core/io/ip.h"
+
+#if defined(UNIX_ENABLED) || defined(WINDOWS_ENABLED)
 
 class IPUnix : public IP {
 	GDCLASS(IPUnix, IP);
@@ -49,6 +49,6 @@ public:
 	IPUnix();
 };
 
-#endif // UNIX_ENABLED
+#endif
 
 #endif // IP_UNIX_H
