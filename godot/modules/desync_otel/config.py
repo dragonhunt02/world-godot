@@ -12,7 +12,7 @@ def can_build(env, platform):
         pass
 
     if platform == "web":
-        return False
+        return True
     if platform == "ios":
         return False
     if platform == "android":
