@@ -240,7 +240,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [linuxbsd, windows, macos, android, web]
+        platform: [linuxbsd, web]
     steps:
       - name: Download Artifacts
         uses: actions/download-artifact@v4
