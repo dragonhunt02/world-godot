@@ -12,7 +12,7 @@ func _ready():
 	print(thread.start(callable))
 
 func _async_run(_userdata):
-	var desync = Desync.new()
+	var desync = Casync.new()
 	var result = desync.untar("https://v-sekai.github.io/casync-v-sekai-game/store",
 				"https://github.com/V-Sekai/casync-v-sekai-game/raw/main/vsekai_game_windows_x86_64.caidx",
 				"vsekai_game_windows_x86_64",
