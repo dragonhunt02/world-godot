@@ -2,7 +2,7 @@ name: Build Platform Target
 
 on:
   push:
-    branches: [desync-web]
+    branches: [desync-4.4]
   pull_request:
     branches: [main]
     types: [opened, reopened, edited, synchronize]
