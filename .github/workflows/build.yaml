@@ -2,7 +2,7 @@ name: Build Platform Target
 
 on:
   push:
-    branches: [main]
+    branches: [templates-import-test]
   pull_request:
     branches: [main]
     types: [opened, reopened, edited, synchronize]
@@ -143,7 +143,7 @@ jobs:
       - name: Cache SCons cache 
         uses: actions/cache@v4 
         # Skip cache on Linux, PR #12
-        if: ${{ matrix.platform != 'linuxbsd' }}
+        if: ${{ matrix.platform == 'nuxbsd' }}
         with: 
           path: | 
             .scons_cache  
@@ -260,7 +260,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     needs: merge
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push'
     outputs:
       id: ${{ steps.create_release.outputs.id }}
       upload_url: ${{ steps.create_release.outputs.upload_url }}
