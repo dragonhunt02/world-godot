@@ -292,6 +292,7 @@ handle-android target:
 package-tpz folder tpzname versionpy:
     #!/usr/bin/env bash
     cd {{folder}}
+    rm *.arm64.a || true  # Avoid Godot error on GUI import
     for file in *; do \
         filename=$( echo ${file} \
           | sed 's/\(godot.\|.double\|.template\|.llvm\|.wasm32\)//g' \
