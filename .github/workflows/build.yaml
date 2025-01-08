@@ -96,7 +96,7 @@ jobs:
           name: Godot-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}
           path: editor
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       pull-requests: write
       actions: write
@@ -121,7 +121,13 @@ jobs:
 
     steps:
       - name: Set up dependencies
-        run: dnf install -y just git
+        run: |
+          if dnf >/dev/null 2>&1; then
+            dnf install -y just git; # Fedora 39
+          else
+            echo "'just' requires ubuntu-24.04 or more";
+            sudo apt install -y just git;
+          fi
 
       - name: Set up Go
         uses: actions/setup-go@v2
