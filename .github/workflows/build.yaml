@@ -2,7 +2,7 @@ name: Build Platform Target
 
 on:
   push:
-    branches: [neon-arm-patch-test]
+    branches: [neon-arm-patch-test-ubuntu]
   pull_request:
     branches: [main]
     types: [opened, reopened, edited, synchronize]
@@ -100,8 +100,6 @@ jobs:
     permissions:
       pull-requests: write
       actions: write
-    container:
-      image: fedora:39
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
