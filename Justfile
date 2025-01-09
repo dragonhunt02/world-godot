@@ -168,6 +168,9 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
     set -o xtrace
     cd $WORLD_PWD
     source "$EMSDK_ROOT/emsdk_env.sh"
+    if [[ "{{arch}}" == "arm64" ]]; then
+        export PATH="$ARM64_ROOT/bin:$PATH"
+    fi
     cd godot
     case "{{platform}}" in
         macos)
