@@ -15,9 +15,11 @@ export GIT_URL_DOCKER := "https://github.com/V-Sekai/docker-groups.git"
 export GIT_URL_VSEKAI := "https://github.com/V-Sekai/v-sekai-game.git"
 export WORLD_PWD := invocation_directory()
 export ANDROID_NDK_VERSION := "23.2.8568313"
+export arm64toolchain := "https://github.com/godotengine/buildroot/releases/download/godot-2023.08.x-4/aarch64-godot-linux-gnu_sdk-buildroot.tar.bz2"
 export cmdlinetools := "commandlinetools-linux-11076708_latest.zip"
 
 export SCONS_CACHE := WORLD_PWD + "/.scons_cache"
+export ARM64_ROOT := WORLD_PWD + "/aarch64-godot-linux-gnu_sdk-buildroot"
 export ANDROID_SDK_ROOT := WORLD_PWD + "/android_sdk"
 export ANDROID_HOME := ANDROID_SDK_ROOT
 export JAVA_HOME := WORLD_PWD + "/jdk"
@@ -112,6 +114,15 @@ setup-emscripten:
         ./emsdk activate 3.1.67
     fi
 
+setup-arm64:
+    #!/usr/bin/env bash
+    curl -LO "${arm64toolchain}" && \
+    tar xf aarch64-godot-linux-gnu_sdk-buildroot.tar.bz2 && \
+    rm -f aarch64-godot-linux-gnu_sdk-buildroot.tar.bz2 && \
+    cd aarch64-godot-linux-gnu_sdk-buildroot && \
+    ./relocate-sdk.sh && \
+    export PATH="$ARM64_ROOT/bin:$PATH"
+
 deploy_osxcross:
     #!/usr/bin/env bash
     git clone https://github.com/tpoechtrager/osxcross.git || true
@@ -152,7 +163,7 @@ generate_build_constants:
     echo "const BUILD_DATE_STR = \"$(shell date --utc --iso=seconds)\"" >> v/addons/vsk_version/build_constants.gd
     echo "const BUILD_UNIX_TIME = $(shell date +%s)" >> v/addons/vsk_version/build_constants.gd
 
-build-platform-target platform target precision="double" osx_bundle="yes":
+build-platform-target platform target arch="auto" precision="double" osx_bundle="yes":
     #!/usr/bin/env bash
     set -o xtrace
     cd $WORLD_PWD
@@ -166,6 +177,7 @@ build-platform-target platform target precision="double" osx_bundle="yes":
                 export PATH=${OSXCROSS_ROOT}/target/bin/:$PATH
             fi
             scons platform=macos \
+                    arch={{arch}} \
                     werror=no \
                     compiledb=yes \
                     precision={{precision}} \
@@ -181,6 +193,7 @@ build-platform-target platform target precision="double" osx_bundle="yes":
             ;;
         windows)
             scons platform=windows \
+                arch={{arch}} \
                 werror=no \
                 compiledb=yes \
                 precision={{precision}} \
@@ -193,6 +206,7 @@ build-platform-target platform target precision="double" osx_bundle="yes":
             ;;
         android)
             scons platform=android \
+                    arch={{arch}} \
                     werror=no \
                     compiledb=yes \
                     precision={{precision}} \
@@ -202,6 +216,7 @@ build-platform-target platform target precision="double" osx_bundle="yes":
             ;;
         linuxbsd)
             scons platform=linuxbsd \
+                    arch={{arch}} \
                     werror=no \
                     compiledb=yes \
                     precision={{precision}} \
@@ -212,6 +227,7 @@ build-platform-target platform target precision="double" osx_bundle="yes":
             ;;
         web)
             scons platform=web \
+                    arch={{arch}} \
                     werror=no \
                     compiledb=yes \
                     precision={{precision}} \
@@ -227,6 +243,7 @@ build-platform-target platform target precision="double" osx_bundle="yes":
                 export PATH=${OSXCROSS_ROOT}/target/bin/:$PATH
             fi
             scons platform=ios \
+                    arch={{arch}} \
                     werror=no \
                     compiledb=yes \
                     precision={{precision}} \
@@ -261,8 +278,8 @@ build-platform-target platform target precision="double" osx_bundle="yes":
 
 build-platform-templates platform precision="double":
     # Bundle all on last command with osx_bundle
-    just build-platform-target {{platform}} template_debug {{precision}} "no"
-    just build-platform-target {{platform}} template_release {{precision}} "yes"
+    just build-platform-target {{platform}} template_debug auto {{precision}} "no"
+    just build-platform-target {{platform}} template_release auto {{precision}} "yes"
 
 all-build-platform-target:
     #!/usr/bin/env bash
