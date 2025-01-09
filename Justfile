@@ -19,6 +19,7 @@ export cmdlinetools := "commandlinetools-linux-11076708_latest.zip"
 
 export SCONS_CACHE := WORLD_PWD + "/.scons_cache"
 export ANDROID_SDK_ROOT := WORLD_PWD + "/android_sdk"
+export ANDROID_HOME := ANDROID_SDK_ROOT
 export JAVA_HOME := WORLD_PWD + "/jdk"
 export VULKAN_SDK_ROOT := WORLD_PWD + "/vulkan_sdk/"
 export EMSDK_ROOT := WORLD_PWD + "/emsdk"
@@ -130,7 +131,11 @@ nil:
     echo "nil: Suceeded."
 
 install_packages:
-    dnf install -y hyperfine vulkan xz gcc gcc-c++ zlib-devel libmpc-devel mpfr-devel gmp-devel clang just parallel scons mold pkgconfig libX11-devel libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel wayland-devel mesa-libGL-devel mesa-libGLU-devel alsa-lib-devel pulseaudio-libs-devel libudev-devel libstdc++-static libatomic-static cmake ccache patch libxml2-devel openssl openssl-devel git unzip
+    if dnf >/dev/null 2>&1; then \
+        dnf install -y hyperfine vulkan xz gcc gcc-c++ zlib-devel libmpc-devel mpfr-devel gmp-devel clang just parallel scons mold pkgconfig libX11-devel libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel wayland-devel mesa-libGL-devel mesa-libGLU-devel alsa-lib-devel pulseaudio-libs-devel libudev-devel libstdc++-static libatomic-static cmake ccache patch libxml2-devel openssl openssl-devel git unzip; \
+    else \
+        sudo apt install -y build-essential hyperfine vulkan-tools xz-utils gcc zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev clang just parallel scons mold pkg-config libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libwayland-dev libgl1-mesa-dev libglu1-mesa-dev libasound2-dev libpulse-dev libudev-dev cmake ccache patch libxml2-dev openssl libssl-dev git unzip; \
+    fi
 
 copy_binaries:
     cp templates/windows_release_x86_64.exe export_windows/v_sekai_windows.exe
