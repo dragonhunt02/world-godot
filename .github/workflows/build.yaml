@@ -75,7 +75,7 @@ jobs:
           if [ ${{ matrix.target }} == "templates" ]; then
             hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-templates ${{ matrix.platform }} ${{ matrix.precision }}'
           else
-            hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.precision }}'
+            hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} auto ${{ matrix.precision }}'
           fi
 
       - name: Upload Artifacts
@@ -112,11 +112,27 @@ jobs:
       fail-fast: false
       matrix:
         precision: [double]
+        architecture: [x86_64, arm64, wasm32]
         platform: [linuxbsd, windows, android, web]
         target: [editor, template_release, template_debug]
+        exclude:
+            - platform: android
+              architecture: x86_64
+            - platform: android
+              architecture: wasm32
+            - platform: linuxbsd
+              architecture: wasm32
+            - platform: windows
+              architecture: wasm32
+            - platform: windows
+              architecture: arm64
+            - platform: web
+              architecture: arm64
+            - platform: web
+              architecture: x86_64
 
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}-${{ matrix.architecture }}
       cancel-in-progress: true
 
     steps:
@@ -159,9 +175,9 @@ jobs:
             android_sdk  
             vulkan_sdk  
             mingw 
-          key: ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}-${{ github.sha }}-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}
+          key: ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}-${{ github.sha }}-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}-${{ matrix.architecture }}
           restore-keys: | 
-            ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}-${{ github.sha }}-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}
+            ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}-${{ github.sha }}-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}-${{ matrix.architecture }}
             ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}-${{ github.sha }}-${{ matrix.platform }}-${{ matrix.target }}
             ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}-${{ github.sha }}  
             ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}  
@@ -171,7 +187,7 @@ jobs:
       - name: Fetch dependencies and Build Platform Target 
         run: | 
           just install_packages 
-          export PLATFORM_ARGS=""  
+          export PLATFORM_ARGS=""
           case "${{ matrix.platform }}" in  
             android)  
               PLATFORM_ARGS="fetch-openjdk setup-android-sdk"  
@@ -188,25 +204,28 @@ jobs:
             *)  
               PLATFORM_ARGS="nil"  
               ;;  
-          esac  
-          hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.precision }}'
+          esac
+          if "${{ matrix.architecture == 'arm64' }}"; then
+              PLATFORM_ARGS="setup-arm64 $PLATFORM_ARGS"
+          fi
+          hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.architecture }} ${{ matrix.precision }}'
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}
+          name: build-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.architecture }}-${{ matrix.precision }}
           path: godot/bin/*
 
       - name: Upload TPZ File
         uses: actions/upload-artifact@v4
         with:
-          name: Godot-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}.tpz
+          name: Godot-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.architecture }}-${{ matrix.precision }}.tpz
           path: tpz
 
       - name: Upload Godot Editor Files
         uses: actions/upload-artifact@v4
         with:
-          name: Godot-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}
+          name: Godot-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.architecture }}-${{ matrix.precision }}
           path: editor
 
   merge-templates:

@@ -15,9 +15,11 @@ export GIT_URL_DOCKER := "https://github.com/V-Sekai/docker-groups.git"
 export GIT_URL_VSEKAI := "https://github.com/V-Sekai/v-sekai-game.git"
 export WORLD_PWD := invocation_directory()
 export ANDROID_NDK_VERSION := "23.2.8568313"
+export arm64toolchain := "https://github.com/godotengine/buildroot/releases/download/godot-2023.08.x-4/aarch64-godot-linux-gnu_sdk-buildroot.tar.bz2"
 export cmdlinetools := "commandlinetools-linux-11076708_latest.zip"
 
 export SCONS_CACHE := WORLD_PWD + "/.scons_cache"
+export ARM64_ROOT := WORLD_PWD + "/aarch64-godot-linux-gnu_sdk-buildroot"
 export ANDROID_SDK_ROOT := WORLD_PWD + "/android_sdk"
 export ANDROID_HOME := ANDROID_SDK_ROOT
 export JAVA_HOME := WORLD_PWD + "/jdk"
@@ -112,6 +114,14 @@ setup-emscripten:
         ./emsdk activate 3.1.67
     fi
 
+setup-arm64:
+    #!/usr/bin/env bash
+    curl -LO "${arm64toolchain}" && \
+    tar xf aarch64-godot-linux-gnu_sdk-buildroot.tar.bz2 && \
+    rm -f aarch64-godot-linux-gnu_sdk-buildroot.tar.bz2 && \
+    cd aarch64-godot-linux-gnu_sdk-buildroot && \
+    ./relocate-sdk.sh
+
 deploy_osxcross:
     #!/usr/bin/env bash
     git clone https://github.com/tpoechtrager/osxcross.git || true
@@ -132,9 +142,9 @@ nil:
 
 install_packages:
     if dnf >/dev/null 2>&1; then \
-        dnf install -y hyperfine vulkan xz gcc gcc-c++ zlib-devel libmpc-devel mpfr-devel gmp-devel clang just parallel scons mold pkgconfig libX11-devel libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel wayland-devel mesa-libGL-devel mesa-libGLU-devel alsa-lib-devel pulseaudio-libs-devel libudev-devel libstdc++-static libatomic-static cmake ccache patch libxml2-devel openssl openssl-devel git unzip; \
+        dnf install -y hyperfine vulkan xz bzip2 file gcc gcc-c++ zlib-devel libmpc-devel mpfr-devel gmp-devel clang just parallel scons mold pkgconfig libX11-devel libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel wayland-devel mesa-libGL-devel mesa-libGLU-devel alsa-lib-devel pulseaudio-libs-devel libudev-devel libstdc++-static libatomic-static cmake ccache patch libxml2-devel openssl openssl-devel git unzip; \
     else \
-        sudo apt install -y build-essential hyperfine vulkan-tools xz-utils gcc zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev clang just parallel scons mold pkg-config libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libwayland-dev libgl1-mesa-dev libglu1-mesa-dev libasound2-dev libpulse-dev libudev-dev cmake ccache patch libxml2-dev openssl libssl-dev git unzip; \
+        sudo apt install -y build-essential hyperfine vulkan-tools xz-utils bzip2 file gcc zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev clang just parallel scons mold pkg-config libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libwayland-dev libgl1-mesa-dev libglu1-mesa-dev libasound2-dev libpulse-dev libudev-dev cmake ccache patch libxml2-dev openssl libssl-dev git unzip; \
     fi
 
 copy_binaries:
@@ -152,11 +162,14 @@ generate_build_constants:
     echo "const BUILD_DATE_STR = \"$(shell date --utc --iso=seconds)\"" >> v/addons/vsk_version/build_constants.gd
     echo "const BUILD_UNIX_TIME = $(shell date +%s)" >> v/addons/vsk_version/build_constants.gd
 
-build-platform-target platform target precision="double" osx_bundle="yes":
+build-platform-target platform target arch="auto" precision="double" osx_bundle="yes":
     #!/usr/bin/env bash
     set -o xtrace
     cd $WORLD_PWD
     source "$EMSDK_ROOT/emsdk_env.sh"
+    if [[ "{{arch}}" == "arm64" ]]; then
+        export PATH="$ARM64_ROOT/bin:$PATH";
+    fi
     cd godot
     case "{{platform}}" in
         macos)
@@ -166,6 +179,7 @@ build-platform-target platform target precision="double" osx_bundle="yes":
                 export PATH=${OSXCROSS_ROOT}/target/bin/:$PATH
             fi
             scons platform=macos \
+                    arch={{arch}} \
                     werror=no \
                     compiledb=yes \
                     precision={{precision}} \
@@ -181,6 +195,7 @@ build-platform-target platform target precision="double" osx_bundle="yes":
             ;;
         windows)
             scons platform=windows \
+                arch={{arch}} \
                 werror=no \
                 compiledb=yes \
                 precision={{precision}} \
@@ -193,6 +208,7 @@ build-platform-target platform target precision="double" osx_bundle="yes":
             ;;
         android)
             scons platform=android \
+                    arch={{arch}} \
                     werror=no \
                     compiledb=yes \
                     precision={{precision}} \
@@ -202,6 +218,7 @@ build-platform-target platform target precision="double" osx_bundle="yes":
             ;;
         linuxbsd)
             scons platform=linuxbsd \
+                    arch={{arch}} \
                     werror=no \
                     compiledb=yes \
                     precision={{precision}} \
@@ -212,6 +229,7 @@ build-platform-target platform target precision="double" osx_bundle="yes":
             ;;
         web)
             scons platform=web \
+                    arch={{arch}} \
                     werror=no \
                     compiledb=yes \
                     precision={{precision}} \
@@ -227,6 +245,7 @@ build-platform-target platform target precision="double" osx_bundle="yes":
                 export PATH=${OSXCROSS_ROOT}/target/bin/:$PATH
             fi
             scons platform=ios \
+                    arch={{arch}} \
                     werror=no \
                     compiledb=yes \
                     precision={{precision}} \
@@ -261,8 +280,8 @@ build-platform-target platform target precision="double" osx_bundle="yes":
 
 build-platform-templates platform precision="double":
     # Bundle all on last command with osx_bundle
-    just build-platform-target {{platform}} template_debug {{precision}} "no"
-    just build-platform-target {{platform}} template_release {{precision}} "yes"
+    just build-platform-target {{platform}} template_debug auto {{precision}} "no"
+    just build-platform-target {{platform}} template_release auto {{precision}} "yes"
 
 all-build-platform-target:
     #!/usr/bin/env bash
