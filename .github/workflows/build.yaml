@@ -78,15 +78,7 @@ jobs:
             hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} auto ${{ matrix.precision }}'
           fi
 
-      - name: Upload Android Editors
-        if: ${{ matrix.platform == 'android' && matrix.target == 'editor' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}
-          path: godot/bin/android_editor_builds/android_editor*
-          
       - name: Upload Artifacts
-        if: ${{ !(matrix.platform == 'android' && matrix.target == 'editor') }}
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}
@@ -173,7 +165,7 @@ jobs:
       - name: Cache SCons cache 
         uses: actions/cache@v4 
         # Skip cache on Linux, PR #12
-        if: ${{ matrix.platform != 'linuxbsd' }}
+        if: ${{ matrix.platform == 'uxbsd' }}
         with: 
           path: | 
             .scons_cache  
@@ -218,8 +210,15 @@ jobs:
           fi
           hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.architecture }} ${{ matrix.precision }}'
 
-      - name: Upload Artifacts
+      - name: Upload Android Editors
+        if: ${{ matrix.platform == 'android' && matrix.target == 'editor' }}
         uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}
+          path: godot/bin/android_editor_builds/android_editor*
+          
+      - name: Upload Artifacts
+        if: ${{ !(matrix.platform == 'android' && matrix.target == 'editor') }}
         with:
           name: build-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.architecture }}-${{ matrix.precision }}
           path: godot/bin/*
