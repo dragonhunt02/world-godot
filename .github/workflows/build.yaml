@@ -210,7 +210,36 @@ jobs:
           fi
           hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.architecture }} ${{ matrix.precision }}'
 
+      - name: Upload Android Editor APK (android-debug)
+        if: ${{ matrix.platform == 'android' && matrix.target == 'editor' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Godot-android-editor-apk-android-debug.apk
+          path: godot/bin/android_editor_builds/android_editor-android-debug.apk
+
+      - name: Upload Android Editor APK (horizonos-debug)
+        if: ${{ matrix.platform == 'android' && matrix.target == 'editor' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Godot-android-editor-apk-horizonos-debug.apk
+          path: godot/bin/android_editor_builds/android_editor-horizonos-debug.apk
+
+      - name: Upload Android Editor AAB (android-debug)
+        if: ${{ matrix.platform == 'android' && matrix.target == 'editor' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Godot-android-editor-aab-android-debug.aab
+          path: godot/bin/android_editor_builds/android_editor-android-debug.aab
+
+      - name: Upload Android Editor AAB (horizonos-debug)
+        if: ${{ matrix.platform == 'android' && matrix.target == 'editor' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Godot-android-editor-aab-horizonos-debug.aab
+          path: godot/bin/android_editor_builds/android_editor-horizonos-debug.aab
+
       - name: Upload Artifacts
+        if: ${{ !(matrix.platform == 'android' && matrix.target == 'editor') }} 
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.architecture }}-${{ matrix.precision }}
