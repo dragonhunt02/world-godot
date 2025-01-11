@@ -2528,7 +2528,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		}
 	}
 
-	GLOBAL_DEF("internationalization/locale/include_text_server_data", false);
+	GLOBAL_DEF_BASIC("internationalization/locale/include_text_server_data", false);
 
 	OS::get_singleton()->_allow_hidpi = GLOBAL_DEF("display/window/dpi/allow_hidpi", true);
 	OS::get_singleton()->_allow_layered = GLOBAL_DEF("display/window/per_pixel_transparency/allowed", false);
@@ -2923,6 +2923,10 @@ Error Main::setup2(bool p_show_boot_logo) {
 					init_custom_pos = config->get_value("EditorWindow", "position", Vector2i(0, 0));
 				}
 			}
+		}
+
+		if (init_screen == EditorSettings::InitialScreen::INITIAL_SCREEN_AUTO) {
+			init_screen = DisplayServer::SCREEN_PRIMARY;
 		}
 
 		OS::get_singleton()->benchmark_end_measure("Startup", "Initialize Early Settings");
