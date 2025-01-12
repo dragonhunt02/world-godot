@@ -37,7 +37,7 @@ class SpringBoneCollisionPlane3D : public SpringBoneCollision3D {
 	GDCLASS(SpringBoneCollisionPlane3D, SpringBoneCollision3D);
 
 protected:
-	virtual Vector3 _collide(const Vector3 &p_bone_position, float p_bone_radius, float p_bone_length, const Vector3 &p_current) const override;
+	virtual Vector3 _collide(const Transform3D &p_center, float p_bone_radius, float p_bone_length, const Vector3 &p_current) const override;
 };
 
 #endif // SPRING_BONE_COLLISION_PLANE_3D_H

@@ -131,11 +131,21 @@ void SpringBoneCollision3D::sync_pose() {
 		Skeleton3D *sk = get_skeleton();
 		if (sk) {
 			Transform3D tr = sk->get_bone_global_pose(bone);
-			tr.origin += position_offset;
+			tr.origin += tr.basis.get_rotation_quaternion().xform(position_offset);
 			tr.basis *= Basis(rotation_offset);
 			set_transform(tr);
 		}
 	}
+}
+
+Transform3D SpringBoneCollision3D::get_transform_from_skeleton(const Transform3D &p_center) const {
+	Transform3D gtr = get_global_transform();
+	Skeleton3D *sk = get_skeleton();
+	if (sk) {
+		Transform3D tr = sk->get_global_transform();
+		gtr = tr.affine_inverse() * p_center * gtr;
+	}
+	return gtr;
 }
 
 void SpringBoneCollision3D::_bind_methods() {
@@ -160,11 +170,11 @@ void SpringBoneCollision3D::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::QUATERNION, "offset/rotation"), "set_rotation_offset", "get_rotation_offset");
 }
 
-Vector3 SpringBoneCollision3D::collide(const Vector3 &p_bone_position, float p_bone_radius, float p_bone_length, const Vector3 &p_current) const {
-	return _collide(p_bone_position, p_bone_radius, p_bone_length, p_current);
+Vector3 SpringBoneCollision3D::collide(const Transform3D &p_center, float p_bone_radius, float p_bone_length, const Vector3 &p_current) const {
+	return _collide(p_center, p_bone_radius, p_bone_length, p_current);
 }
 
-Vector3 SpringBoneCollision3D::_collide(const Vector3 &p_bone_position, float p_bone_radius, float p_bone_length, const Vector3 &p_current) const {
+Vector3 SpringBoneCollision3D::_collide(const Transform3D &p_center, float p_bone_radius, float p_bone_length, const Vector3 &p_current) const {
 	return Vector3(0, 0, 0);
 }
 

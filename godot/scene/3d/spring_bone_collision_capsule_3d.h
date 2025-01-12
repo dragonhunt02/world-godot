@@ -43,7 +43,7 @@ class SpringBoneCollisionCapsule3D : public SpringBoneCollision3D {
 protected:
 	static void _bind_methods();
 
-	virtual Vector3 _collide(const Vector3 &p_bone_position, float p_bone_radius, float p_bone_length, const Vector3 &p_current) const override;
+	virtual Vector3 _collide(const Transform3D &p_center, float p_bone_radius, float p_bone_length, const Vector3 &p_current) const override;
 
 public:
 	void set_radius(float p_radius);
@@ -54,8 +54,7 @@ public:
 	bool is_inside() const;
 
 	// Helper.
-	Vector3 get_head() const;
-	Vector3 get_tail() const;
+	Pair<Vector3, Vector3> get_head_and_tail(const Transform3D &p_center) const;
 };
 
 #endif // SPRING_BONE_COLLISION_CAPSULE_3D_H

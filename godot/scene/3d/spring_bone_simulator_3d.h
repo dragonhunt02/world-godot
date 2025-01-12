@@ -55,6 +55,12 @@ public:
 		BONE_DIRECTION_FROM_PARENT,
 	};
 
+	enum CenterFrom {
+		CENTER_FROM_WORLD_ORIGIN,
+		CENTER_FROM_NODE,
+		CENTER_FROM_BONE,
+	};
+
 	enum RotationAxis {
 		ROTATION_AXIS_X,
 		ROTATION_AXIS_Y,
@@ -99,6 +105,8 @@ public:
 		float end_bone_length = 0.0;
 		float end_bone_tip_radius = 0.02;
 
+		CenterFrom center_from = CENTER_FROM_WORLD_ORIGIN;
+		NodePath center_node;
 		String center_bone_name;
 		int center_bone = -1;
 
@@ -143,7 +151,7 @@ protected:
 	virtual void _set_active(bool p_active) override;
 	virtual void _process_modification() override;
 	void _init_joints(Skeleton3D *p_skeleton, SpringBone3DSetting *p_setting);
-	void _process_joints(double p_delta, Skeleton3D *p_skeleton, Vector<SpringBone3DJointSetting *> &p_joints, const LocalVector<ObjectID> &p_collisions, const Transform3D &p_center_transform, const Transform3D &p_inverted_center_transform);
+	void _process_joints(double p_delta, Skeleton3D *p_skeleton, Vector<SpringBone3DJointSetting *> &p_joints, const LocalVector<ObjectID> &p_collisions, const Transform3D &p_center_transform, const Transform3D &p_inverted_center_transform, const Quaternion &p_inverted_center_rotation);
 
 	void _make_joints_dirty(int p_index);
 	void _make_all_joints_dirty();
@@ -177,6 +185,10 @@ public:
 	float get_end_bone_tip_radius(int p_index) const;
 	Vector3 get_end_bone_axis(int p_end_bone, BoneDirection p_direction) const; // Helper.
 
+	void set_center_from(int p_index, CenterFrom p_center_from);
+	CenterFrom get_center_from(int p_index) const;
+	void set_center_node(int p_index, const NodePath &p_node_path);
+	NodePath get_center_node(int p_index) const;
 	void set_center_bone_name(int p_index, const String &p_bone_name);
 	String get_center_bone_name(int p_index) const;
 	void set_center_bone(int p_index, int p_bone);
@@ -263,6 +275,7 @@ public:
 };
 
 VARIANT_ENUM_CAST(SpringBoneSimulator3D::BoneDirection);
+VARIANT_ENUM_CAST(SpringBoneSimulator3D::CenterFrom);
 VARIANT_ENUM_CAST(SpringBoneSimulator3D::RotationAxis);
 
 #endif // SPRING_BONE_SIMULATOR_3D_H

@@ -62,17 +62,17 @@ void SpringBoneCollisionSphere3D::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "inside"), "set_inside", "is_inside");
 }
 
-Vector3 SpringBoneCollisionSphere3D::_collide_sphere(const Vector3 &p_coordinate, float p_radius, bool p_inside, const Vector3 &p_bone_position, float p_bone_radius, float p_bone_length, const Vector3 &p_current) {
-	Vector3 diff = p_current - p_coordinate;
+Vector3 SpringBoneCollisionSphere3D::_collide_sphere(const Vector3 &p_origin, float p_radius, bool p_inside, float p_bone_radius, float p_bone_length, const Vector3 &p_current) {
+	Vector3 diff = p_current - p_origin;
 	float length = diff.length();
 	float r = p_inside ? p_radius - p_bone_radius : p_bone_radius + p_radius;
 	float distance = p_inside ? r - length : length - r;
 	if (distance > 0) {
 		return p_current;
 	}
-	return p_coordinate + diff.normalized() * r;
+	return p_origin + diff.normalized() * r;
 }
 
-Vector3 SpringBoneCollisionSphere3D::_collide(const Vector3 &p_bone_position, float p_bone_radius, float p_bone_length, const Vector3 &p_current) const {
-	return _collide_sphere(get_global_position(), radius, inside, p_bone_position, p_bone_radius, p_bone_length, p_current);
+Vector3 SpringBoneCollisionSphere3D::_collide(const Transform3D &p_center, float p_bone_radius, float p_bone_length, const Vector3 &p_current) const {
+	return _collide_sphere(get_transform_from_skeleton(p_center).origin, radius, inside, p_bone_radius, p_bone_length, p_current);
 }

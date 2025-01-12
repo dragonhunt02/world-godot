@@ -63,10 +63,14 @@ bool SpringBoneSimulator3D::_set(const StringName &p_path, const Variant &p_valu
 			}
 		} else if (what == "extend_end_bone") {
 			set_extend_end_bone(which, p_value);
-		} else if (what == "center_bone_name") {
-			set_center_bone_name(which, p_value);
+		} else if (what == "center_from") {
+			set_center_from(which, static_cast<CenterFrom>((int)p_value));
+		} else if (what == "center_node") {
+			set_center_node(which, p_value);
 		} else if (what == "center_bone") {
 			set_center_bone(which, p_value);
+		} else if (what == "center_bone_name") {
+			set_center_bone_name(which, p_value);
 		} else if (what == "individual_config") {
 			set_individual_config(which, p_value);
 		} else if (what == "rotation_axis") {
@@ -181,10 +185,14 @@ bool SpringBoneSimulator3D::_get(const StringName &p_path, Variant &r_ret) const
 			}
 		} else if (what == "extend_end_bone") {
 			r_ret = is_end_bone_extended(which);
-		} else if (what == "center_bone_name") {
-			r_ret = get_center_bone_name(which);
+		} else if (what == "center_from") {
+			r_ret = (int)get_center_from(which);
+		} else if (what == "center_node") {
+			r_ret = get_center_node(which);
 		} else if (what == "center_bone") {
 			r_ret = get_center_bone(which);
+		} else if (what == "center_bone_name") {
+			r_ret = get_center_bone_name(which);
 		} else if (what == "individual_config") {
 			r_ret = is_config_individual(which);
 		} else if (what == "rotation_axis") {
@@ -287,6 +295,8 @@ void SpringBoneSimulator3D::_get_property_list(List<PropertyInfo> *p_list) const
 		p_list->push_back(PropertyInfo(Variant::INT, path + "end_bone/direction", PROPERTY_HINT_ENUM, "+X,-X,+Y,-Y,+Z,-Z,FromParent"));
 		p_list->push_back(PropertyInfo(Variant::FLOAT, path + "end_bone/length", PROPERTY_HINT_RANGE, "0,1,0.001,or_greater,suffix:m"));
 		p_list->push_back(PropertyInfo(Variant::FLOAT, path + "end_bone/tip_radius", PROPERTY_HINT_RANGE, "0,1,0.001,or_greater,suffix:m"));
+		p_list->push_back(PropertyInfo(Variant::INT, path + "center_from", PROPERTY_HINT_ENUM, "WorldOrigin,Node,Bone"));
+		p_list->push_back(PropertyInfo(Variant::NODE_PATH, path + "center_node"));
 		p_list->push_back(PropertyInfo(Variant::STRING, path + "center_bone_name", PROPERTY_HINT_ENUM_SUGGESTION, enum_hint));
 		p_list->push_back(PropertyInfo(Variant::INT, path + "center_bone", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR));
 		p_list->push_back(PropertyInfo(Variant::BOOL, path + "individual_config"));
@@ -337,6 +347,14 @@ void SpringBoneSimulator3D::_validate_property(PropertyInfo &p_property) const {
 
 		// Extended end bone option.
 		if (split[2] == "end_bone" && !is_end_bone_extended(which) && split.size() > 3) {
+			p_property.usage = PROPERTY_USAGE_NONE;
+		}
+
+		// Center option.
+		if (get_center_from(which) != CENTER_FROM_BONE && (split[2] == "center_bone" || split[2] == "center_bone_name")) {
+			p_property.usage = PROPERTY_USAGE_NONE;
+		}
+		if (get_center_from(which) != CENTER_FROM_NODE && split[2] == "center_node") {
 			p_property.usage = PROPERTY_USAGE_NONE;
 		}
 
@@ -521,6 +539,27 @@ Vector3 SpringBoneSimulator3D::get_end_bone_axis(int p_end_bone, BoneDirection p
 		axis = get_vector_from_bone_axis(static_cast<BoneAxis>((int)p_direction));
 	}
 	return axis;
+}
+
+void SpringBoneSimulator3D::set_center_from(int p_index, CenterFrom p_center_from) {
+	ERR_FAIL_INDEX(p_index, settings.size());
+	settings[p_index]->center_from = p_center_from;
+	notify_property_list_changed();
+}
+
+SpringBoneSimulator3D::CenterFrom SpringBoneSimulator3D::get_center_from(int p_index) const {
+	ERR_FAIL_INDEX_V(p_index, settings.size(), CENTER_FROM_WORLD_ORIGIN);
+	return settings[p_index]->center_from;
+}
+
+void SpringBoneSimulator3D::set_center_node(int p_index, const NodePath &p_node_path) {
+	ERR_FAIL_INDEX(p_index, settings.size());
+	settings[p_index]->center_node = p_node_path;
+}
+
+NodePath SpringBoneSimulator3D::get_center_node(int p_index) const {
+	ERR_FAIL_INDEX_V(p_index, settings.size(), NodePath());
+	return settings[p_index]->center_node;
 }
 
 void SpringBoneSimulator3D::set_center_bone_name(int p_index, const String &p_bone_name) {
@@ -1075,6 +1114,10 @@ void SpringBoneSimulator3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_end_bone_tip_radius", "index", "radius"), &SpringBoneSimulator3D::set_end_bone_tip_radius);
 	ClassDB::bind_method(D_METHOD("get_end_bone_tip_radius", "index"), &SpringBoneSimulator3D::get_end_bone_tip_radius);
 
+	ClassDB::bind_method(D_METHOD("set_center_from", "index", "center_from"), &SpringBoneSimulator3D::set_center_from);
+	ClassDB::bind_method(D_METHOD("get_center_from", "index"), &SpringBoneSimulator3D::get_center_from);
+	ClassDB::bind_method(D_METHOD("set_center_node", "index", "node_path"), &SpringBoneSimulator3D::set_center_node);
+	ClassDB::bind_method(D_METHOD("get_center_node", "index"), &SpringBoneSimulator3D::get_center_node);
 	ClassDB::bind_method(D_METHOD("set_center_bone_name", "index", "bone_name"), &SpringBoneSimulator3D::set_center_bone_name);
 	ClassDB::bind_method(D_METHOD("get_center_bone_name", "index"), &SpringBoneSimulator3D::get_center_bone_name);
 	ClassDB::bind_method(D_METHOD("set_center_bone", "index", "bone"), &SpringBoneSimulator3D::set_center_bone);
@@ -1156,6 +1199,10 @@ void SpringBoneSimulator3D::_bind_methods() {
 	BIND_ENUM_CONSTANT(BONE_DIRECTION_PLUS_Z);
 	BIND_ENUM_CONSTANT(BONE_DIRECTION_MINUS_Z);
 	BIND_ENUM_CONSTANT(BONE_DIRECTION_FROM_PARENT);
+
+	BIND_ENUM_CONSTANT(CENTER_FROM_WORLD_ORIGIN);
+	BIND_ENUM_CONSTANT(CENTER_FROM_NODE);
+	BIND_ENUM_CONSTANT(CENTER_FROM_BONE);
 
 	BIND_ENUM_CONSTANT(ROTATION_AXIS_X);
 	BIND_ENUM_CONSTANT(ROTATION_AXIS_Y);
@@ -1388,7 +1435,7 @@ void SpringBoneSimulator3D::_process_modification() {
 	double delta = skeleton->get_modifier_callback_mode_process() == Skeleton3D::MODIFIER_CALLBACK_MODE_PROCESS_IDLE ? skeleton->get_process_delta_time() : skeleton->get_physics_process_delta_time();
 	for (int i = 0; i < settings.size(); i++) {
 		_init_joints(skeleton, settings[i]);
-		_process_joints(delta, skeleton, settings[i]->joints, get_valid_collision_instance_ids(i), settings[i]->cached_center, settings[i]->cached_inverted_center);
+		_process_joints(delta, skeleton, settings[i]->joints, get_valid_collision_instance_ids(i), settings[i]->cached_center, settings[i]->cached_inverted_center, settings[i]->cached_inverted_center.basis.get_rotation_quaternion());
 	}
 }
 
@@ -1406,13 +1453,27 @@ void SpringBoneSimulator3D::reset() {
 }
 
 void SpringBoneSimulator3D::_init_joints(Skeleton3D *p_skeleton, SpringBone3DSetting *setting) {
-	if (setting->center_bone > 0) {
-		setting->cached_center = p_skeleton->get_global_transform() * p_skeleton->get_bone_global_pose(setting->center_bone);
-		setting->cached_inverted_center = setting->cached_center.affine_inverse();
-	} else {
+	if (setting->center_from == CENTER_FROM_WORLD_ORIGIN) {
 		setting->cached_center = p_skeleton->get_global_transform();
-		setting->cached_inverted_center = setting->cached_center.affine_inverse();
+	} else if (setting->center_from == CENTER_FROM_NODE) {
+		if (setting->center_node == NodePath()) {
+			setting->cached_center = Transform3D();
+		} else {
+			Node3D *nd = Object::cast_to<Node3D>(get_node_or_null(setting->center_node));
+			if (!nd) {
+				setting->cached_center = Transform3D();
+			} else {
+				setting->cached_center = nd->get_global_transform().affine_inverse() * p_skeleton->get_global_transform();
+			}
+		}
+	} else {
+		if (setting->center_bone >= 0) {
+			setting->cached_center = p_skeleton->get_bone_global_pose(setting->center_bone);
+		} else {
+			setting->cached_center = Transform3D();
+		}
 	}
+	setting->cached_inverted_center = setting->cached_center.affine_inverse();
 
 	if (!setting->simulation_dirty) {
 		return;
@@ -1459,17 +1520,17 @@ Vector3 SpringBoneSimulator3D::limit_length(const Vector3 &p_origin, const Vecto
 	return p_origin + (p_destination - p_origin).normalized() * p_length;
 }
 
-void SpringBoneSimulator3D::_process_joints(double p_delta, Skeleton3D *p_skeleton, Vector<SpringBone3DJointSetting *> &p_joints, const LocalVector<ObjectID> &p_collisions, const Transform3D &p_center_transform, const Transform3D &p_inverted_center_transform) {
+void SpringBoneSimulator3D::_process_joints(double p_delta, Skeleton3D *p_skeleton, Vector<SpringBone3DJointSetting *> &p_joints, const LocalVector<ObjectID> &p_collisions, const Transform3D &p_center_transform, const Transform3D &p_inverted_center_transform, const Quaternion &p_inverted_center_rotation) {
 	for (int i = 0; i < p_joints.size(); i++) {
 		SpringBone3DVerletInfo *verlet = p_joints[i]->verlet;
 		if (!verlet) {
 			continue; // Means not extended end bone.
 		}
 		Transform3D current_global_pose = p_skeleton->get_bone_global_pose(p_joints[i]->bone);
-		Transform3D current_world_pose = p_skeleton->get_global_transform() * current_global_pose;
+		Transform3D current_world_pose = p_center_transform * current_global_pose;
 		Quaternion current_rot = current_global_pose.basis.get_rotation_quaternion();
 		Vector3 current_origin = p_center_transform.xform(current_global_pose.origin);
-		Vector3 external = p_skeleton->get_global_transform().affine_inverse().basis.xform(p_joints[i]->gravity_direction * p_joints[i]->gravity * p_delta);
+		Vector3 external = p_inverted_center_rotation.xform(p_joints[i]->gravity_direction * p_joints[i]->gravity * p_delta);
 
 		// Integration of velocity by verlet.
 		Vector3 next_tail = verlet->current_tail +
@@ -1488,7 +1549,8 @@ void SpringBoneSimulator3D::_process_joints(double p_delta, Skeleton3D *p_skelet
 			}
 			SpringBoneCollision3D *col = Object::cast_to<SpringBoneCollision3D>(obj);
 			if (col) {
-				next_tail = col->collide(current_origin, p_joints[i]->radius, verlet->length, next_tail);
+				// Collider movement should separate from the effect of the center.
+				next_tail = col->collide(p_center_transform, p_joints[i]->radius, verlet->length, next_tail);
 				// Snap to plane if axis locked.
 				next_tail = snap_position_to_plane(current_world_pose, p_joints[i]->rotation_axis, next_tail);
 				// Limit bone length.

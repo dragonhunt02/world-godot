@@ -51,7 +51,7 @@ protected:
 	virtual void _notification(int p_what);
 #endif // TOOLS_ENABLED
 
-	virtual Vector3 _collide(const Vector3 &p_bone_position, float p_bone_radius, float p_bone_length, const Vector3 &p_current) const;
+	virtual Vector3 _collide(const Transform3D &p_center, float p_bone_radius, float p_bone_length, const Vector3 &p_current) const;
 
 public:
 	Skeleton3D *get_skeleton() const;
@@ -67,8 +67,9 @@ public:
 	Quaternion get_rotation_offset() const;
 
 	void sync_pose();
+	Transform3D get_transform_from_skeleton(const Transform3D &p_center) const;
 
-	Vector3 collide(const Vector3 &p_bone_position, float p_bone_radius, float p_bone_length, const Vector3 &p_current) const;
+	Vector3 collide(const Transform3D &p_center, float p_bone_radius, float p_bone_length, const Vector3 &p_current) const;
 };
 
 #endif // SPRING_BONE_COLLISION_3D_H
