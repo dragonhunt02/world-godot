@@ -45,7 +45,7 @@ void SpringBoneCollision3D::_validate_property(PropertyInfo &p_property) const {
 	if (p_property.name == "bone_name") {
 		Skeleton3D *sk = get_skeleton();
 		if (sk) {
-			p_property.hint = PROPERTY_HINT_ENUM;
+			p_property.hint = PROPERTY_HINT_ENUM_SUGGESTION;
 			p_property.hint_string = sk->get_concatenated_bone_names();
 		} else {
 			p_property.hint = PROPERTY_HINT_NONE;
@@ -130,10 +130,10 @@ void SpringBoneCollision3D::sync_pose() {
 	if (bone >= 0) {
 		Skeleton3D *sk = get_skeleton();
 		if (sk) {
-			Transform3D tr = sk->get_bone_global_pose(bone);
+			Transform3D tr = sk->get_global_transform() * sk->get_bone_global_pose(bone);
 			tr.origin += tr.basis.get_rotation_quaternion().xform(position_offset);
 			tr.basis *= Basis(rotation_offset);
-			set_transform(tr);
+			set_global_transform(tr);
 		}
 	}
 }
