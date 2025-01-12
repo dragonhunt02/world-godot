@@ -210,7 +210,15 @@ jobs:
           fi
           hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.architecture }} ${{ matrix.precision }}'
 
+      - name: Upload Android Editors
+        if: ${{ matrix.platform == 'android' && matrix.target == 'editor' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}
+          path: godot/bin/android_editor_builds/android_editor*
+
       - name: Upload Artifacts
+        if: ${{ !(matrix.platform == 'android' && matrix.target == 'editor') }} 
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.architecture }}-${{ matrix.precision }}
