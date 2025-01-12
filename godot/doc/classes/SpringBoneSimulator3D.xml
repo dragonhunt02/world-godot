@@ -5,10 +5,10 @@
 	</brief_description>
 	<description>
 		This [SkeletonModifier3D] can be used to wiggle hair, cloth, and tails. This modifier behaves differently from [PhysicalBoneSimulator3D] as it attempts to return the original pose after modification.
-		If you setup [method set_root_bone] and [method set_end_bone], it is treated as one bone chain. Note that it does not support a branched chain like Y-shaped.
+		If you setup [method set_root_bone] and [method set_end_bone], it is treated as one bone chain. Note that it does not support a branched chain like Y-shaped chains.
 		When a bone chain is created, an array is generated from the bones that exist in between and listed in the joint list.
-		Several properties can be applied to each joint, such as [method set_joint_stiffness], [method set_joint_drag] and [method set_joint_gravity].
-		For simplicity, you can set values to all joints at the same time by using [Curve]. If you want to specify detailed values individually, set [method set_individual_config] to [code]true[/code].
+		Several properties can be applied to each joint, such as [method set_joint_stiffness], [method set_joint_drag], and [method set_joint_gravity].
+		For simplicity, you can set values to all joints at the same time by using a [Curve]. If you want to specify detailed values individually, set [method set_individual_config] to [code]true[/code].
 		For physical simulation, [SpringBoneSimulator3D] can have children as self-standing collisions that are not related to [PhysicsServer3D], see also [SpringBoneCollision3D].
 	</description>
 	<tutorials>
@@ -25,20 +25,20 @@
 			<return type="void" />
 			<param index="0" name="index" type="int" />
 			<description>
-				Clear all collisions from the collision list at [param index] in the settings when [method are_all_child_collisions_enabled] is [code]false[/code].
+				Clears all collisions from the collision list at [param index] in the settings when [method are_all_child_collisions_enabled] is [code]false[/code].
 			</description>
 		</method>
 		<method name="clear_exclude_collisions">
 			<return type="void" />
 			<param index="0" name="index" type="int" />
 			<description>
-				Clear all exclude collisions from the collision list at [param index] in the settings when [method are_all_child_collisions_enabled] is [code]true[/code].
+				Clears all exclude collisions from the collision list at [param index] in the settings when [method are_all_child_collisions_enabled] is [code]true[/code].
 			</description>
 		</method>
 		<method name="clear_settings">
 			<return type="void" />
 			<description>
-				Clear all settings.
+				Clears all settings.
 			</description>
 		</method>
 		<method name="get_center_bone" qualifiers="const">
@@ -230,14 +230,14 @@
 			<return type="float" />
 			<param index="0" name="index" type="int" />
 			<description>
-				Returns the joints radius of the bone chain.
+				Returns the joint radius of the bone chain.
 			</description>
 		</method>
 		<method name="get_radius_damping_curve" qualifiers="const">
 			<return type="Curve" />
 			<param index="0" name="index" type="int" />
 			<description>
-				Returns the joints radius damping curve of the bone chain.
+				Returns the joint radius damping curve of the bone chain.
 			</description>
 		</method>
 		<method name="get_root_bone" qualifiers="const">
@@ -287,6 +287,13 @@
 			<param index="0" name="index" type="int" />
 			<description>
 				Returns [code]true[/code] if the end bone is extended to have the tail.
+			</description>
+		</method>
+		<method name="reset">
+			<return type="void" />
+			<description>
+				Resets a simulating state with respect to the current bone pose.
+				It is useful to prevent the simulation result getting violent. For example, calling this immediately after a call to [method AnimationPlayer.play] without a fading, or within the previous [signal SkeletonModifier3D.modification_processed] signal if it's condition changes significantly.
 			</description>
 		</method>
 		<method name="set_center_bone">
@@ -346,7 +353,8 @@
 			<param index="0" name="index" type="int" />
 			<param index="1" name="enabled" type="bool" />
 			<description>
-				If sets [param enabled] to [code]true[/code], the all child [SpringBoneCollision3D]s are contained in the collision list at [param index] in the settings.
+				If sets [param enabled] to [code]true[/code], the all child [SpringBoneCollision3D]s are collided and [method set_exclude_collision_path] is enabled as an exclusion list at [param index] in the settings.
+				If sets [param enabled] to [code]false[/code], you need to manually register all valid collisions with [method set_collision_path].
 			</description>
 		</method>
 		<method name="set_end_bone">
@@ -379,7 +387,7 @@
 			<param index="1" name="bone_name" type="String" />
 			<description>
 				Sets the end bone name of the bone chain.
-				[b]Note:[/b] End bone must be the same as or a child of root bone. If they are the same, the tail must be extended by [method set_extend_end_bone] to jiggle the bone.
+				[b]Note:[/b] End bone must be the root bone or a child of the root bone. If they are the same, the tail must be extended by [method set_extend_end_bone] to jiggle the bone.
 			</description>
 		</method>
 		<method name="set_end_bone_tip_radius">
@@ -412,7 +420,7 @@
 			<param index="0" name="index" type="int" />
 			<param index="1" name="enabled" type="bool" />
 			<description>
-				If sets [param enabled] to [code]true[/code], the end bone is extended to have the tail.
+				If [param enabled] is [code]true[/code], the end bone is extended to have the tail.
 			</description>
 		</method>
 		<method name="set_gravity">
@@ -447,7 +455,7 @@
 			<param index="0" name="index" type="int" />
 			<param index="1" name="enabled" type="bool" />
 			<description>
-				If sets [param enabled] to [code]true[/code], the config can be edited individually for each joint.
+				If [param enabled] is [code]true[/code], the config can be edited individually for each joint.
 			</description>
 		</method>
 		<method name="set_joint_drag">
@@ -509,7 +517,7 @@
 			<param index="0" name="index" type="int" />
 			<param index="1" name="radius" type="float" />
 			<description>
-				Sets the joints radius of the bone chain. It is used to move and slide with the [SpringBoneCollision3D] in the collision list.
+				Sets the joint radius of the bone chain. It is used to move and slide with the [SpringBoneCollision3D] in the collision list.
 				The value is scaled by [method set_radius_damping_curve] and cached in each joint setting in the joint list.
 			</description>
 		</method>
@@ -518,7 +526,7 @@
 			<param index="0" name="index" type="int" />
 			<param index="1" name="curve" type="Curve" />
 			<description>
-				Sets the joints radius damping curve of the bone chain.
+				Sets the joint radius damping curve of the bone chain.
 			</description>
 		</method>
 		<method name="set_root_bone">
@@ -567,7 +575,7 @@
 	</methods>
 	<members>
 		<member name="setting_count" type="int" setter="set_setting_count" getter="get_setting_count" default="0">
-			The number of setting.
+			The number of settings.
 		</member>
 	</members>
 	<constants>

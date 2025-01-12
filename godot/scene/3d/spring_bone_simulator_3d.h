@@ -124,8 +124,8 @@ public:
 
 		// To process.
 		bool simulation_dirty = false;
-		Transform3D cached_center = Transform3D();
-		Transform3D cached_inverted_center = Transform3D();
+		Transform3D cached_center;
+		Transform3D cached_inverted_center;
 	};
 
 protected:
@@ -143,7 +143,7 @@ protected:
 	virtual void _set_active(bool p_active) override;
 	virtual void _process_modification() override;
 	void _init_joints(Skeleton3D *p_skeleton, SpringBone3DSetting *p_setting);
-	void _process_joints(double p_delta, Skeleton3D *p_skeleton, Vector<SpringBone3DJointSetting *> &p_joints, const LocalVector<ObjectID> &p_collisions, const Transform3D &center_transform, const Transform3D &inverted_center_transform);
+	void _process_joints(double p_delta, Skeleton3D *p_skeleton, Vector<SpringBone3DJointSetting *> &p_joints, const LocalVector<ObjectID> &p_collisions, const Transform3D &p_center_transform, const Transform3D &p_inverted_center_transform);
 
 	void _make_joints_dirty(int p_index);
 	void _make_all_joints_dirty();
@@ -256,7 +256,10 @@ public:
 	static Quaternion get_local_pose_rotation(Skeleton3D *p_skeleton, int p_bone, const Quaternion &p_global_pose_rotation);
 	static Quaternion get_from_to_rotation(const Vector3 &p_from, const Vector3 &p_to);
 	static Vector3 snap_position_to_plane(const Transform3D &p_rest, RotationAxis p_axis, const Vector3 &p_position);
-	static Vector3 limit_length(const Vector3 &origin, const Vector3 &p_destination, float p_length);
+	static Vector3 limit_length(const Vector3 &p_origin, const Vector3 &p_destination, float p_length);
+
+	// To process manually.
+	void reset();
 };
 
 VARIANT_ENUM_CAST(SpringBoneSimulator3D::BoneDirection);

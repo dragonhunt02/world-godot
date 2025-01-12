@@ -29,6 +29,7 @@
 /**************************************************************************/
 
 #include "spring_bone_3d_gizmo_plugin.h"
+
 #include "editor/editor_settings.h"
 #include "scene/3d/spring_bone_collision_capsule_3d.h"
 #include "scene/3d/spring_bone_collision_plane_3d.h"
@@ -47,7 +48,8 @@ SpringBoneSimulator3DGizmoPlugin::SpringBoneSimulator3DGizmoPlugin() {
 	selection_materials.unselected_mat->set_flag(StandardMaterial3D::FLAG_DISABLE_FOG, true);
 
 	selection_materials.selected_mat.instantiate();
-	Ref<Shader> sh = Ref<Shader>(memnew(Shader));
+	Ref<Shader> sh;
+	sh.instantiate();
 	sh->set_code(R"(
 // Skeleton 3D gizmo bones shader.
 
@@ -107,7 +109,8 @@ void SpringBoneSimulator3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 Ref<ArrayMesh> SpringBoneSimulator3DGizmoPlugin::get_joints_mesh(Skeleton3D *p_skeleton, SpringBoneSimulator3D *p_simulator, bool p_is_selected) {
 	Color bone_color = EDITOR_GET("editors/3d_gizmos/gizmo_colors/spring_bone_joint");
 
-	Ref<SurfaceTool> surface_tool(memnew(SurfaceTool));
+	Ref<SurfaceTool> surface_tool;
+	surface_tool.instantiate();
 	surface_tool->begin(Mesh::PRIMITIVE_LINES);
 
 	if (p_is_selected) {
@@ -210,7 +213,8 @@ SpringBoneCollision3DGizmoPlugin::SpringBoneCollision3DGizmoPlugin() {
 	selection_materials.unselected_mat->set_flag(StandardMaterial3D::FLAG_DISABLE_FOG, true);
 
 	selection_materials.selected_mat.instantiate();
-	Ref<Shader> sh = Ref<Shader>(memnew(Shader));
+	Ref<Shader> sh;
+	sh.instantiate();
 	sh->set_code(R"(
 // Skeleton 3D gizmo bones shader.
 
@@ -261,7 +265,8 @@ Ref<ArrayMesh> SpringBoneCollision3DGizmoPlugin::get_collision_mesh(SpringBoneCo
 	Color collision_color = EDITOR_GET("editors/3d_gizmos/gizmo_colors/spring_bone_collision");
 	Color inside_collision_color = EDITOR_GET("editors/3d_gizmos/gizmo_colors/spring_bone_inside_collision");
 
-	Ref<SurfaceTool> surface_tool(memnew(SurfaceTool));
+	Ref<SurfaceTool> surface_tool;
+	surface_tool.instantiate();
 	surface_tool->begin(Mesh::PRIMITIVE_LINES);
 
 	if (p_is_selected) {

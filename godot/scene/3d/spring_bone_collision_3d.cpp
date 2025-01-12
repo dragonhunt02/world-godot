@@ -76,7 +76,7 @@ String SpringBoneCollision3D::get_bone_name() const {
 	return bone_name;
 }
 
-void SpringBoneCollision3D::set_bone(const int &p_bone) {
+void SpringBoneCollision3D::set_bone(int p_bone) {
 	bone = p_bone;
 
 	Skeleton3D *sk = get_skeleton();
@@ -167,3 +167,13 @@ Vector3 SpringBoneCollision3D::collide(const Vector3 &p_bone_position, float p_b
 Vector3 SpringBoneCollision3D::_collide(const Vector3 &p_bone_position, float p_bone_radius, float p_bone_length, const Vector3 &p_current) const {
 	return Vector3(0, 0, 0);
 }
+
+#ifdef TOOLS_ENABLED
+void SpringBoneCollision3D::_notification(int p_what) {
+	switch (p_what) {
+		case NOTIFICATION_EDITOR_PRE_SAVE: {
+			sync_pose();
+		} break;
+	}
+}
+#endif // TOOLS_ENABLED

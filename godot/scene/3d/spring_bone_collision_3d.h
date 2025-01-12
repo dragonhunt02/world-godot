@@ -39,14 +39,17 @@ class SpringBoneCollision3D : public Node3D {
 	String bone_name;
 	int bone = -1;
 
-	Vector3 position_offset = Vector3(0, 0, 0);
-	Quaternion rotation_offset = Quaternion(0, 0, 0, 1);
+	Vector3 position_offset;
+	Quaternion rotation_offset;
 
 protected:
 	PackedStringArray get_configuration_warnings() const override;
 
 	void _validate_property(PropertyInfo &p_property) const;
 	static void _bind_methods();
+#ifdef TOOLS_ENABLED
+	virtual void _notification(int p_what);
+#endif // TOOLS_ENABLED
 
 	virtual Vector3 _collide(const Vector3 &p_bone_position, float p_bone_radius, float p_bone_length, const Vector3 &p_current) const;
 
@@ -55,7 +58,7 @@ public:
 
 	void set_bone_name(const String &p_name);
 	String get_bone_name() const;
-	void set_bone(const int &p_bone);
+	void set_bone(int p_bone);
 	int get_bone() const;
 
 	void set_position_offset(const Vector3 &p_offset);
