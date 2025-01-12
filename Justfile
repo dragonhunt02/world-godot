@@ -31,8 +31,11 @@ export MINGW_PREFIX := WORLD_PWD + "/mingw"
 build-target-macos-editor-single:
     @just build-platform-target macos editor single
 
-build-target-windows-editor-single: fetch-llvm-mingw-macos
-    @just build-platform-target windows editor single
+build-target-windows-editor-single: fetch-llvm-mingw
+    @just build-platform-target windows editor x86_64 single
+
+build-target-windows-editor-double: fetch-llvm-mingw
+    @just build-platform-target windows editor x86_64 double
 
 run-all:
     just fetch-openjdk
@@ -50,9 +53,10 @@ fetch-llvm-mingw-macos:
         cd $WORLD_PWD
         mkdir -p ${MINGW_PREFIX}
         curl -o llvm-mingw.tar.xz -L https://github.com/mstorsjo/llvm-mingw/releases/download/20241030/llvm-mingw-20241030-ucrt-macos-universal.tar.xz
-        tar -xf llvm-mingw.tar.xz -C ${MINGW_PREFIX} --strip 1
+        tar --dereference -xf llvm-mingw.tar.xz -C ${MINGW_PREFIX} --strip 1
         rm -rf llvm-mingw.tar.xz
     fi
+
 
 fetch-llvm-mingw:
     #!/usr/bin/env bash
@@ -60,7 +64,7 @@ fetch-llvm-mingw:
         cd $WORLD_PWD
         mkdir -p ${MINGW_PREFIX}
         curl -o llvm-mingw.tar.xz -L https://github.com/mstorsjo/llvm-mingw/releases/download/20240917/llvm-mingw-20240917-ucrt-ubuntu-20.04-x86_64.tar.xz
-        tar -xf llvm-mingw.tar.xz -C ${MINGW_PREFIX} --strip 1
+        tar --dereference -xf llvm-mingw.tar.xz -C ${MINGW_PREFIX} --strip 1
         rm -rf llvm-mingw.tar.xz
     fi
 
@@ -69,7 +73,7 @@ fetch-openjdk:
     if [ ! -d "${JAVA_HOME}" ]; then
         curl --fail --location --silent --show-error "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.11%2B9/OpenJDK17U-jdk_$(uname -m | sed -e s/86_//g)_linux_hotspot_17.0.11_9.tar.gz" --output jdk.tar.gz
         mkdir -p {{JAVA_HOME}}
-        tar -xf jdk.tar.gz -C {{JAVA_HOME}} --strip 1
+        tar --dereference -xf jdk.tar.gz -C {{JAVA_HOME}} --strip 1
         rm -rf jdk.tar.gz
     fi
 
