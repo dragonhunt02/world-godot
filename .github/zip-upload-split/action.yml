@@ -1,10 +1,10 @@
 name: 'zip-upload-split'
 
-description: 'Split zip and upload 2G release parts'
+description: 'Convert file or directory into split zip and upload 2G release parts'
 
 inputs:
   zip-path:
-    description: 'Zip file to split'
+    description: 'File or directory to split'
     required: true
   release-id:
     description: 'Release identifier'
@@ -30,10 +30,32 @@ runs:
       run: |
           NAME=$( basename ${{ inputs.zip-path }} )
           SIZE=$( stat -c %s ${{ inputs.zip-path }} )
+          ABS_PATH=$( realpath ${{ inputs.zip-path }} )
 
+          mkdir _temporary
+          cd _temporary
+
+          # Ensure input is directory before zipping
+          if [ -d ${ABS_PATH} ]; then
+            INPUT_PATH=${ABS_PATH};
+            IS_FILE=false;
+          elif [ -f ${ABS_PATH} ]; then
+            # cut last ext if filename doesn't start with dot
+            NAME1="${NAME%.*}" && NAME="${NAME1:=NAME}";
+            INPUT_PATH=./${NAME};
+            mkdir ${INPUT_PATH};
+            ln -s ${ABS_PATH} ${INPUT_PATH};
+            IS_FILE=true;
+          else
+            echo "Invalid zip-path argument";
+            exit 1;
+          fi
+          
+          # Zip directory
           mkdir _temp
-          if [ "${SIZE}" -le "${MAX_SIZE}" ]; then
-            cp ${{ inputs.zip-path }} _temp/${NAME};
+          if [ "${IS_FILE}" == 'true' ] && [ "${SIZE}" -le "${MAX_SIZE}" ]; then
+            echo "File smaller than max size. Skipping zip operation...";
+            cp -v ${INPUT_PATH}/* _temp/;
           elif [ ${{ inputs.zip-cmd }} == '7zip' ]; then
 
             # On ubuntu-22.04 and ubuntu-24.04 apt package has a bug
@@ -55,14 +77,16 @@ runs:
 
             tar -xvf 7z2409-linux-x86.tar.xz "7zz";
             chmod +x 7zz;
-            ./7zz a -tzip -v${MAX_SIZE_K}k _temp/${NAME} ${{ inputs.zip-path }};
+            ./7zz a -tzip -v${MAX_SIZE_K}k _temp/${NAME}.zip ${INPUT_PATH};
             rm 7z2409-linux-x86.tar.xz 7zz
           else
-            # unknown zip bug can corrupt files in split archives 
-            zip ${{ inputs.zip-path }} --out _temp/${NAME} -s "${MAX_SIZE_K}k";
+            # Unknown zip bug can corrupt files in split archives 
+            zip -r ${NAME}.zip ${INPUT_PATH};
+            zip ${NAME}.zip --out _temp/${NAME}.zip -s "${MAX_SIZE_K}k";
           fi
-
           tree
+
+          # Upload files
           cd _temp
           for file in *; do \
             echo -e "Uploading $file...\n"; \
@@ -73,5 +97,8 @@ runs:
               -H "Content-Type: application/zip" \
               "https://uploads.github.com/repos/${{ github.repository }}/releases/${{ inputs.release-id }}/assets?name=${file}" \
               -T "${file}"; \
-            done
-            cd .. && rm -r _temp
+          done
+          cd ..
+
+          # Remove temporary files
+          cd .. && rm -r _temporary
