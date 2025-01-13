@@ -41,10 +41,10 @@ runs:
             IS_FILE=false;
           elif [ -f ${ABS_PATH} ]; then
             # cut last ext if filename doesn't start with dot
-            NAME1="${NAME%.*}" && NAME="${NAME1:=NAME}";
+            #NAME1="${NAME%.*}" && NAME="${NAME1:=NAME}";
             INPUT_PATH=./${NAME};
             mkdir ${INPUT_PATH};
-            mv -v ${ABS_PATH} ${INPUT_PATH};
+            ln -s ${ABS_PATH} ${INPUT_PATH};
             IS_FILE=true;
           else
             echo "Invalid zip-path argument";
@@ -101,9 +101,9 @@ runs:
           cd ..
 
           # If file, move back to original path
-          if [ "${IS_FILE}" == 'true' ]; then
-            mv -v ${INPUT_PATH}/* ${ABS_PATH};
-          fi
+          #if [ "${IS_FILE}" == 'true' ]; then
+            #mv -v ${INPUT_PATH}/* ${ABS_PATH};
+          #fi
 
           # Remove temporary files
           cd .. && rm -r _temporary
