@@ -341,11 +341,10 @@ jobs:
           if ${{ matrix.type == 'templates' }}; then \
             sudo apt install -y just; \
             just package-tpz v-sekai-godot-${{ matrix.type }} v-sekai-godot-${{ matrix.type }} ./godot/version.py; \
-            zip -0 -rm v-sekai-godot-${{ matrix.type }}.zip v-sekai-godot-${{ matrix.type }}.tpz; \
+            echo "name=v-sekai-godot-${{ matrix.type }}.tpz" >> ${GITHUB_OUTPUT}; \
           else \
-            zip -rm v-sekai-godot-${{ matrix.type }}.zip v-sekai-godot-${{ matrix.type }}; \
+            echo "name=v-sekai-godot-${{ matrix.type }}" >> ${GITHUB_OUTPUT}; \
           fi
-          echo "name=v-sekai-godot-${{ matrix.type }}.zip" >> ${GITHUB_OUTPUT}
 
       - name: Upload Zip Release Asset
         uses: ./.github/zip-upload-split
