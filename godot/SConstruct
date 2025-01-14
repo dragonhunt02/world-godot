@@ -536,7 +536,7 @@ if env.GetOption("num_jobs") == altered_num_jobs:
                 "Couldn't auto-detect CPU count to configure build parallelism. Specify it with the `-j` or `num_jobs` arguments."
             )
         else:
-            safer_cpu_count = 2
+            safer_cpu_count = cpu_count if cpu_count <= 4 else cpu_count - 1
             print(
                 "Auto-detected %d CPU cores available for build parallelism. Using %d cores by default. You can override it with the `-j` or `num_jobs` arguments."
                 % (cpu_count, safer_cpu_count)
