@@ -100,8 +100,8 @@ jobs:
     permissions:
       pull-requests: write
       actions: write
-    container:
-      image: fedora:40
+ #   container:
+ #     image: fedora:40
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
@@ -185,39 +185,6 @@ jobs:
             ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }} 
   
 
-      - name: Swap space before modification
-        run: |
-          dnf install -y procps-ng
-          echo "Memory and swap:"
-          free -h
-          echo
-          swapon --show
-          echo
-
-      - name: Create or resize swap space
-        run: |
-          export SWAP_FILE=$(swapon --show=NAME | tail -n 1)
-
-          if test -z "${SWAP_FILE}"; then
-              export SWAP_FILE=/swapfile
-          else
-              sudo swapoff "${SWAP_FILE}"
-              sudo rm "${SWAP_FILE}"
-          fi
-
-          sudo fallocate -l 1G "${SWAP_FILE}"
-
-          sudo chmod 600 "${SWAP_FILE}"
-          sudo mkswap "${SWAP_FILE}"
-          sudo swapon "${SWAP_FILE}"
-
-      - name: Swap space after modification
-        run: |
-          echo "Memory and swap:"
-          free -h
-          echo
-          swapon --show
-          echo
       
       - name: Fetch dependencies and Build Platform Target 
         run: | 
