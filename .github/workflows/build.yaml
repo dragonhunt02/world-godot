@@ -187,6 +187,7 @@ jobs:
 
       - name: Swap space before modification
         run: |
+          sudo apt-get install -y procps
           echo "Memory and swap:"
           free -h
           echo
