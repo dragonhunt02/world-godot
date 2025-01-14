@@ -239,7 +239,7 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
                     target={{target}} \
                     test=yes \
                     dlink_enabled=yes \
-                    debug_symbols=yes -j1 verbose=yes optimize=none
+                    debug_symbols=yes optimize=none
             ;;
         ios)
             if [ "$(uname)" = "Darwin" ]; then
