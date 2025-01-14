@@ -27,3 +27,5 @@ vulkan_sdk/
 tpz/
 
 editors/
+
+llvm-mingw.tar.xz
