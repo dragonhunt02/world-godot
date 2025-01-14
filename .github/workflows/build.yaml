@@ -2,7 +2,7 @@ name: Build Platform Target
 
 on:
   push:
-    branches: [web-template-test]
+    branches: [web-template-test2]
   pull_request:
     branches: [main]
     types: [opened, reopened, edited, synchronize]
