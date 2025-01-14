@@ -100,8 +100,8 @@ jobs:
     permissions:
       pull-requests: write
       actions: write
- #   container:
- #     image: fedora:40
+    container:
+      image: fedora:39
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
@@ -165,7 +165,7 @@ jobs:
       - name: Cache SCons cache 
         uses: actions/cache@v4 
         # Skip cache on Linux, PR #12
-        if: ${{ matrix.target != 'template_debug' }}
+        if: ${{ matrix.target != 'linuxbsd' }}
         with: 
           path: | 
             .scons_cache  
