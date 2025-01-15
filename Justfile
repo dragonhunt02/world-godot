@@ -28,14 +28,17 @@ export EMSDK_ROOT := WORLD_PWD + "/emsdk"
 export OSXCROSS_ROOT := WORLD_PWD + "/osxcross"
 export MINGW_PREFIX := WORLD_PWD + "/mingw"
 
-build-target-macos-editor-single:
-    @just build-platform-target macos editor single
+build-target-macos-editor-double:
+    @just build-platform-target macos editor arm64 double
 
-build-target-windows-editor-single: fetch-llvm-mingw
-    @just build-platform-target windows editor x86_64 single
+build-target-macos-editor-single:
+    @just build-platform-target macos editor arm64 single
 
 build-target-windows-editor-double: fetch-llvm-mingw
     @just build-platform-target windows editor x86_64 double
+
+build-target-windows-editor-single: fetch-llvm-mingw
+    @just build-platform-target windows editor x86_64 single
 
 run-all:
     just fetch-openjdk
