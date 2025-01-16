@@ -112,7 +112,8 @@ jobs:
         precision: [double]
         architecture: [x86_64, arm64, wasm32]
         platform: [linuxbsd, windows, android, web]
-        target: [editor, template_release, template_debug]
+        target: [editor, template_debug]
+        #template_release, template_debug]
         exclude:
             - platform: android
               architecture: x86_64
@@ -183,7 +184,7 @@ jobs:
             ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }} 
   
       - name: Fetch dependencies and Build Platform Target 
-        if: ${{ !( matrix.platform == 'android' && matrix.target != 'editor' ) }}
+    #    if: ${{ !( matrix.platform == 'android' && matrix.target != 'editor' ) }}
         run: | 
           just install_packages 
           export PLATFORM_ARGS=""
@@ -211,7 +212,14 @@ jobs:
           if "${{ matrix.architecture == 'arm64' }}"; then
               PLATFORM_ARGS="setup-arm64 $PLATFORM_ARGS"
           fi
-          hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.architecture }} ${{ matrix.precision }} yes $EXTRA_OPTIONS'
+          if [ ${{ matrix.platform }} == 'android' ] && [ ${{ matrix.target }} == 'template_debug' }} ]; then
+              hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-templates ${{ matrix.platform }} ${{ matrix.precision }}';
+              tree;
+              echo "Zipped";
+              zipinfo -1 $( find . -iname android-source.zip );
+          else
+              hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.architecture }} ${{ matrix.precision }} yes $EXTRA_OPTIONS';
+          fi
 
       - name: Upload Android Editors
         if: ${{ matrix.platform == 'android' && matrix.target == 'editor' }}
