@@ -15,7 +15,6 @@ jobs:
       actions: write
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
       GODOT_BASE_BRANCH: main
       CACHE_NAME: v-sekai-godot
 
@@ -104,7 +103,6 @@ jobs:
       image: fedora:39
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
       GODOT_BASE_BRANCH: main
       CACHE_NAME: v-sekai-godot
 
