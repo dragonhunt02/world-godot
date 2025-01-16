@@ -289,10 +289,10 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
         cp -rf $WORLD_PWD/godot/bin/* $WORLD_PWD/tpz
     fi
 
-build-platform-templates platform precision="double":
+build-platform-templates platform precision="double" extra_options="":
     # Bundle all on last command with osx_bundle
-    just build-platform-target {{platform}} template_debug auto {{precision}} "no"
-    just build-platform-target {{platform}} template_release auto {{precision}} "yes"
+    just build-platform-target {{platform}} template_debug auto {{precision}} "no" {{extra_options}}
+    just build-platform-target {{platform}} template_release auto {{precision}} "yes" {{extra_options}}
 
 all-build-platform-target:
     #!/usr/bin/env bash
