@@ -212,7 +212,9 @@ jobs:
           if "${{ matrix.architecture == 'arm64' }}"; then
               PLATFORM_ARGS="setup-arm64 $PLATFORM_ARGS"
           fi
-          if [ ${{ matrix.platform }} == 'android' ] && [ ${{ matrix.target }} == 'template_debug' }} ]; then
+          if [ ${{ matrix.platform }} == 'android' ] && [ ${{ matrix.target }} == 'template_debug' ]; then
+              echo "Zipped1"; 
+              zipinfo || true;
               hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-templates ${{ matrix.platform }} ${{ matrix.precision }}';
               tree;
               echo "Zipped";
