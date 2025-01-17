@@ -186,12 +186,16 @@ jobs:
         run: | 
           just install_packages 
           export PLATFORM_ARGS=""
+          export EXTRA_OPTIONS=""
           case "${{ matrix.platform }}" in  
             android)  
               PLATFORM_ARGS="fetch-openjdk setup-android-sdk"  
               ;;  
             web)  
-              PLATFORM_ARGS="setup-emscripten"  
+              PLATFORM_ARGS="setup-emscripten"
+              if [ ${{ matrix.target }} == 'template_debug' ]; then
+                  EXTRA_OPTIONS="optimize=none"; # Fix Github runner out of RAM
+              fi
               ;;  
             windows)  
               PLATFORM_ARGS="fetch-llvm-mingw"  
@@ -206,7 +210,7 @@ jobs:
           if "${{ matrix.architecture == 'arm64' }}"; then
               PLATFORM_ARGS="setup-arm64 $PLATFORM_ARGS"
           fi
-          hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.architecture }} ${{ matrix.precision }}'
+          hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.architecture }} ${{ matrix.precision }} yes $EXTRA_OPTIONS'
 
       - name: Upload Android Editors
         if: ${{ matrix.platform == 'android' && matrix.target == 'editor' }}

@@ -169,7 +169,7 @@ generate_build_constants:
     echo "const BUILD_DATE_STR = \"$(shell date --utc --iso=seconds)\"" >> v/addons/vsk_version/build_constants.gd
     echo "const BUILD_UNIX_TIME = $(shell date +%s)" >> v/addons/vsk_version/build_constants.gd
 
-build-platform-target platform target arch="auto" precision="double" osx_bundle="yes":
+build-platform-target platform target arch="auto" precision="double" osx_bundle="yes" extra_options="":
     #!/usr/bin/env bash
     set -o xtrace
     cd $WORLD_PWD
@@ -197,7 +197,8 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
                     osxcross_sdk=darwin24 \
                     generate_bundle={{osx_bundle}} \
                     debug_symbols=yes \
-                    separate_debug_symbols=yes
+                    separate_debug_symbols=yes \
+                    {{extra_options}}
             ;;
         windows)
             scons platform=windows \
@@ -210,7 +211,8 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
                 use_llvm=yes \
                 use_mingw=yes \
                 debug_symbols=yes \
-                separate_debug_symbols=yes
+                separate_debug_symbols=yes \
+                {{extra_options}}
             ;;
         android)
             scons platform=android \
@@ -220,6 +222,7 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
                     precision={{precision}} \
                     target={{target}} \
                     test=yes \
+                    {{extra_options}} \
                     #debug_symbols=yes    # Editor build runs out of space in Github Runner
             ;;
         linuxbsd)
@@ -231,7 +234,8 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
                     target={{target}} \
                     test=yes \
                     debug_symbols=yes \
-                    separate_debug_symbols=yes
+                    separate_debug_symbols=yes \
+                    {{extra_options}}
             ;;
         web)
             scons platform=web \
@@ -242,7 +246,8 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
                     target={{target}} \
                     test=yes \
                     dlink_enabled=yes \
-                    debug_symbols=yes
+                    debug_symbols=yes \
+                    {{extra_options}}
             ;;
         ios)
             if [ "$(uname)" = "Darwin" ]; then
@@ -262,7 +267,8 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
                     osxcross_sdk=darwin24 \
                     generate_bundle={{osx_bundle}} \
                     debug_symbols=yes \
-                    separate_debug_symbols=yes
+                    separate_debug_symbols=yes \
+                    {{extra_options}}
             ;;
         *)
             echo "Unsupported platform: {{platform}}"
