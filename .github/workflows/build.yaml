@@ -222,8 +222,8 @@ jobs:
               cd tpz;
               unzip android_source.zip;
               ls -a .;
-              tree android_source;
-              rm -rf android_source;
+              #tree android_source;
+              #rm -rf android_source;
           else
               hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.architecture }} ${{ matrix.precision }} yes $EXTRA_OPTIONS';
           fi
