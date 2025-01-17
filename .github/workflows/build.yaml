@@ -72,7 +72,7 @@ jobs:
         run: | 
           export PLATFORM_ARGS="fetch-vulkan-sdk"
           if [ ${{ matrix.target }} == "templates" ]; then
-            hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-templates ${{ matrix.platform }} ${{ matrix.precision }}'
+            hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-templates ${{ matrix.platform }} auto ${{ matrix.precision }}'
           else
             hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} auto ${{ matrix.precision }}'
           fi
@@ -114,6 +114,9 @@ jobs:
         platform: [linuxbsd, windows, android, web]
         target: [editor, template_release, template_debug]
         exclude:
+            # Android templates step is combined
+            - platform: android
+              target: template_debug
             - platform: android
               architecture: x86_64
             - platform: android
@@ -210,7 +213,12 @@ jobs:
           if "${{ matrix.architecture == 'arm64' }}"; then
               PLATFORM_ARGS="setup-arm64 $PLATFORM_ARGS"
           fi
-          hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.architecture }} ${{ matrix.precision }} yes $EXTRA_OPTIONS'
+          if [ ${{ matrix.platform }} == 'android' ] && [ ${{ matrix.target }} == 'template_release' ]; then
+              # Combined debug/release templates step
+              hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-templates ${{ matrix.platform }} ${{ matrix.architecture }} ${{ matrix.precision }}';
+          else
+              hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.architecture }} ${{ matrix.precision }} yes $EXTRA_OPTIONS';
+          fi
 
       - name: Upload Android Editors
         if: ${{ matrix.platform == 'android' && matrix.target == 'editor' }}
