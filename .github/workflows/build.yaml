@@ -2,7 +2,7 @@ name: Build Platform Target
 
 on:
   push:
-    branches: [android-template-test2]
+    branches: [android-template-test3]
   pull_request:
     branches: [main]
     types: [opened, reopened, edited, synchronize]
@@ -72,7 +72,7 @@ jobs:
         run: | 
           export PLATFORM_ARGS="fetch-vulkan-sdk"
           if [ ${{ matrix.target }} == "templates" ]; then
-            hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-templates ${{ matrix.platform }} ${{ matrix.precision }}'
+            hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-templates ${{ matrix.platform }} auto ${{ matrix.precision }}'
           else
             hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} auto ${{ matrix.precision }}'
           fi
@@ -112,9 +112,11 @@ jobs:
         precision: [double]
         architecture: [x86_64, arm64, wasm32]
         platform: [linuxbsd, windows, android, web]
-        target: [editor, template_debug]
-        #template_release, template_debug]
+        target: [editor, template_release, template_debug]
         exclude:
+            # Android templates step is combined
+            - platform: android
+              target: template_debug
             - platform: android
               architecture: x86_64
             - platform: android
@@ -184,7 +186,6 @@ jobs:
             ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }} 
   
       - name: Fetch dependencies and Build Platform Target 
-    #    if: ${{ !( matrix.platform == 'android' && matrix.target != 'editor' ) }}
         run: | 
           just install_packages 
           export PLATFORM_ARGS=""
@@ -212,18 +213,9 @@ jobs:
           if "${{ matrix.architecture == 'arm64' }}"; then
               PLATFORM_ARGS="setup-arm64 $PLATFORM_ARGS"
           fi
-          if [ ${{ matrix.platform }} == 'android' ] && [ ${{ matrix.target }} == 'template_debug' ]; then
-              echo "Zipped1"; 
-              zipinfo || true;
-              hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-templates ${{ matrix.platform }} ${{ matrix.precision }}';
-              #tree;
-              echo "Zipped2";
-              zipinfo -1 $( find . -iname android_source.zip ) || true;
-              cd tpz;
-              unzip android_source.zip;
-              ls -a .;
-              #tree android_source;
-              #rm -rf android_source;
+          if [ ${{ matrix.platform }} == 'android' ] && [ ${{ matrix.target }} == 'template_release' ]; then
+              # Combined debug/release templates step
+              hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-templates ${{ matrix.platform }} ${{ matrix.architecture }} ${{ matrix.precision }}';
           else
               hyperfine --show-output --runs 1 'just $PLATFORM_ARGS && just build-platform-target ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.architecture }} ${{ matrix.precision }} yes $EXTRA_OPTIONS';
           fi
