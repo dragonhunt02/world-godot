@@ -291,8 +291,8 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
 
 build-platform-templates platform precision="double" extra_options="":
     # Bundle all on last command with osx_bundle
-    just build-platform-target {{platform}} template_debug auto {{precision}} "no" generate_apk=no
-    just build-platform-target {{platform}} template_release auto {{precision}} "yes" generate_apk=yes
+    just build-platform-target {{platform}} template_debug auto {{precision}} "no"
+    just build-platform-target {{platform}} template_release auto {{precision}} "yes"
 
 all-build-platform-target:
     #!/usr/bin/env bash
