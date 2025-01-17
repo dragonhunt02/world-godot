@@ -28,6 +28,9 @@ export EMSDK_ROOT := WORLD_PWD + "/emsdk"
 export OSXCROSS_ROOT := WORLD_PWD + "/osxcross"
 export MINGW_PREFIX := WORLD_PWD + "/mingw"
 
+default:
+    @just --list
+
 build-target-macos-editor-double:
     @just build-platform-target macos editor arm64 double
 
