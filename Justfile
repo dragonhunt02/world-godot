@@ -30,6 +30,40 @@ export MINGW_PREFIX := WORLD_PWD + "/mingw"
 default:
     @just --list
 
+# Reference sizes:
+# godot.macos.editor.double.arm64: 114M
+# godot.macos.template_release.double.arm64: 28M
+build-small-macos-editor-double:
+    #!/bin/bash
+    if [ "$(uname)" = "Darwin" ]; then
+        unset OSXCROSS_ROOT
+    else
+        export PATH=${OSXCROSS_ROOT}/target/bin/:$PATH
+    fi
+    cd "$WORLD_PWD/godot" && scons modules_enabled_by_default=no \
+                    scu_build=yes \
+                    optimize=size \
+                    lto=full \
+                    precision=double \
+                    platform=macos \
+                    target=template_release \
+                    vulkan=no \
+                    opengl3=no \
+                    metal=no \
+                    disable_3d=no \
+                    disable_advanced_gui=yes \
+                    builtin_freetype=yes \
+                    builtin_glslang=yes \
+                    builtin_libpng=yes \
+                    builtin_libtheora=yes \
+                    builtin_libvorbis=yes \
+                    builtin_libwebp=yes \
+                    builtin_zlib=yes \
+                    builtin_zstd=yes \
+                    module_text_server_adv_enabled=no module_text_server_fb_enabled=yes \
+                    module_goal_task_planner_enabled=yes \
+                    module_gltf_enabled=yes
+
 build-target-macos-editor-double:
     @just build-platform-target macos editor arm64 double
 
