@@ -18,7 +18,6 @@ export ANDROID_NDK_VERSION := "23.2.8568313"
 export arm64toolchain := "https://github.com/godotengine/buildroot/releases/download/godot-2023.08.x-4/aarch64-godot-linux-gnu_sdk-buildroot.tar.bz2"
 export cmdlinetools := "commandlinetools-linux-11076708_latest.zip"
 
-export SCONS_CACHE := WORLD_PWD + "/.scons_cache"
 export ARM64_ROOT := WORLD_PWD + "/aarch64-godot-linux-gnu_sdk-buildroot"
 export ANDROID_SDK_ROOT := WORLD_PWD + "/android_sdk"
 export ANDROID_HOME := ANDROID_SDK_ROOT
