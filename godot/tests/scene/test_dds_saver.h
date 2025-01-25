@@ -74,9 +74,11 @@ void init(const String &p_test, const String &p_copy_target = String()) {
 }
 
 // Metal rendering driver fails to run on Apple's software Metal implementation (paravirtual device) #101773
-// Vulkan rendering driver fails to run on Linux CI
-#if !defined(MACOS_ENABLED) && !defined(LINUX_ENABLED)
+#if !defined(MACOS_ENABLED)
 TEST_CASE("[SceneTree][DDSSaver] Save DDS - Save valid image with mipmap") {
+#ifdef LINUX_ENABLED
+	ProjectSettings::get_singleton()->set("rendering/textures/vram_compression/compress_with_gpu", false);
+#endif
 	init("save_dds_valid_image_with_mipmap");
 	Ref<Image> image = Image::create_empty(4, 4, false, Image::FORMAT_RGBA8);
 	image->fill(Color(1, 0, 0)); // Fill with red color
@@ -99,6 +101,9 @@ TEST_CASE("[SceneTree][DDSSaver] Save DDS - Save valid image with mipmap") {
 }
 
 TEST_CASE("[SceneTree][DDSSaver] Save DDS - Save valid image with BPTC and S3TC compression") {
+#ifdef LINUX_ENABLED
+	ProjectSettings::get_singleton()->set("rendering/textures/vram_compression/compress_with_gpu", false);
+#endif
 	init("save_dds_valid_image_bptc_s3tc");
 	Ref<Image> image_bptc = Image::create_empty(4, 4, false, Image::FORMAT_RGBA8);
 	image_bptc->fill(Color(0, 0, 1)); // Fill with blue color
@@ -138,7 +143,7 @@ TEST_CASE("[SceneTree][DDSSaver] Save DDS - Save valid image with BPTC and S3TC 
 	float rms_s3tc = metrics_s3tc["root_mean_squared"];
 	CHECK(rms_s3tc == 0.0f);
 }
-#endif
+#endif // MACOS_ENABLED
 } //namespace TestDDSSaver
 
 #endif // TEST_DDS_SAVER_H
