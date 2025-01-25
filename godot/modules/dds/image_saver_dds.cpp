@@ -334,6 +334,11 @@ uint32_t _image_format_to_fourcc_format(Image::Format p_format) {
 	}
 }
 
+const int DDSD_CAPS = 0x1;
+const int DDSD_HEIGHT = 0x2;
+const int DDSD_WIDTH = 0x4;
+const int DDSD_PIXELFORMAT = 0x1000;
+
 Vector<uint8_t> save_dds_buffer(const Ref<Image> &p_img) {
 	Ref<StreamPeerBuffer> stream_buffer;
 	stream_buffer.instantiate();
@@ -345,7 +350,7 @@ Vector<uint8_t> save_dds_buffer(const Ref<Image> &p_img) {
 	uint32_t header_size = 124;
 	stream_buffer->put_32(header_size);
 
-	uint32_t flags = DDSD_LINEARSIZE;
+	uint32_t flags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT | DDSD_PITCH | DDSD_LINEARSIZE;
 
 	if (image->has_mipmaps()) {
 		flags |= DDSD_MIPMAPCOUNT;
