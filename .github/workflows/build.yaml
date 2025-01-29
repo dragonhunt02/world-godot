@@ -395,7 +395,7 @@ jobs:
 
   dispatch:
     name: Dispatch build message
-    needs: upload-releases
+    needs: [upload-releases, upload-templates]
     env:
       REPO_TOKEN: ${{ secrets.REPO_DISPATCH }}
     runs-on: ubuntu-latest
