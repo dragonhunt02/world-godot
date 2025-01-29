@@ -210,7 +210,10 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
     set -o xtrace
     cd $WORLD_PWD
     source "$EMSDK_ROOT/emsdk_env.sh"
-    if [[ "{{arch}}" == "arm64" ]]; then
+    HOST_ARCH=$( uname -m )
+    echo "HOST ARCHITECTURE: ${HOST_ARCH}"
+    if [[ "{{arch}}" == "arm64" && ${HOST_ARCH} == 'x86_64' ]]; then
+        rename 'aarch64-godot-linux-gnu-' '' ${ARM64_ROOT}/bin/*;
         export PATH="$ARM64_ROOT/bin:$PATH";
     fi
     cd godot
