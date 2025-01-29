@@ -211,9 +211,10 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
     cd $WORLD_PWD
     source "$EMSDK_ROOT/emsdk_env.sh"
     if [[ "{{arch}}" == "arm64" ]]; then
+        rename 'aarch64-godot-linux-gnu-' '' ${ARM64_ROOT}/bin/*
         tree ${ARM64_ROOT}/bin
         export PATH="$ARM64_ROOT/bin:$PATH";
-        extra_options="STRIP=${ARM64_ROOT}/bin/aarch64-godot-linux-gnu-strip OBJCOPY=${ARM64_ROOT}/bin/aarch64-godot-linux-gnu-objcopy";
+        #extra_options="STRIP=${ARM64_ROOT}/bin/aarch64-godot-linux-gnu-strip OBJCOPY=${ARM64_ROOT}/bin/aarch64-godot-linux-gnu-objcopy";
         echo "extra_options ${extra_options}"
     fi
     cd godot
