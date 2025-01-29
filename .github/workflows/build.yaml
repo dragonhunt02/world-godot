@@ -392,3 +392,23 @@ jobs:
           asset_path: ./v-sekai-godot-${{ matrix.platform }}.zip
           asset_name: v-sekai-godot-${{ matrix.platform }}.zip
           asset_content_type: application/zip
+
+  dispatch:
+    name: Dispatch build message
+    needs: upload-releases
+    env:
+      REPO_TOKEN: ${{ secrets.REPO_DISPATCH }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        repo: ['V-Sekai/v-sekai-game']
+    steps:
+      - name: Dispatch to workflow 
+        run: |
+            echo "Send build message to ${{ matrix.repo }}..."
+            curl -v -L \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${REPO_TOKEN}" \
+            --data '{ "event_type": "build-ready", "client_payload": {} }' \
+            https://api.github.com/repos/${{ matrix.repo }}/dispatches
