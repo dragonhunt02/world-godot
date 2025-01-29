@@ -214,6 +214,7 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
         tree ${ARM64_ROOT}/bin
         export PATH="$ARM64_ROOT/bin:$PATH";
         extra_options="STRIP=${ARM64_ROOT}/bin/aarch64-godot-linux-gnu-strip OBJCOPY=${ARM64_ROOT}/bin/aarch64-godot-linux-gnu-objcopy";
+        echo "extra_options ${extra_options}"
     fi
     cd godot
     case "{{platform}}" in
@@ -273,7 +274,7 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
                     test=yes \
                     debug_symbols=yes \
                     separate_debug_symbols=yes \
-                    {{extra_options}}
+                    ${extra_options}
             ;;
         web)
             scons platform=web \
