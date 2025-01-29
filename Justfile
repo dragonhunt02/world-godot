@@ -213,7 +213,7 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
     if [[ "{{arch}}" == "arm64" ]]; then
         tree ${ARM64_ROOT}/bin
         export PATH="$ARM64_ROOT/bin:$PATH";
-        extra_options="STRIP=${ARM64_ROOT}/bin/aarch64-godot-linux-gnu-strip OBJCOPY=${ARM64_ROOT}/bin/aarch64-godot-linux-gnu-objcopy";
+        extra_options := "STRIP=${ARM64_ROOT}/bin/aarch64-godot-linux-gnu-strip OBJCOPY=${ARM64_ROOT}/bin/aarch64-godot-linux-gnu-objcopy";
     fi
     cd godot
     case "{{platform}}" in
