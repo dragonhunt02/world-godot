@@ -277,7 +277,7 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
                     test=yes \
                     debug_symbols=yes \
                     separate_debug_symbols=yes \
-                    ${extra_options}
+                    {{extra_options}}
             ;;
         web)
             scons platform=web \
