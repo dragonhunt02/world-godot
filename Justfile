@@ -210,6 +210,9 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
     set -o xtrace
     cd $WORLD_PWD
     source "$EMSDK_ROOT/emsdk_env.sh"
+    HOST_ARCH=$( uname -p )
+    HOST_ARCHM=$( uname -m )
+    echo "HOST_ARCH P ${HOST_ARCH} - HOST_ARCH M ${HOST_ARCHM}"
     if [[ "{{arch}}" == "arm64" ]]; then
         rename 'aarch64-godot-linux-gnu-' '' ${ARM64_ROOT}/bin/*
         tree ${ARM64_ROOT}/bin
