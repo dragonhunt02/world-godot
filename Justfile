@@ -205,7 +205,7 @@ generate_build_constants:
     echo "const BUILD_DATE_STR = \"$(shell date --utc --iso=seconds)\"" >> v/addons/vsk_version/build_constants.gd
     echo "const BUILD_UNIX_TIME = $(shell date +%s)" >> v/addons/vsk_version/build_constants.gd
 
-build-platform-target platform target arch="auto" precision="double" osx_bundle="yes" extra_options="":
+build-platform-target platform target arch="auto" precision="double" osx_bundle="yes" $extra_options="":
     #!/usr/bin/env bash
     set -o xtrace
     cd $WORLD_PWD
@@ -213,7 +213,7 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
     if [[ "{{arch}}" == "arm64" ]]; then
         tree ${ARM64_ROOT}/bin
         export PATH="$ARM64_ROOT/bin:$PATH";
-        extra_options := "STRIP=${ARM64_ROOT}/bin/aarch64-godot-linux-gnu-strip OBJCOPY=${ARM64_ROOT}/bin/aarch64-godot-linux-gnu-objcopy";
+        extra_options="STRIP=${ARM64_ROOT}/bin/aarch64-godot-linux-gnu-strip OBJCOPY=${ARM64_ROOT}/bin/aarch64-godot-linux-gnu-objcopy";
     fi
     cd godot
     case "{{platform}}" in
