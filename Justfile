@@ -205,15 +205,14 @@ generate_build_constants:
     echo "const BUILD_DATE_STR = \"$(shell date --utc --iso=seconds)\"" >> v/addons/vsk_version/build_constants.gd
     echo "const BUILD_UNIX_TIME = $(shell date +%s)" >> v/addons/vsk_version/build_constants.gd
 
-build-platform-target platform target arch="auto" precision="double" osx_bundle="yes" $extra_options="":
+build-platform-target platform target arch="auto" precision="double" osx_bundle="yes" extra_options="":
     #!/usr/bin/env bash
     set -o xtrace
     cd $WORLD_PWD
     source "$EMSDK_ROOT/emsdk_env.sh"
-    HOST_ARCH=$( uname -p )
-    HOST_ARCHM=$( uname -m )
-    echo "HOST_ARCH P ${HOST_ARCH} - HOST_ARCH M ${HOST_ARCHM}"
-    if [[ "{{arch}}" == "arm64" ]]; then
+    HOST_ARCH=$( uname -m )
+    echo "HOST ARCHITECTURE: ${HOST_ARCH}"
+    if [[ "{{arch}}" == "arm64" && ${HOST_ARCH} == 'x86_64' ]]; then
         rename 'aarch64-godot-linux-gnu-' '' ${ARM64_ROOT}/bin/*
         tree ${ARM64_ROOT}/bin
         export PATH="$ARM64_ROOT/bin:$PATH";
