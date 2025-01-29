@@ -211,9 +211,9 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
     cd $WORLD_PWD
     source "$EMSDK_ROOT/emsdk_env.sh"
     if [[ "{{arch}}" == "arm64" ]]; then
-        tree ${ARM64_ROOT}
+        tree ${ARM64_ROOT}/bin
         export PATH="$ARM64_ROOT/bin:$PATH";
-        #extra_options="STRIP=${ARM64_TOOL}strip OBJCOPY=${ARM64_TOOL}objcopy";
+        extra_options="STRIP=${ARM64_ROOT}/bin/strip OBJCOPY=${ARM64_ROOT}/bin/objcopy";
     fi
     cd godot
     case "{{platform}}" in
