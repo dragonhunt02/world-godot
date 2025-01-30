@@ -637,10 +637,8 @@ void FileDialog::deselect_all() {
 				set_ok_button_text(ETR("Select Current Folder"));
 				break;
 			case FILE_MODE_OPEN_ANY:
-				set_ok_button_text(ETR("Open"));
-				break;
 			case FILE_MODE_SAVE_FILE:
-				set_ok_button_text(ETR("Save"));
+				// FIXME: Implement, or refactor to avoid duplication with set_mode
 				break;
 		}
 	}
@@ -659,13 +657,7 @@ void FileDialog::_tree_selected() {
 
 	if (!d["dir"]) {
 		file->set_text(d["name"]);
-		if (mode == FILE_MODE_SAVE_FILE) {
-			set_ok_button_text(ETR("Save"));
-		} else {
-			set_ok_button_text(ETR("Open"));
-		}
-	} else if (mode == FILE_MODE_OPEN_DIR || mode == FILE_MODE_OPEN_ANY) {
-		file->set_text("");
+	} else if (mode == FILE_MODE_OPEN_DIR) {
 		set_ok_button_text(ETR("Select This Folder"));
 	}
 

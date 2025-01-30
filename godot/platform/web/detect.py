@@ -28,11 +28,6 @@ def can_build():
     return WhereIs("emcc") is not None
 
 
-def get_tools(env: "SConsEnvironment"):
-    # Use generic POSIX build toolchain for Emscripten.
-    return ["cc", "c++", "ar", "link", "textfile", "zip"]
-
-
 def get_opts():
     from SCons.Variables import BoolVariable
 

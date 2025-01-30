@@ -166,7 +166,11 @@ void ProgressDialog::_popup() {
 
 	center_panel->set_custom_minimum_size(ms);
 
-	Window *current_window = get_last_exclusive_window();
+	Window *current_window = Window::get_from_id(DisplayServer::get_singleton()->get_focused_window());
+	if (!current_window) {
+		current_window = get_tree()->get_root();
+	}
+
 	reparent(current_window);
 
 	// Ensures that events are properly released before the dialog blocks input.
