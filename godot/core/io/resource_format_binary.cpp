@@ -704,9 +704,11 @@ Error ResourceLoaderBinary::load() {
 			ERR_FAIL_V_MSG(error, "External dependency not in whitelist: " + path + ".");
 		}
 
-		external_resources.write[i].load_token = ResourceLoader::_load_start(path, external_resources[i].type, use_sub_threads ? ResourceLoader::LOAD_THREAD_DISTRIBUTE : ResourceLoader::LOAD_THREAD_FROM_CURRENT, cache_mode_for_external, true, using_whitelist, external_path_whitelist, type_whitelist);
+		// Once the external resource has passed the whitelist, we consider the external resource to be safe.
+		// The external resource can always be loaded without whitelist.
+		external_resources.write[i].load_token = ResourceLoader::_load_start(path, external_resources[i].type, use_sub_threads ? ResourceLoader::LOAD_THREAD_DISTRIBUTE : ResourceLoader::LOAD_THREAD_FROM_CURRENT, cache_mode_for_external, false, false, Dictionary(), Dictionary());
 
-		if (!external_resources[i].load_token.is_valid()) {
+		if (external_resources[i].load_token.is_null()) {
 			if (!ResourceLoader::get_abort_on_missing_resources()) {
 				ResourceLoader::notify_dependency_error(local_path, path, external_resources[i].type);
 			} else {

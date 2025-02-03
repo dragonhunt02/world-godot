@@ -310,7 +310,7 @@ Ref<Resource> ResourceLoader::_load(const String &p_path, const String &p_origin
 		} else {
 			res = loader[i]->load(p_path, !p_original_path.is_empty() ? p_original_path : p_path, r_error, p_use_sub_threads, r_progress, p_cache_mode);
 		}
-		if (!res.is_null()) {
+		if (res.is_valid()) {
 			break;
 		}
 	}
@@ -565,7 +565,7 @@ Ref<Resource> ResourceLoader::load(const String &p_path, const String &p_type_hi
 		thread_mode = LOAD_THREAD_SPAWN_SINGLE;
 	}
 	Ref<LoadToken> load_token = _load_start(p_path, p_type_hint, thread_mode, p_cache_mode, false, false, Dictionary(), Dictionary());
-	if (!load_token.is_valid()) {
+	if (load_token.is_null()) {
 		if (r_error) {
 			*r_error = FAILED;
 		}
@@ -590,7 +590,7 @@ Ref<Resource> ResourceLoader::load_whitelisted(const String &p_path, Dictionary 
 		thread_mode = LOAD_THREAD_SPAWN_SINGLE;
 	}
 	Ref<LoadToken> load_token = _load_start(p_path, p_type_hint, thread_mode, p_cache_mode, false, true, p_external_path_whitelist, p_type_whitelist);
-	if (!load_token.is_valid()) {
+	if (load_token.is_null()) {
 		if (r_error) {
 			*r_error = FAILED;
 		}
