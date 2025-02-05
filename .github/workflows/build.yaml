@@ -2,7 +2,7 @@ name: Build Platform Target
 
 on:
   push:
-    branches: [main]
+    branches: [single]
   pull_request:
     branches: [main]
     types: [opened, reopened, edited, synchronize]
@@ -109,7 +109,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        precision: [double]
+        precision: [single]
         architecture: [x86_64, arm64, wasm32]
         platform: [linuxbsd, windows, android, web]
         target: [editor, template_release, template_debug]
@@ -303,7 +303,6 @@ jobs:
   release:
     runs-on: ubuntu-latest
     needs: merge
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     outputs:
       id: ${{ steps.create_release.outputs.id }}
       upload_url: ${{ steps.create_release.outputs.upload_url }}
