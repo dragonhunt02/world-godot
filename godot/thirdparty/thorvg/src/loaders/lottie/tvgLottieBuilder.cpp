@@ -1049,12 +1049,25 @@ void LottieBuilder::updateText(LottieLayer* layer, float frameNo)
             }
         }
 
+        /* all lowercase letters are converted to uppercase in the "t" text field, making the "ca" value irrelevant, thus AllCaps is nothing to do.
+           So only convert lowercase letters to uppercase (for 'SmallCaps' an extra scaling factor applied) */
+        auto code = p;
+        auto capScale = 1.0f;
+        char capCode;
+        if ((unsigned char)(p[0]) < 0x80 && doc.caps) {
+            if (*p >= 'a' && *p <= 'z') {
+                capCode = *p + 'A' - 'a';
+                code = &capCode;
+                if (doc.caps == 2) capScale = 0.7f;
+            }
+        }
+
         //find the glyph
         bool found = false;
         for (auto g = text->font->chars.begin(); g < text->font->chars.end(); ++g) {
             auto glyph = *g;
             //draw matched glyphs
-            if (!strncmp(glyph->code, p, glyph->len)) {
+            if (!strncmp(glyph->code, code, glyph->len)) {
                 if (textGrouping == LottieText::AlignOption::Group::Chars || textGrouping == LottieText::AlignOption::Group::All) {
                     //new text group, single scene for each characters
                     scene->push(std::move(textGroup));
@@ -1177,7 +1190,7 @@ void LottieBuilder::updateText(LottieLayer* layer, float frameNo)
                     Matrix matrix;
                     identity(&matrix);
                     translate(&matrix, translation.x / scale + cursor.x - textGroupMatrix.e13, translation.y / scale + cursor.y - textGroupMatrix.e23);
-                    tvg::scale(&matrix, scaling.x, scaling.y);
+                    tvg::scale(&matrix, scaling.x * capScale, scaling.y * capScale);
                     shape->transform(matrix);
                 }
 
@@ -1188,6 +1201,7 @@ void LottieBuilder::updateText(LottieLayer* layer, float frameNo)
                     auto matrix = shape->transform();
                     matrix.e13 = cursor.x;
                     matrix.e23 = cursor.y;
+                    matrix.e11 = matrix.e22 = capScale; //cases with matrix scaling factors =! 1 handled in the 'needGroup' scenario
                     shape->transform(matrix);
                     scene->push(cast(shape));
                 }
@@ -1196,7 +1210,7 @@ void LottieBuilder::updateText(LottieLayer* layer, float frameNo)
                 idx += glyph->len;
 
                 //advance the cursor position horizontally
-                cursor.x += glyph->width + doc.tracking;
+                cursor.x += (glyph->width + doc.tracking) * capScale;
 
                 found = true;
                 break;
@@ -1211,37 +1225,9 @@ void LottieBuilder::updateText(LottieLayer* layer, float frameNo)
 }
 
 
-void LottieBuilder::updateMaskings(LottieLayer* layer, float frameNo)
+void LottieBuilder::updateMasks(LottieLayer* layer, float frameNo)
 {
     if (layer->masks.count == 0) return;
-
-    //Apply the base mask
-    auto pMask = static_cast<LottieMask*>(layer->masks[0]);
-    auto pMethod = pMask->method;
-    auto opacity = pMask->opacity(frameNo);
-    auto expand = pMask->expand(frameNo);
-
-    auto pShape = layer->pooling();
-    pShape->reset();
-    pShape->fill(255, 255, 255, opacity);
-    pShape->transform(layer->cache.matrix);
-
-    //Apply Masking Expansion (Offset)
-    if (expand == 0.0f) {
-        pMask->pathset(frameNo, P(pShape)->rs.path.cmds, P(pShape)->rs.path.pts, nullptr, nullptr, nullptr, exps);
-    } else {
-        //TODO: Once path direction support is implemented, ensure that the direction is ignored here
-        auto offset = LottieOffsetModifier(pMask->expand(frameNo));
-        pMask->pathset(frameNo, P(pShape)->rs.path.cmds, P(pShape)->rs.path.pts, nullptr, nullptr, &offset, exps);
-    }
-
-    auto compMethod = (pMethod == CompositeMethod::SubtractMask || pMethod == CompositeMethod::InvAlphaMask) ? CompositeMethod::InvAlphaMask : CompositeMethod::AlphaMask;
-
-    //Cheaper. Replace the masking with a clipper
-    if (layer->masks.count == 1 && compMethod == CompositeMethod::AlphaMask && opacity == 255) {
-        layer->scene->clip(tvg::cast(pShape));
-        return;
-    }
 
     //Introduce an intermediate scene for embracing the matte + masking
     if (layer->matteTarget) {
@@ -1250,28 +1236,58 @@ void LottieBuilder::updateMaskings(LottieLayer* layer, float frameNo)
         layer->scene = scene;
     }
 
-    layer->scene->composite(tvg::cast(pShape), compMethod);
+    Shape* pShape = nullptr;
+    CompositeMethod pMethod;
+    uint8_t pOpacity;
 
-    //Apply the subsquent masks
-    for (auto m = layer->masks.begin() + 1; m < layer->masks.end(); ++m) {
-        auto mask = static_cast<LottieMask*>(*m);
+    for (auto m = layer->masks.begin(); m < layer->masks.end(); ++m) {
+        auto mask = *m;
+        if (mask->method == CompositeMethod::None) continue;
+
         auto method = mask->method;
-        if (method == CompositeMethod::None) continue;
+        auto opacity = mask->opacity(frameNo);
+        auto expand = mask->expand(frameNo);
+        auto fastTrack = false;  //single clipping
 
-        //Append the mask shape
-        if (pMethod == method && (method == CompositeMethod::SubtractMask || method == CompositeMethod::DifferenceMask)) {
-            mask->pathset(frameNo, P(pShape)->rs.path.cmds, P(pShape)->rs.path.pts, nullptr, nullptr, nullptr, exps);
-        //Chain composition
-        } else {
+        //the first mask
+        if (!pShape) {
+            pShape = layer->pooling();
+            pShape->reset();
+            pShape->fill(255, 255, 255, opacity);
+            pShape->transform(layer->cache.matrix);
+            auto compMethod = (method == CompositeMethod::SubtractMask || method == CompositeMethod::InvAlphaMask) ? CompositeMethod::InvAlphaMask : CompositeMethod::AlphaMask;
+            //Cheaper. Replace the masking with a clipper
+            if (layer->masks.count == 1 && compMethod == CompositeMethod::AlphaMask) {
+                layer->scene->opacity(MULTIPLY(layer->scene->opacity(), opacity));
+                layer->scene->clip(cast(pShape));
+                fastTrack = true;
+            } else {
+                layer->scene->composite(cast(pShape), compMethod);
+            }
+        //Chain mask composition
+        } else if (pMethod != method || pOpacity != opacity || (method != CompositeMethod::SubtractMask && method != CompositeMethod::DifferenceMask)) {
             auto shape = layer->pooling();
             shape->reset();
-            shape->fill(255, 255, 255, mask->opacity(frameNo));
+            shape->fill(255, 255, 255, opacity);
             shape->transform(layer->cache.matrix);
-            mask->pathset(frameNo, P(shape)->rs.path.cmds, P(shape)->rs.path.pts, nullptr, nullptr, nullptr, exps);
-            pShape->composite(tvg::cast(shape), method);
+            pShape->composite(cast(shape), method);
             pShape = shape;
-            pMethod = method;
         }
+
+        //Default Masking
+        if (expand == 0.0f) {
+            mask->pathset(frameNo, P(pShape)->rs.path.cmds, P(pShape)->     rs.path.pts, nullptr, nullptr, nullptr, exps);
+        //Masking with Expansion (Offset)
+        } else {
+            //TODO: Once path direction support is implemented, ensure that the direction is ignored here
+            auto offset = LottieOffsetModifier(expand);
+            mask->pathset(frameNo, P(pShape)->rs.path.cmds, P(pShape)->rs.path.pts, nullptr, nullptr, &offset, exps);
+        }
+
+        if (fastTrack) return;
+
+        pOpacity = opacity;
+        pMethod = method;
     }
 }
 
@@ -1295,6 +1311,60 @@ bool LottieBuilder::updateMatte(LottieComposition* comp, float frameNo, Scene* s
 }
 
 
+void LottieBuilder::updateStrokeEffect(LottieLayer* layer, LottieFxStroke* effect, float frameNo)
+{
+    if (layer->masks.count == 0) return;
+
+    auto shape = layer->pooling();
+    shape->reset();
+
+    //FIXME: all mask
+    if (effect->allMask(frameNo)) {
+        for (auto m = layer->masks.begin(); m < layer->masks.end(); ++m) {
+            auto mask = *m;
+            mask->pathset(frameNo, P(shape)->rs.path.cmds, P(shape)->rs.path.pts, nullptr, nullptr, nullptr, exps);
+        }
+    //A specific mask
+    } else {
+        auto idx = static_cast<uint32_t>(effect->mask(frameNo) - 1);
+        if (idx < 0 || idx >= layer->masks.count) return;
+        auto mask = layer->masks[idx];
+        mask->pathset(frameNo, P(shape)->rs.path.cmds, P(shape)->rs.path.pts, nullptr, nullptr, nullptr, exps);
+    }
+
+    shape->transform(layer->cache.matrix);
+    shape->strokeTrim(effect->begin(frameNo) * 0.01f, effect->end(frameNo) * 0.01f);
+    shape->stroke(255, 255, 255, (int)(effect->opacity(frameNo) * 255.0f));
+    shape->stroke(StrokeJoin::Round);
+    shape->stroke(StrokeCap::Round);
+
+    auto size = effect->size(frameNo) * 2.0f;
+    shape->stroke(size);
+
+    //fill the color to the layer shapes if any
+    auto color = effect->color(frameNo);
+    if (color.rgb[0] != 255 || color.rgb[1] != 255 || color.rgb[2] != 255) {
+        auto accessor = tvg::Accessor::gen();
+        auto stroke = (layer->type == LottieLayer::Type::Shape) ? true : false;
+        auto f = [color, size, stroke](const tvg::Paint* paint, void* data) -> bool {
+            if (paint->type() == tvg::Type::Shape) {
+                auto shape = (tvg::Shape*) paint;
+                //expand shape to fill the stroke region
+                if (stroke) {
+                    shape->stroke(size);
+                    shape->stroke(color.rgb[0], color.rgb[1], color.rgb[2], 255);
+                }
+                shape->fill(color.rgb[0], color.rgb[1], color.rgb[2], 255);
+            }
+            return true;
+        };
+        accessor->set(layer->scene, f, nullptr);
+    }
+
+    layer->scene->composite(cast(shape), CompositeMethod::AlphaMask);
+}
+
+
 void LottieBuilder::updateEffect(LottieLayer* layer, float frameNo)
 {
     constexpr int QUALITY = 25;
@@ -1305,14 +1375,41 @@ void LottieBuilder::updateEffect(LottieLayer* layer, float frameNo)
     for (auto ef = layer->effects.begin(); ef < layer->effects.end(); ++ef) {
         if (!(*ef)->enable) continue;
         switch ((*ef)->type) {
-            case LottieEffect::DropShadow: {
-                auto effect = static_cast<LottieDropShadow*>(*ef);
+            case LottieEffect::Tint: {
+                auto effect = static_cast<LottieFxTint*>(*ef);
+                auto black = effect->black(frameNo);
+                auto white = effect->white(frameNo);
+                layer->scene->push(SceneEffect::Tint, black.rgb[0], black.rgb[1], black.rgb[2], white.rgb[0], white.rgb[1], white.rgb[2], effect->intensity(frameNo));
+                break;
+            }
+            case LottieEffect::Fill: {
+                auto effect = static_cast<LottieFxFill*>(*ef);
                 auto color = effect->color(frameNo);
-                layer->scene->push(SceneEffect::DropShadow, color.rgb[0], color.rgb[1], color.rgb[2], (int)effect->opacity(frameNo), effect->angle(frameNo), effect->distance(frameNo), effect->blurness(frameNo) * BLUR_TO_SIGMA, QUALITY);
+                layer->scene->push(SceneEffect::Fill, color.rgb[0], color.rgb[1], color.rgb[2], (int)(255.0f * effect->opacity(frameNo)));
+                break;
+            }
+            case LottieEffect::Stroke: {
+                auto effect = static_cast<LottieFxStroke*>(*ef);
+                updateStrokeEffect(layer, effect, frameNo);
+                break;
+            }
+            case LottieEffect::Tritone: {
+                auto effect = static_cast<LottieFxTritone*>(*ef);
+                auto dark = effect->dark(frameNo);
+                auto midtone = effect->midtone(frameNo);
+                auto bright = effect->bright(frameNo);
+                layer->scene->push(SceneEffect::Tritone, dark.rgb[0], dark.rgb[1], dark.rgb[2], midtone.rgb[0], midtone.rgb[1], midtone.rgb[2], bright.rgb[0], bright.rgb[1], bright.rgb[2]);
+                break;
+            }
+            case LottieEffect::DropShadow: {
+                auto effect = static_cast<LottieFxDropShadow*>(*ef);
+                auto color = effect->color(frameNo);
+                //seems the opacity range in dropshadow is 0 ~ 256
+                layer->scene->push(SceneEffect::DropShadow, color.rgb[0], color.rgb[1], color.rgb[2], std::min(255, (int)effect->opacity(frameNo)), effect->angle(frameNo), effect->distance(frameNo), effect->blurness(frameNo) * BLUR_TO_SIGMA, QUALITY);
                 break;
             }
             case LottieEffect::GaussianBlur: {
-                auto effect = static_cast<LottieGaussianBlur*>(*ef);
+                auto effect = static_cast<LottieFxGaussianBlur*>(*ef);
                 layer->scene->push(SceneEffect::GaussianBlur, effect->blurness(frameNo) * BLUR_TO_SIGMA, effect->direction(frameNo) - 1, effect->wrap(frameNo), QUALITY);
                 break;
             }
@@ -1373,7 +1470,7 @@ void LottieBuilder::updateLayer(LottieComposition* comp, Scene* scene, LottieLay
         }
     }
 
-    updateMaskings(layer, frameNo);
+    updateMasks(layer, frameNo);
 
     layer->scene->blend(layer->blendMethod);
 

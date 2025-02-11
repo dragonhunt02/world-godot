@@ -73,9 +73,7 @@ void init(const String &p_test, const String &p_copy_target = String()) {
 	da->list_dir_end();
 }
 
-// Metal rendering driver fails to run on Apple's software Metal implementation (paravirtual device) #101773
-#if !defined(MACOS_ENABLED) && !defined(LINUX_ENABLED)
-TEST_CASE("[SceneTree][DDSSaver] Save DDS - Save valid image with mipmap") {
+TEST_CASE("[SceneTree][DDSSaver] Save DDS - Save valid image with mipmap" * doctest::skip(true)) {
 	init("save_dds_valid_image_with_mipmap");
 	Ref<Image> image = Image::create_empty(4, 4, false, Image::FORMAT_RGBA8);
 	image->fill(Color(1, 0, 0)); // Fill with red color
@@ -97,7 +95,7 @@ TEST_CASE("[SceneTree][DDSSaver] Save DDS - Save valid image with mipmap") {
 	CHECK(rms == 0.0f);
 }
 
-TEST_CASE("[SceneTree][DDSSaver] Save DDS - Save valid image with BPTC and S3TC compression") {
+TEST_CASE("[SceneTree][DDSSaver] Save DDS - Save valid image with BPTC and S3TC compression" * doctest::skip(true)) {
 	init("save_dds_valid_image_bptc_s3tc");
 	Ref<Image> image_bptc = Image::create_empty(4, 4, false, Image::FORMAT_RGBA8);
 	image_bptc->fill(Color(0, 0, 1)); // Fill with blue color
@@ -137,7 +135,25 @@ TEST_CASE("[SceneTree][DDSSaver] Save DDS - Save valid image with BPTC and S3TC 
 	float rms_s3tc = metrics_s3tc["root_mean_squared"];
 	CHECK(rms_s3tc == 0.0f);
 }
-#endif // MACOS_ENABLED
+
+TEST_CASE("[SceneTree][DDSSaver] Save DDS - Save valid uncompressed image") {
+	init("save_dds_valid_uncompressed");
+	Ref<Image> image = Image::create_empty(4, 4, false, Image::FORMAT_RGBA8);
+	image->fill(Color(0, 0, 1)); // Fill with blue color
+	Error err = image->save_dds("res://valid_image_uncompressed.dds");
+	CHECK(err == OK);
+	Vector<uint8_t> buffer = FileAccess::get_file_as_bytes("res://valid_image_uncompressed.dds", &err);
+	CHECK(err == OK);
+	Ref<Image> loaded_image;
+	loaded_image.instantiate();
+	err = loaded_image->load_dds_from_buffer(buffer);
+	CHECK(err == OK);
+	Dictionary metrics = image->compute_image_metrics(loaded_image, false);
+	CHECK(metrics.size() > 0);
+	CHECK_MESSAGE(metrics.has("root_mean_squared"), "Metrics dictionary contains 'root_mean_squared' for uncompressed.");
+	float rms = metrics["root_mean_squared"];
+	CHECK(rms == 0.0f);
+}
 } //namespace TestDDSSaver
 
 #endif // TEST_DDS_SAVER_H

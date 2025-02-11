@@ -219,6 +219,7 @@ bool LottieLoader::open(const char* data, uint32_t size, bool copy)
 
 bool LottieLoader::open(const string& path)
 {
+#ifdef THORVG_FILE_IO_SUPPORT
     auto f = fopen(path.c_str(), "r");
     if (!f) return false;
 
@@ -232,11 +233,7 @@ bool LottieLoader::open(const string& path)
 
     auto content = (char*)(malloc(sizeof(char) * size + 1));
     fseek(f, 0, SEEK_SET);
-    auto ret = fread(content, sizeof(char), size, f);
-    if (ret < size) {
-        fclose(f);
-        return false;
-    }
+    size = fread(content, sizeof(char), size, f);
     content[size] = '\0';
 
     fclose(f);
@@ -246,6 +243,9 @@ bool LottieLoader::open(const string& path)
     this->copy = true;
 
     return header();
+#else
+    return false;
+#endif
 }
 
 

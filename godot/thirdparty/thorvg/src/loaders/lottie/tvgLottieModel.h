@@ -76,46 +76,98 @@ struct LottieStroke
     StrokeJoin join = StrokeJoin::Round;
 };
 
-
 struct LottieEffect
 {
-    enum Type : uint8_t
-    {
-        DropShadow = 0,
-        GaussianBlur = 1,
-    };
+    enum Type : uint8_t {Tint = 20, Fill, Stroke, Tritone, DropShadow = 25, GaussianBlur = 29};
 
     virtual ~LottieEffect() {}
-
     Type type;
     bool enable = false;
 };
 
-
-struct LottieDropShadow : LottieEffect
+struct LottieFxFill : LottieEffect
 {
+    //LottieInteger mask;
+    //LottieInteger allMask;
     LottieColor color;
-    LottieFloat opacity = 0;
-    LottieAngle angle = 0.0f;
-    LottieSlider distance = 0.0f;
-    LottieSlider blurness = 0.0f;
+    //LottieInteger invert;
+    //LottieSlider hFeather;
+    //LottieSlider vFeather;
+    LottieFloat opacity;
 
-    LottieDropShadow()
+    LottieFxFill()
     {
-        type = DropShadow;
+        type = LottieEffect::Fill;
     }
 };
 
-
-struct LottieGaussianBlur : LottieEffect
+struct LottieFxStroke : LottieEffect
 {
-    LottieSlider blurness = 0.0f;
-    LottieCheckbox direction = 0;
-    LottieCheckbox wrap = 0;
+    LottieInteger mask;
+    LottieInteger allMask;
+    //LottieInteger sequential;
+    LottieColor color;
+    LottieFloat size;
+    //LottieFloat hardness;    //should support with the blurness?
+    LottieFloat opacity;
+    LottieFloat begin;
+    LottieFloat end;
+    //LottieFloat space;
+    //LottieInteger style;
 
-    LottieGaussianBlur()
+    LottieFxStroke()
     {
-        type = GaussianBlur;
+        type = LottieEffect::Stroke;
+    }
+};
+
+struct LottieFxTint : LottieEffect
+{
+    LottieColor black;
+    LottieColor white;
+    LottieFloat intensity;
+
+    LottieFxTint()
+    {
+        type = LottieEffect::Tint;
+    }
+};
+
+struct LottieFxTritone : LottieEffect
+{
+    LottieColor bright;
+    LottieColor midtone;
+    LottieColor dark;
+
+    LottieFxTritone()
+    {
+        type = LottieEffect::Tritone;
+    }
+};
+
+struct LottieFxDropShadow : LottieEffect
+{
+    LottieColor color;
+    LottieFloat opacity = 0;
+    LottieFloat angle = 0.0f;
+    LottieFloat distance = 0.0f;
+    LottieFloat blurness = 0.0f;
+
+    LottieFxDropShadow()
+    {
+        type = LottieEffect::DropShadow;
+    }
+};
+
+struct LottieFxGaussianBlur : LottieEffect
+{
+    LottieFloat blurness = 0.0f;
+    LottieInteger direction = 0;
+    LottieInteger wrap = 0;
+
+    LottieFxGaussianBlur()
+    {
+        type = LottieEffect::GaussianBlur;
     }
 };
 

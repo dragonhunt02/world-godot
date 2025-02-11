@@ -230,6 +230,8 @@ void GameView::_instance_starting(int p_idx, List<String> &r_arguments) {
 		window_wrapper->set_window_title(appname);
 
 		_show_update_window_wrapper();
+
+		embedded_process->grab_focus();
 	}
 
 	_update_arguments_for_instance(p_idx, r_arguments);
@@ -796,16 +798,17 @@ void GameView::_window_close_request() {
 	// Before the parent window closed, we close the embedded game. That prevents
 	// the embedded game to be seen without a parent window for a fraction of second.
 	if (EditorRunBar::get_singleton()->is_playing() && (embedded_process->is_embedding_completed() || embedded_process->is_embedding_in_progress())) {
-		// Try to gracefully close the window. That way, the NOTIFICATION_WM_CLOSE_REQUEST
-		// notification should be propagated in the game process.
-		embedded_process->reset();
-
 		// When the embedding is not complete, we need to kill the process.
 		// If the game is paused, the close request will not be processed by the game, so it's better to kill the process.
 		if (paused || embedded_process->is_embedding_in_progress()) {
+			embedded_process->reset();
 			// Call deferred to prevent the _stop_pressed callback to be executed before the wrapper window
 			// actually closes.
 			callable_mp(EditorRunBar::get_singleton(), &EditorRunBar::stop_playing).call_deferred();
+		} else {
+			// Try to gracefully close the window. That way, the NOTIFICATION_WM_CLOSE_REQUEST
+			// notification should be propagated in the game process.
+			embedded_process->request_close();
 		}
 	}
 }
@@ -977,6 +980,11 @@ GameView::GameView(Ref<GameViewDebugger> p_debugger, WindowWrapper *p_wrapper) {
 	game_size_label = memnew(Label());
 	main_menu_hbox->add_child(game_size_label);
 	game_size_label->hide();
+	// Setting the minimum size prevents the game workspace from resizing indefinitely
+	// due to the label size oscillating by a few pixels when the game is in stretch mode
+	// and the game workspace is at its minimum size.
+	game_size_label->set_custom_minimum_size(Size2(80 * EDSCALE, 0));
+	game_size_label->set_horizontal_alignment(HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
 	panel = memnew(Panel);
 	add_child(panel);
