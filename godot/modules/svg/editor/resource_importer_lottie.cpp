@@ -39,11 +39,12 @@ Ref<JSON> read_lottie_json(const String &p_path) {
 	Error err = OK;
 	Ref<JSON> lottie_json;
 	lottie_json.instantiate();
-	String lottie_str = FileAccess::get_file_as_string(p_path, &err);
-	if (err == OK) {
+	String lottie_str;
+	String ext = p_path.get_extension();
+	if (ext == "lottiejson") {
+		lottie_str = FileAccess::get_file_as_string(p_path, &err);
 		err = lottie_json->parse(lottie_str, true);
-	}
-	if (err != OK) {
+	} else if (ext == "lottie") {
 		Ref<ZIPReader> zip_reader;
 		zip_reader.instantiate();
 		err = zip_reader->open(p_path);
@@ -185,11 +186,11 @@ String ResourceImporterLottie::get_visible_name() const {
 }
 
 int ResourceImporterLottie::get_preset_count() const {
-	return 1;
+	return importer_ctex->get_preset_count();
 }
 
 String ResourceImporterLottie::get_preset_name(int p_idx) const {
-	return p_idx == 0 ? importer_ctex->get_preset_name(ResourceImporterTexture::PRESET_2D) : "";
+	return importer_ctex->get_preset_name(p_idx);
 }
 
 void ResourceImporterLottie::get_import_options(const String &p_path, List<ImportOption> *r_options, int p_preset) const {
@@ -210,7 +211,9 @@ bool ResourceImporterLottie::get_option_visibility(const String &p_path, const S
 }
 
 void ResourceImporterLottie::get_recognized_extensions(List<String> *p_extensions) const {
+	p_extensions->push_back("lottiejson");
 	p_extensions->push_back("lottie");
+	p_extensions->push_back("lot");
 }
 
 String ResourceImporterLottie::get_save_extension() const {

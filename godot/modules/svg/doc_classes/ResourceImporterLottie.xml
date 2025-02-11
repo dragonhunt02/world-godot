@@ -4,8 +4,8 @@
 		Import a Lottie animation as a sprite sheet.
 	</brief_description>
 	<description>
-		This imports a Lottie animation to a [CompressedTexture2D]. See also [ResourceImporterTexture].
-		[b]Note:[/b] Both JSON and dotLottie (extra resources are ignored) are supported. Only files with the [code].lottie[/code] extension are recognized. You will have to rename the JSON file extension to [code].lottie[/code] to import it.
+		This imports a Lottie animation to a [CompressedTexture2D] with support for Lottie JSON and limited support for dotLottie( Only reads the first animation within dotLottie and ignores other resources ). See also [ResourceImporterTexture].
+		[b]Note:[/b] Only recognizes files with [code].lottie[/code] or [code].lottiejson[/code] extension. You need to rename the JSON file extension to [code].lottiejson[/code] to import it.
 	</description>
 	<tutorials>
 	</tutorials>
