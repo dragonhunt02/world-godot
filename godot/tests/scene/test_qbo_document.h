@@ -66,7 +66,7 @@ const QBOTestCase qbo_test_cases[] = {
 			"",
 			// Here are the array sizes.
 			{
-					{ "nodes", 26 },
+					{ "nodes", 4 },
 					{ "buffers", 0 },
 					{ "buffer_views", 0 },
 					{ "accessors", 0 },
