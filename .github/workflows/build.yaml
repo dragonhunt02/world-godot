@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          ref: build-branch
+          ref: cron-patch
           fetch-depth: 0
       - name: Dispatch to workflow 
         run: |
@@ -27,12 +27,12 @@ jobs:
             git status
 
             git log -n 5
-            git reset --soft HEAD~2
-            rm -f .github/workflows/dispatch.yaml
+            git reset --soft HEAD~3
+            # rm -f .github/workflows/dispatch.yaml
             git config --global user.email "jackhunt43@libero.it"
             git config --global user.name "dragonhunt02"
             git add -A
-            git commit -a -m 'Add automated build dispatch'
+            git commit -a -m 'Add automated nightly pruning'
             git log -n 5
             git status
             git push -f
