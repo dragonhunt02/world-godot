@@ -401,7 +401,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        repo: ['V-Sekai/v-sekai-game', 'V-Sekai/TOOL_model_explorer']
+        repo: ['V-Sekai/v-sekai-game', 'V-Sekai/TOOL_model_explorer', 'V-Sekai/xr-grid']
     steps:
       - name: Dispatch to workflow 
         run: |
