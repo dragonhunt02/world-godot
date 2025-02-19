@@ -2,7 +2,7 @@ name: Build Platform Target
 
 on:
   push:
-    branches: [main]
+    branches: [web-test]
   pull_request:
     branches: [main]
     types: [opened, reopened, edited, synchronize]
@@ -196,9 +196,7 @@ jobs:
               ;;  
             web)  
               PLATFORM_ARGS="setup-emscripten"
-              if [ ${{ matrix.target }} == 'template_debug' ]; then
-                  EXTRA_OPTIONS="optimize=none"; # Fix Github runner out of RAM
-              fi
+              EXTRA_OPTIONS="optimize=none"; # Fix Github runner out of RAM
               ;;  
             windows)  
               PLATFORM_ARGS="fetch-llvm-mingw"  
@@ -303,7 +301,6 @@ jobs:
   release:
     runs-on: ubuntu-latest
     needs: merge
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     outputs:
       id: ${{ steps.create_release.outputs.id }}
       upload_url: ${{ steps.create_release.outputs.upload_url }}
