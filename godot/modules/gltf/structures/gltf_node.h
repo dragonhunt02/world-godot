@@ -40,7 +40,6 @@ class GLTFNode : public Resource {
 	friend class GLTFDocument;
 	friend class SkinTool;
 	friend class FBXDocument;
-	friend class QBODocument;
 
 private:
 	String original_name;

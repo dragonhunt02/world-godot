@@ -50,7 +50,6 @@
 class GLTFState : public Resource {
 	GDCLASS(GLTFState, Resource);
 	friend class GLTFDocument;
-	friend class QBODocument;
 	friend class GLTFNode;
 
 protected:
