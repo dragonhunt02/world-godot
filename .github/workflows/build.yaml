@@ -3,9 +3,6 @@ name: Build Platform Target
 on:
   push:
     branches: [web2]
-  pull_request:
-    branches: [web2]
-    types: [opened, reopened, edited, synchronize]
 
 jobs:
   build-native:
