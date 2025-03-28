@@ -315,9 +315,10 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
             ;;
     esac
     just handle-special-cases {{platform}} {{target}}
+
     if [[ "{{target}}" == "editor" ]]; then
         mkdir -p $WORLD_PWD/editors
-        mv -vf $WORLD_PWD/godot/bin/ $WORLD_PWD/editors
+        cp -rf $WORLD_PWD/godot/bin/ $WORLD_PWD/editors
     elif [[ "{{target}}" =~ template_* && \
             "{{platform}}" =~ ^(mac|i)os && \
             "{{osx_bundle}}" == "no" ]]; then
@@ -325,7 +326,7 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
         true
     elif [[ "{{target}}" =~ template_* ]]; then
         mkdir -p $WORLD_PWD/tpz
-        mv -vf $WORLD_PWD/godot/bin/ $WORLD_PWD/tpz
+        cp -rf $WORLD_PWD/godot/bin/ $WORLD_PWD/tpz
     fi
 
 build-platform-templates platform arch="auto" precision="double":
@@ -385,3 +386,11 @@ package-tpz folder tpzname versionpy:
     mkdir -p tpz_temp && mv {{folder}} tpz_temp/templates && cd tpz_temp \
       && zip -r ../{{tpzname}}.tpz templates && cd ..
     rm -r tpz_temp
+
+is-github-actions:
+    #!/usr/bin/env bash
+    if [[ "$CI" == "true" && "$GITHUB_ACTIONS" == "true" ]]; then
+      echo "true"
+    else
+      echo "false"
+    fi
