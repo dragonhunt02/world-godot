@@ -321,7 +321,7 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
 
     if [[ "{{target}}" == "editor" ]]; then
         mkdir -p $WORLD_PWD/editors
-        cp $COPYSYM -rf $WORLD_PWD/godot/bin/ $WORLD_PWD/editors
+        cp $COPYSYM -rf $WORLD_PWD/godot/bin/* $WORLD_PWD/editors
     elif [[ "{{target}}" =~ template_* && \
             "{{platform}}" =~ ^(mac|i)os && \
             "{{osx_bundle}}" == "no" ]]; then
