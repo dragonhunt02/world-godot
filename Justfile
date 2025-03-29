@@ -316,8 +316,8 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
     esac
     just handle-special-cases {{platform}} {{target}}
 
-    # In github runner copy as symlink to save space
-    if [[ "$(just is-github-actions)" == "true" ]]; then COPYSYM="-s"; else COPYSYM=""; fi
+    # In github runner copy as hard symlink to save space
+    if [[ "$(just is-github-actions)" == "true" ]]; then COPYSYM="-l"; else COPYSYM=""; fi
 
     if [[ "{{target}}" == "editor" ]]; then
         mkdir -p $WORLD_PWD/editors
