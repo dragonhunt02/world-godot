@@ -248,7 +248,7 @@ jobs:
           path: editor
 
   merge-templates:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: ["build", "build-native"]
     steps:
       - name: Merge Export Templates
