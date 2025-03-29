@@ -316,12 +316,15 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
     esac
     just handle-special-cases {{platform}} {{target}}
 
-    # In github runner copy as symlink to save space
-    if [[ "$(just is-github-actions)" == "true" ]]; then COPYSYM="-s"; else COPYSYM=""; fi
-
     if [[ "{{target}}" == "editor" ]]; then
         mkdir -p $WORLD_PWD/editors
-        cp $COPYSYM -rf $WORLD_PWD/godot/bin/ $WORLD_PWD/editors
+
+        # In github runner move files to save space
+        if [[ "$(just is-github-actions)" == "true" ]]; then
+            mv -vf $WORLD_PWD/godot/bin/ $WORLD_PWD/editors/
+        else
+            cp -vrf $WORLD_PWD/godot/bin/* $WORLD_PWD/editors
+        fi
     elif [[ "{{target}}" =~ template_* && \
             "{{platform}}" =~ ^(mac|i)os && \
             "{{osx_bundle}}" == "no" ]]; then
