@@ -2,7 +2,7 @@ name: Build Platform Target
 
 on:
   push:
-    branches: [space-bug-hardl]
+    branches: [space-bug-hardl-deb]
   pull_request:
     branches: [main]
     types: [opened, reopened, edited, synchronize]
