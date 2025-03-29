@@ -318,6 +318,7 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
 
     # In github runner copy as hard symlink to save space
     if [[ "$(just is-github-actions)" == "true" ]]; then COPYSYM="-l"; else COPYSYM=""; fi
+    rm -rf $WORLD_PWD/godot/bin/obj
 
     if [[ "{{target}}" == "editor" ]]; then
         mkdir -p $WORLD_PWD/editors
