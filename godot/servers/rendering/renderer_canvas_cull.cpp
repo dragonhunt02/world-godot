@@ -434,7 +434,7 @@ void RendererCanvasCull::_cull_canvas_item(Item *p_canvas_item, const Transform2
 			child_items = (Item **)alloca(child_item_count * sizeof(Item *));
 
 			ci->ysort_xform = Transform2D();
-			ci->ysort_modulate = Color(1, 1, 1, 1);
+			ci->ysort_modulate = Color(1, 1, 1, 1) / ci->modulate;
 			ci->ysort_index = 0;
 			ci->ysort_parent_abs_z_index = parent_z;
 			child_items[0] = ci;
@@ -1440,7 +1440,7 @@ void RendererCanvasCull::canvas_item_add_circle(RID p_item, const Point2 &p_pos,
 		// Store circle center in the last point.
 		points_ptr[circle_segments + 1] = p_pos;
 
-		const real_t circle_point_step = Math_TAU / circle_segments;
+		const real_t circle_point_step = Math::TAU / circle_segments;
 
 		for (int i = 0; i < circle_segments + 1; i++) {
 			float angle = i * circle_point_step;
@@ -1484,7 +1484,7 @@ void RendererCanvasCull::canvas_item_add_circle(RID p_item, const Point2 &p_pos,
 		points.resize(2 * circle_segments + 2);
 		colors.resize(2 * circle_segments + 2);
 
-		const real_t circle_point_step = Math_TAU / circle_segments;
+		const real_t circle_point_step = Math::TAU / circle_segments;
 
 		Vector2 *points_ptr = points.ptrw();
 		Color *colors_ptr = colors.ptrw();
@@ -1522,7 +1522,7 @@ void RendererCanvasCull::canvas_item_add_texture_rect(RID p_item, const Rect2 &p
 	if (p_tile) {
 		rect->flags |= RendererCanvasRender::CANVAS_RECT_TILE;
 		rect->flags |= RendererCanvasRender::CANVAS_RECT_REGION;
-		rect->source = Rect2(0, 0, ABS(p_rect.size.width), ABS(p_rect.size.height));
+		rect->source = Rect2(0, 0, Math::abs(p_rect.size.width), Math::abs(p_rect.size.height));
 	}
 
 	if (p_rect.size.x < 0) {
@@ -2605,8 +2605,8 @@ bool RendererCanvasCull::free(RID p_rid) {
 		}
 
 		canvas_item_set_material(canvas_item->self, RID());
-		canvas_item->instance_uniforms.free(canvas_item->self);
 		update_dirty_items();
+		canvas_item->instance_uniforms.free(canvas_item->self);
 
 		if (canvas_item->canvas_group != nullptr) {
 			memdelete(canvas_item->canvas_group);
@@ -2670,16 +2670,15 @@ bool RendererCanvasCull::free(RID p_rid) {
 
 template <typename T>
 void RendererCanvasCull::_free_rids(T &p_owner, const char *p_type) {
-	List<RID> owned;
-	p_owner.get_owned_list(&owned);
+	LocalVector<RID> owned = p_owner.get_owned_list();
 	if (owned.size()) {
 		if (owned.size() == 1) {
 			WARN_PRINT(vformat("1 RID of type \"%s\" was leaked.", p_type));
 		} else {
 			WARN_PRINT(vformat("%d RIDs of type \"%s\" were leaked.", owned.size(), p_type));
 		}
-		for (const RID &E : owned) {
-			free(E);
+		for (const RID &rid : owned) {
+			free(rid);
 		}
 	}
 }

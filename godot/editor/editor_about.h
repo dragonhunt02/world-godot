@@ -28,8 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef EDITOR_ABOUT_H
-#define EDITOR_ABOUT_H
+#pragma once
 
 #include "scene/gui/dialogs.h"
 #include "scene/gui/item_list.h"
@@ -37,6 +36,8 @@
 #include "scene/gui/scroll_container.h"
 #include "scene/gui/texture_rect.h"
 #include "scene/gui/tree.h"
+
+class CreditsRoll;
 
 /**
  * NOTE: Do not assume the EditorNode singleton to be available in this class' methods.
@@ -47,22 +48,21 @@ class EditorAbout : public AcceptDialog {
 
 private:
 	void _license_tree_selected();
+	void _project_manager_clicked();
 	void _item_with_website_selected(int p_id, ItemList *p_il);
 	void _item_list_resized(ItemList *p_il);
-	ScrollContainer *_populate_list(const String &p_name, const List<String> &p_sections, const char *const *const p_src[], int p_single_column_flags = 0, bool p_allow_website = false);
+	ScrollContainer *_populate_list(const String &p_name, const List<String> &p_sections, const char *const *const p_src[], int p_single_column_flags = 0, bool p_allow_website = false, const String &p_easter_egg_section = String());
 
 	Tree *_tpl_tree = nullptr;
 	RichTextLabel *license_text_label = nullptr;
 	RichTextLabel *_tpl_text = nullptr;
 	TextureRect *_logo = nullptr;
 	Vector<ItemList *> name_lists;
+	CreditsRoll *credits_roll = nullptr;
 
 protected:
 	void _notification(int p_what);
 
 public:
 	EditorAbout();
-	~EditorAbout();
 };
-
-#endif // EDITOR_ABOUT_H

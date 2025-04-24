@@ -71,7 +71,7 @@ struct RenderContext
     ~RenderContext()
     {
         PP(propagator)->unref();
-        free(transform);
+        delete(transform);
         delete(roundness);
         delete(offsetPath);
     }
@@ -84,6 +84,10 @@ struct RenderContext
         this->repeaters = rhs.repeaters;
         if (rhs.roundness) this->roundness = new LottieRoundnessModifier(rhs.roundness->r);
         if (rhs.offsetPath) this->offsetPath = new LottieOffsetModifier(rhs.offsetPath->offset, rhs.offsetPath->miterLimit, rhs.offsetPath->join);
+        if (rhs.transform) {
+            transform = new Matrix;
+            *transform = *rhs.transform;
+        }
     }
 };
 
@@ -103,6 +107,7 @@ struct LottieBuilder
     void build(LottieComposition* comp);
 
 private:
+    void updateStrokeEffect(LottieLayer* layer, LottieFxStroke* effect, float frameNo);
     void updateEffect(LottieLayer* layer, float frameNo);
     void updateLayer(LottieComposition* comp, Scene* scene, LottieLayer* layer, float frameNo);
     bool updateMatte(LottieComposition* comp, float frameNo, Scene* scene, LottieLayer* layer);
@@ -110,7 +115,7 @@ private:
     void updateSolid(LottieLayer* layer);
     void updateImage(LottieGroup* layer);
     void updateText(LottieLayer* layer, float frameNo);
-    void updateMaskings(LottieLayer* layer, float frameNo);
+    void updateMasks(LottieLayer* layer, float frameNo);
     void updateTransform(LottieLayer* layer, float frameNo);
     void updateChildren(LottieGroup* parent, float frameNo, Inlist<RenderContext>& contexts);
     void updateGroup(LottieGroup* parent, LottieObject** child, float frameNo, Inlist<RenderContext>& pcontexts, RenderContext* ctx);

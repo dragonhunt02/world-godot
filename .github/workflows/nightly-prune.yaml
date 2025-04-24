@@ -1,0 +1,49 @@
+name: ♻️ Nightly Cleanup
+on:
+  push:
+    branches:
+    - main
+  workflow_dispatch:
+  schedule:
+    - cron: '00 12 */5 * *'
+  # Runs every 5 days at 12:00
+  # Manual trigger is in Actions Tab > Nightly Cleanup > Run workflow
+
+env:
+  GH_TOKEN: ${{ secrets.REPO_DISPATCH }}
+  ENABLED: 'true'
+  
+  # Keeps only $MAX_NIGHTLY most recent nightly releases.
+  MAX_NIGHTLY: 5
+
+  # Remove associated nightly git tag
+  CLEAR_TAG: 'true'
+jobs:
+  clean:
+    name: Prune nightly releases
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        owner: ['V-Sekai']
+        repo: ['v-sekai-game', 'TOOL_model_explorer', 'xr-grid']
+    steps:
+      - name: Prune
+        run: |
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "Missing token.";
+          elif [ ${ENABLED} == 'true' ]; then
+            echo "Pruning nightly releases...";
+            gh api --paginate repos/${{ matrix.owner }}/${{ matrix.repo }}/releases | \
+            jq -r '[ .[] | select(.tag_name | contains("-nightly-")) ] | sort_by(.published_at) | reverse
+            | .['${MAX_NIGHTLY}':] | .[] | [.id, .tag_name] | @tsv' | \
+            while read -r id tag; do
+                echo "Deleting release id: ${id}, tag: ${tag}";
+                gh api -X DELETE "repos/${{ matrix.owner }}/${{ matrix.repo }}/releases/${id}"
+              if [ ${CLEAR_TAG} == 'true' ]; then
+                echo "Deleting tag: ${tag}";
+                gh api -X DELETE "repos/${{ matrix.owner }}/${{ matrix.repo }}/git/refs/tags/${tag}"
+              fi
+            done;
+          else
+            echo "Scheduled nightly cleanup is disabled.";
+          fi

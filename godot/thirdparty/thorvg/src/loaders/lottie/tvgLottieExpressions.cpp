@@ -68,6 +68,25 @@ static ExpContent* _expcontent(LottieExpression* exp, float frameNo, LottieObjec
 }
 
 
+static float _rand()
+{
+    return (float)(rand() % 10000001) * 0.0000001f;
+}
+
+
+static jerry_value_t _point2d(const Point& pt)
+{
+    auto obj = jerry_object();
+    auto v1 = jerry_number(pt.x);
+    auto v2 = jerry_number(pt.y);
+    jerry_object_set_index(obj, 0, v1);
+    jerry_object_set_index(obj, 1, v2);
+    jerry_value_free(v1);
+    jerry_value_free(v2);
+    return obj;
+}
+
+
 static void contentFree(void *native_p, struct jerry_object_native_info_t *info_p)
 {
     free(native_p);
@@ -315,9 +334,11 @@ static void _buildLayer(jerry_value_t context, float frameNo, LottieLayer* layer
     //marker.nearestKey(t)
     //marker.numKeys
 
-    auto name = jerry_string_sz(layer->name);
-    jerry_object_set_sz(context, EXP_NAME, name);
-    jerry_value_free(name);
+    if (layer->name) {
+        auto name = jerry_string_sz(layer->name);
+        jerry_object_set_sz(context, EXP_NAME, name);
+        jerry_value_free(name);
+    }
 
     auto toComp = jerry_function_external(_toComp);
     jerry_object_set_sz(context, "toComp", toComp);
@@ -484,7 +505,7 @@ static jerry_value_t _linear(const jerry_call_info_t* info, const jerry_value_t 
 static jerry_value_t _ease(const jerry_call_info_t* info, const jerry_value_t args[], const jerry_length_t argsCnt)
 {
     auto t = (float) jerry_value_as_number(args[0]);
-    t = (t < 0.5) ? (4 * t * t * t) : (1.0f - pow(-2.0f * t + 2.0f, 3) * 0.5f);
+    t = (t < 0.5f) ? (4 * t * t * t) : (1.0f - powf(-2.0f * t + 2.0f, 3) * 0.5f);
     return _interp(t, args, jerry_value_as_uint32(argsCnt));
 }
 
@@ -501,7 +522,7 @@ static jerry_value_t _easeIn(const jerry_call_info_t* info, const jerry_value_t 
 static jerry_value_t _easeOut(const jerry_call_info_t* info, const jerry_value_t args[], const jerry_length_t argsCnt)
 {
     auto t = (float) jerry_value_as_number(args[0]);
-    t = 1.0f - pow(1.0f - t, 3);
+    t = 1.0f - powf(1.0f - t, 3);
     return _interp(t, args, jerry_value_as_uint32(argsCnt));
 }
 
@@ -601,8 +622,7 @@ static jerry_value_t _length(const jerry_call_info_t* info, const jerry_value_t 
 
 static jerry_value_t _random(const jerry_call_info_t* info, const jerry_value_t args[], const jerry_length_t argsCnt)
 {
-    auto val = (float)(rand() % 10000001);
-    return jerry_number(val * 0.0000001f);
+    return jerry_number(_rand());
 }
 
 
@@ -816,6 +836,32 @@ static jerry_value_t _speedAtTime(const jerry_call_info_t* info, const jerry_val
     auto speed = sqrtf(pow(cur.x - prv.x, 2) + pow(cur.y - prv.y, 2)) / elapsed;
     auto obj = jerry_number(speed);
     return obj;
+}
+
+
+
+static jerry_value_t _wiggle(const jerry_call_info_t* info, const jerry_value_t args[], const jerry_length_t argsCnt)
+{
+    auto data = static_cast<ExpContent*>(jerry_object_get_native_ptr(info->function, &freeCb));
+    auto freq = jerry_value_as_number(args[0]);
+    auto amp = jerry_value_as_number(args[1]);
+    auto octaves = (argsCnt > 2) ? jerry_value_as_int32(args[2]) : 1;
+    auto ampm = (argsCnt > 3) ? jerry_value_as_number(args[3]) : 5.0f;
+    auto time = (argsCnt > 4) ? jerry_value_as_number(args[4]) : data->exp->comp->timeAtFrame(data->frameNo);
+
+    Point result = {100.0f, 100.0f};
+
+    for (int o = 0; o < octaves; ++o) {
+        auto repeat = int(time * freq);
+        auto frac = (time * freq - float(repeat)) * 1.25f;
+        for (int i = 0; i < repeat; ++i) {
+            result.x += (_rand() * 2.0f - 1.0f) * amp * frac;
+            result.y += (_rand() * 2.0f - 1.0f) * amp * frac;
+        }
+        freq *= 2.0f;
+        amp *= ampm;
+    }
+    return _point2d(result);
 }
 
 
@@ -1042,7 +1088,11 @@ static void _buildProperty(float frameNo, jerry_value_t context, LottieExpressio
     jerry_object_set_native_ptr(speedAtTime, nullptr, exp);
     jerry_value_free(speedAtTime);
 
-    //wiggle(freq, amp, octaves=1, amp_mult=.5, t=time)
+    auto wiggle = jerry_function_external(_wiggle);
+    jerry_object_set_sz(context, "wiggle", wiggle);
+    jerry_object_set_native_ptr(wiggle, &freeCb, _expcontent(exp, frameNo, exp->object));
+    jerry_value_free(wiggle);
+
     //temporalWiggle(freq, amp, octaves=1, amp_mult=.5, t=time)
     //smooth(width=.2, samples=5, t=time)
 
@@ -1276,9 +1326,11 @@ void LottieExpressions::buildComp(LottieComposition* comp, float frameNo, Lottie
     //bgColor
     //pixelAspect
 
-    auto name = jerry_string((jerry_char_t*)comp->name, strlen(comp->name), JERRY_ENCODING_UTF8);
-    jerry_object_set_sz(thisComp, EXP_NAME, name);
-    jerry_value_free(name);
+    if (comp->name) {
+        auto name = jerry_string((jerry_char_t*)comp->name, strlen(comp->name), JERRY_ENCODING_UTF8);
+        jerry_object_set_sz(thisComp, EXP_NAME, name);
+        jerry_value_free(name);
+    }
 }
 
 
@@ -1351,7 +1403,7 @@ jerry_value_t LottieExpressions::evaluate(float frameNo, LottieExpression* exp)
     //evaluate the code
     auto eval = jerry_eval((jerry_char_t *) exp->code, strlen(exp->code), JERRY_PARSE_NO_OPTS);
 
-    if (jerry_value_is_exception(eval) || jerry_value_is_undefined(eval)) {
+    if (jerry_value_is_exception(eval)) {
         TVGERR("LOTTIE", "Failed to dispatch the expressions!");
         exp->disabled = true;
         return jerry_undefined();

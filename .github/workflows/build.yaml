@@ -196,7 +196,8 @@ jobs:
               ;;  
             web)  
               PLATFORM_ARGS="setup-emscripten"
-              if [ ${{ matrix.target }} == 'template_debug' ]; then
+              if [ ${{ matrix.target }} == 'editor' ] \
+              || [ ${{ matrix.target }} == 'template_debug' ]; then
                   EXTRA_OPTIONS="optimize=none"; # Fix Github runner out of RAM
               fi
               ;;  
@@ -401,7 +402,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        repo: ['V-Sekai/v-sekai-game']
+        repo: ['V-Sekai/v-sekai-game', 'V-Sekai/TOOL_model_explorer', 'V-Sekai/xr-grid']
     steps:
       - name: Dispatch to workflow 
         run: |

@@ -28,8 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef RENDERING_SERVER_H
-#define RENDERING_SERVER_H
+#pragma once
 
 #include "core/io/image.h"
 #include "core/math/geometry_3d.h"
@@ -857,6 +856,7 @@ public:
 	};
 
 	virtual void particles_collision_set_height_field_resolution(RID p_particles_collision, ParticlesCollisionHeightfieldResolution p_resolution) = 0; // For SDF and vector field.
+	virtual void particles_collision_set_height_field_mask(RID p_particles_collision, uint32_t p_heightfield_mask) = 0;
 
 	/* FOG VOLUME API */
 
@@ -892,6 +892,7 @@ public:
 	virtual void camera_set_perspective(RID p_camera, float p_fovy_degrees, float p_z_near, float p_z_far) = 0;
 	virtual void camera_set_orthogonal(RID p_camera, float p_size, float p_z_near, float p_z_far) = 0;
 	virtual void camera_set_frustum(RID p_camera, float p_size, Vector2 p_offset, float p_z_near, float p_z_far) = 0;
+	virtual void camera_set_override_projection(RID p_camera, const Projection &p_matrix) = 0;
 	virtual void camera_set_transform(RID p_camera, const Transform3D &p_transform) = 0;
 	virtual void camera_set_cull_mask(RID p_camera, uint32_t p_layers) = 0;
 	virtual void camera_set_environment(RID p_camera, RID p_env) = 0;
@@ -1977,5 +1978,3 @@ VARIANT_ENUM_CAST(RenderingServer::Features);
 
 // Alias to make it easier to use.
 #define RS RenderingServer
-
-#endif // RENDERING_SERVER_H

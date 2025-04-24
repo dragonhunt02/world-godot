@@ -31,9 +31,6 @@
 #include "register_types.h"
 
 #include "image_loader_svg.h"
-#ifdef TOOLS_ENABLED
-#include "editor/resource_importer_lottie.h"
-#endif // TOOLS_ENABLED
 
 #include <thorvg.h>
 
@@ -43,9 +40,28 @@
 #define TVG_THREADS 0
 #endif
 
+#ifdef TOOLS_ENABLED
+#include "editor/editor_node.h"
+#include "editor/resource_importer_lottie.h"
+
+static void _editor_init() {
+	Ref<ResourceImporterLottie> lottie_importer;
+	lottie_importer.instantiate();
+	ResourceFormatImporter::get_singleton()->add_importer(lottie_importer);
+}
+#endif
+
 static Ref<ImageLoaderSVG> image_loader_svg;
 
 void initialize_svg_module(ModuleInitializationLevel p_level) {
+#ifdef TOOLS_ENABLED
+	if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
+		GDREGISTER_CLASS(ResourceImporterLottie);
+
+		EditorNode::add_init_callback(_editor_init);
+	}
+#endif
+
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
@@ -58,18 +74,6 @@ void initialize_svg_module(ModuleInitializationLevel p_level) {
 
 	image_loader_svg.instantiate();
 	ImageLoader::add_image_format_loader(image_loader_svg);
-
-#ifdef TOOLS_ENABLED
-	Ref<ResourceImporterLottie> resource_importer_lottie;
-	resource_importer_lottie.instantiate();
-	ResourceFormatImporter::get_singleton()->add_importer(resource_importer_lottie);
-
-	ClassDB::APIType prev_api = ClassDB::get_current_api();
-	ClassDB::set_current_api(ClassDB::API_EDITOR);
-	// Required to document import options in the class reference.
-	GDREGISTER_CLASS(ResourceImporterLottie);
-	ClassDB::set_current_api(prev_api);
-#endif // TOOLS_ENABLED
 }
 
 void uninitialize_svg_module(ModuleInitializationLevel p_level) {
@@ -84,6 +88,5 @@ void uninitialize_svg_module(ModuleInitializationLevel p_level) {
 
 	ImageLoader::remove_image_format_loader(image_loader_svg);
 	image_loader_svg.unref();
-
 	tvg::Initializer::term(tvg::CanvasEngine::Sw);
 }

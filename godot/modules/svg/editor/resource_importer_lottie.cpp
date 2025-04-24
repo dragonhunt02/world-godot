@@ -31,52 +31,11 @@
 #include "resource_importer_lottie.h"
 
 #include "core/io/dir_access.h"
-#include "modules/zip/zip_reader.h"
+#include "core/io/json.h"
 
 #include <thorvg.h>
 
-Ref<JSON> read_lottie_json(const String &p_path) {
-	Error err = OK;
-	Ref<JSON> lottie_json;
-	lottie_json.instantiate();
-	String lottie_str = FileAccess::get_file_as_string(p_path, &err);
-	if (err == OK) {
-		err = lottie_json->parse(lottie_str, true);
-	}
-	if (err != OK) {
-		Ref<ZIPReader> zip_reader;
-		zip_reader.instantiate();
-		err = zip_reader->open(p_path);
-		ERR_FAIL_COND_V_MSG(err != OK, nullptr, vformat("Failed to open dotLottie: %s.", error_names[err]));
-		String manifest_str;
-		PackedByteArray manifest_data = zip_reader->read_file("manifest.json", true);
-		err = manifest_str.parse_utf8(reinterpret_cast<const char *>(manifest_data.ptr()), manifest_data.size());
-		ERR_FAIL_COND_V_MSG(err != OK, nullptr, vformat("Failed to parse dotLottie manifest: %s.", error_names[err]));
-		Ref<JSON> manifest;
-		manifest.instantiate();
-		err = manifest->parse(manifest_str, true);
-		ERR_FAIL_COND_V_MSG(err != OK, nullptr, vformat("Failed to parse dotLottie manifest: %s.", error_names[err]));
-		Array animations = ((Dictionary)manifest->get_data())["animations"];
-		String anim_file;
-		for (Dictionary anim : animations) {
-			String file = "animations/" + (String)(anim["id"]) + ".json";
-			if (zip_reader->file_exists(file, true)) {
-				anim_file = file;
-				break;
-			}
-		}
-		ERR_FAIL_COND_V_MSG(anim_file.is_empty(), nullptr, "Animations in dotLottie manifest don't exist.");
-		PackedByteArray lottie_data = zip_reader->read_file(anim_file, true);
-		lottie_str.clear();
-		err = lottie_str.parse_utf8(reinterpret_cast<const char *>(lottie_data.ptr()), lottie_data.size());
-		ERR_FAIL_COND_V_MSG(err != OK, nullptr, vformat("Failed to parse lottie animation %s: %s.", anim_file, error_names[err]));
-		err = lottie_json->parse(lottie_str, true);
-		ERR_FAIL_COND_V_MSG(err != OK, nullptr, vformat("Failed to parse lottie animation %s: %s.", anim_file, error_names[err]));
-	}
-	return lottie_json;
-}
-
-Ref<Image> lottie_to_sprite_sheet(Ref<JSON> p_json, float p_begin, float p_end, float p_fps, int p_columns, float p_scale, int p_size_limit, Size2i *r_sprite_size, int *r_columns, int *r_frame_count) {
+static Ref<Image> lottie_to_sprite_sheet(Ref<JSON> p_json, float p_begin, float p_end, float p_fps, int p_columns, float p_scale, int p_size_limit, Size2i *r_sprite_size, int *r_columns, int *r_frame_count) {
 	std::unique_ptr<tvg::SwCanvas> sw_canvas = tvg::SwCanvas::gen();
 	std::unique_ptr<tvg::Animation> animation = tvg::Animation::gen();
 	tvg::Picture *picture = animation->picture();
@@ -89,7 +48,7 @@ Ref<Image> lottie_to_sprite_sheet(Ref<JSON> p_json, float p_begin, float p_end, 
 		lottie_str = JSON::stringify(p_json->get_data(), "", false);
 	}
 
-	res = picture->load(lottie_str.utf8(), lottie_str.utf8().size(), "lottie", true);
+	res = picture->load(lottie_str.utf8().get_data(), lottie_str.utf8().size(), "lottie", true);
 	ERR_FAIL_COND_V_MSG(res != tvg::Result::Success, Ref<Image>(), "Failed to load Lottie.");
 
 	float origin_width, origin_height;
@@ -177,19 +136,11 @@ Ref<Image> lottie_to_sprite_sheet(Ref<JSON> p_json, float p_begin, float p_end, 
 }
 
 String ResourceImporterLottie::get_importer_name() const {
-	return "lottie_compressed_texture_2d";
+	return "lottie_texture";
 }
 
 String ResourceImporterLottie::get_visible_name() const {
-	return "CompressedTexture2D";
-}
-
-int ResourceImporterLottie::get_preset_count() const {
-	return 1;
-}
-
-String ResourceImporterLottie::get_preset_name(int p_idx) const {
-	return p_idx == 0 ? importer_ctex->get_preset_name(ResourceImporterTexture::PRESET_2D) : "";
+	return "Texture2D";
 }
 
 void ResourceImporterLottie::get_import_options(const String &p_path, List<ImportOption> *r_options, int p_preset) const {
@@ -199,32 +150,20 @@ void ResourceImporterLottie::get_import_options(const String &p_path, List<Impor
 	r_options->push_back(ImportOption(PropertyInfo(Variant::FLOAT, "lottie/end", PROPERTY_HINT_RANGE, "0,1,0.001"), 1));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::FLOAT, "lottie/fps", PROPERTY_HINT_RANGE, "0,60,0.1,or_greater"), 30));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "lottie/columns", PROPERTY_HINT_RANGE, "0,16,1,or_greater"), 0));
-	if (r_options->is_empty()) {
-		return;
-	}
-	importer_ctex->get_import_options(p_path, r_options, p_preset);
-}
-
-bool ResourceImporterLottie::get_option_visibility(const String &p_path, const String &p_option, const HashMap<StringName, Variant> &p_options) const {
-	return importer_ctex->get_option_visibility(p_path, p_option, p_options);
+	ResourceImporterTexture::get_import_options(p_path, r_options, p_preset);
 }
 
 void ResourceImporterLottie::get_recognized_extensions(List<String> *p_extensions) const {
-	p_extensions->push_back("lottie");
-}
-
-String ResourceImporterLottie::get_save_extension() const {
-	return importer_ctex->get_save_extension();
-}
-
-String ResourceImporterLottie::get_resource_type() const {
-	return importer_ctex->get_resource_type();
+	p_extensions->push_back("lot");
 }
 
 Error ResourceImporterLottie::import(ResourceUID::ID p_source_id, const String &p_source_file, const String &p_save_path, const HashMap<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata) {
 	Error err = OK;
-	Ref<JSON> lottie_json = read_lottie_json(p_source_file);
-
+	Ref<JSON> lottie_json;
+	lottie_json.instantiate();
+	String Lottie_str = FileAccess::get_file_as_string(p_source_file, &err);
+	ERR_FAIL_COND_V(err != OK, err);
+	lottie_json->parse(Lottie_str, true);
 	ERR_FAIL_COND_V(lottie_json.is_null(), ERR_INVALID_DATA);
 
 	const int size_limit = p_options["lottie/size_limit"];
@@ -242,21 +181,9 @@ Error ResourceImporterLottie::import(ResourceUID::ID p_source_id, const String &
 	String tmp_image = p_save_path + ".tmp.png";
 	err = image->save_png(tmp_image);
 	if (err == OK) {
-		err = importer_ctex->import(p_source_id, tmp_image, p_save_path, p_options, r_platform_variants, r_gen_files, r_metadata);
+		err = ResourceImporterTexture::import(p_source_id, tmp_image, p_save_path, p_options, r_platform_variants, r_gen_files, r_metadata);
 		Ref<DirAccess> d = DirAccess::create(DirAccess::ACCESS_RESOURCES);
 		err = d->remove(tmp_image);
-		if (r_metadata) {
-			Dictionary meta;
-			meta["sprite_size"] = sprite_size;
-			meta["columns"] = column_r;
-			meta["frame_count"] = frame_count;
-			meta["fps"] = fps;
-			*r_metadata = meta;
-		}
 	}
 	return err;
-}
-
-ResourceImporterLottie::ResourceImporterLottie() {
-	importer_ctex.instantiate();
 }

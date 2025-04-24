@@ -28,8 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef RENDERER_SCENE_CULL_H
-#define RENDERER_SCENE_CULL_H
+#pragma once
 
 #include "core/math/dynamic_bvh.h"
 #include "core/math/transform_interpolator.h"
@@ -46,10 +45,6 @@
 #include "servers/rendering/rendering_method.h"
 #include "servers/rendering/rendering_server_globals.h"
 #include "servers/rendering/storage/utilities.h"
-
-#ifndef _3D_DISABLED
-#include "servers/xr/xr_interface.h"
-#endif // _3D_DISABLED
 
 class RenderingLightCuller;
 
@@ -88,11 +83,13 @@ public:
 		Vector2 offset;
 		uint32_t visible_layers;
 		bool vaspect;
+		bool has_override_projection;
 		RID env;
 		RID attributes;
 		RID compositor;
 
 		Transform3D transform;
+		Projection override_projection;
 
 		Camera() {
 			visible_layers = 0xFFFFFFFF;
@@ -103,6 +100,8 @@ public:
 			size = 1.0;
 			offset = Vector2();
 			vaspect = false;
+			has_override_projection = false;
+			override_projection.set_zero();
 		}
 	};
 
@@ -114,6 +113,7 @@ public:
 	virtual void camera_set_perspective(RID p_camera, float p_fovy_degrees, float p_z_near, float p_z_far);
 	virtual void camera_set_orthogonal(RID p_camera, float p_size, float p_z_near, float p_z_far);
 	virtual void camera_set_frustum(RID p_camera, float p_size, Vector2 p_offset, float p_z_near, float p_z_far);
+	virtual void camera_set_override_projection(RID p_camera, const Projection &p_matrix);
 	virtual void camera_set_transform(RID p_camera, const Transform3D &p_transform);
 	virtual void camera_set_cull_mask(RID p_camera, uint32_t p_layers);
 	virtual void camera_set_environment(RID p_camera, RID p_env);
@@ -1036,7 +1036,7 @@ public:
 
 	uint32_t thread_cull_threshold = 200;
 
-	mutable RID_Owner<Instance, true> instance_owner;
+	mutable RID_Owner<Instance, true> instance_owner{ 65536, 4194304 };
 
 	uint32_t geometry_instance_pair_mask = 0; // used in traditional forward, unnecessary on clustered
 
@@ -1444,5 +1444,3 @@ public:
 	RendererSceneCull();
 	virtual ~RendererSceneCull();
 };
-
-#endif // RENDERER_SCENE_CULL_H

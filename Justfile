@@ -315,9 +315,16 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
             ;;
     esac
     just handle-special-cases {{platform}} {{target}}
+
+    # Remove intermediate build files before copy
+    rm -rf $WORLD_PWD/godot/bin/obj
+
+    # In Github runner copy editor as hardlink to save space
+    if [[ "$(just is-github-actions)" == "true" ]]; then COPYSYM="-l"; else COPYSYM=""; fi
+
     if [[ "{{target}}" == "editor" ]]; then
         mkdir -p $WORLD_PWD/editors
-        cp -rf $WORLD_PWD/godot/bin/* $WORLD_PWD/editors
+        cp $COPYSYM -rf $WORLD_PWD/godot/bin/* $WORLD_PWD/editors
     elif [[ "{{target}}" =~ template_* && \
             "{{platform}}" =~ ^(mac|i)os && \
             "{{osx_bundle}}" == "no" ]]; then
@@ -345,6 +352,9 @@ handle-special-cases platform target:
         android) \ 
             just handle-android {{target}} \
             ;;
+        macos) \ 
+            just handle-macos {{target}} \
+            ;;
     esac
 
 handle-android target:
@@ -363,7 +373,14 @@ handle-android target:
         ls -l bin/
     fi
 
-package-tpz folder tpzname versionpy:
+handle-macos target:
+    #!/usr/bin/env bash
+    cd godot
+    if [ "{{target}}" = "editor" ]; then
+        chmod +x ./bin/*.app/Contents/MacOS/* || echo "Could not set exec permission on editor"
+    fi
+
+package-tpz folder tpzname versionpy precision="double":
     #!/usr/bin/env bash
     cd {{folder}}
     rm *.arm64.a || true  # Avoid Godot error on template import
@@ -381,7 +398,18 @@ package-tpz folder tpzname versionpy:
     cat {{versionpy}} | tr -d ' ' | tr -s '\n' ' ' \
       | sed -E 's/.*major=([0-9]).minor=([0-9]).*status=\"([a-z]*)\".*/\1.\2.\3/' \
       > {{folder}}/version.txt
+    if [ "{{precision}}" = "double" ]; then
+      echo ".double" >> {{folder}}/version.txt
+    fi
     echo "Godot TPZ Version: $( cat {{folder}}/version.txt )"
     mkdir -p tpz_temp && mv {{folder}} tpz_temp/templates && cd tpz_temp \
       && zip -r ../{{tpzname}}.tpz templates && cd ..
     rm -r tpz_temp
+
+is-github-actions:
+    #!/usr/bin/env bash
+    if [[ "$CI" == "true" && "$GITHUB_ACTIONS" == "true" ]]; then
+      echo "true"
+    else
+      echo "false"
+    fi

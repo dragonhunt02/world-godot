@@ -34,6 +34,7 @@
 struct LottieFont;
 struct LottieLayer;
 struct LottieObject;
+struct LottieProperty;
 
 
 template<typename T>
@@ -109,23 +110,6 @@ struct LottieVectorFrame
 };
 
 
-//Property would have an either keyframes or single value.
-struct LottieProperty
-{
-    enum class Type : uint8_t { Point = 0, Float, Opacity, Color, PathSet, ColorStop, Position, TextDoc, Image, Invalid };
-
-    LottieExpression* exp = nullptr;
-    Type type;
-    uint8_t ix;  //property index
-
-    //TODO: Apply common bodies?
-    virtual ~LottieProperty() {}
-    virtual uint32_t frameCnt() = 0;
-    virtual uint32_t nearest(float time) = 0;
-    virtual float frameNo(int32_t key) = 0;
-};
-
-
 struct LottieExpression
 {
     enum LoopMode : uint8_t { None = 0, InCycle = 1, InPingPong, InOffset, InContinue, OutCycle, OutPingPong, OutOffset, OutContinue };
@@ -143,9 +127,54 @@ struct LottieExpression
         LoopMode mode = None;
     } loop;
 
+    LottieExpression() {}
+
+    LottieExpression(const LottieExpression* rhs)
+    {
+        code = strdup(rhs->code);
+        comp = rhs->comp;
+        layer = rhs->layer;
+        object = rhs->object;
+        property = rhs->property;
+        disabled = rhs->disabled;
+    }
+
     ~LottieExpression()
     {
         free(code);
+    }
+};
+
+
+//Property would have an either keyframes or single value.
+struct LottieProperty
+{
+    enum class Type : uint8_t { Point = 0, Float, Opacity, Color, PathSet, ColorStop, Position, TextDoc, Image, Invalid };
+
+    LottieExpression* exp = nullptr;
+    Type type;
+    uint8_t ix;  //property index
+
+    //TODO: Apply common bodies?
+    virtual ~LottieProperty() {}
+    virtual uint32_t frameCnt() = 0;
+    virtual uint32_t nearest(float time) = 0;
+    virtual float frameNo(int32_t key) = 0;
+
+    bool copy(LottieProperty* rhs, bool shallow)
+    {
+        type = rhs->type;
+        ix = rhs->ix;
+
+        if (!rhs->exp) return false;
+        if (shallow) {
+            exp = rhs->exp;
+            rhs->exp = nullptr;
+        } else {
+            exp = new LottieExpression(rhs->exp);
+        }
+        exp->property = this;
+        return true;
     }
 };
 
@@ -263,8 +292,7 @@ struct LottieGenericProperty : LottieProperty
 
     LottieGenericProperty(const LottieGenericProperty<T>& rhs)
     {
-        copy(rhs);
-        type = rhs.type;
+        copy(const_cast<LottieGenericProperty<T>&>(rhs));
     }
 
     ~LottieGenericProperty()
@@ -335,12 +363,15 @@ struct LottieGenericProperty : LottieProperty
         return operator()(frameNo);
     }
 
-    void copy(const LottieGenericProperty<T>& rhs, bool shallow = true)
+    void copy(LottieGenericProperty<T>& rhs, bool shallow = true)
     {
+        if (LottieProperty::copy(&rhs, shallow)) return;
+
         if (rhs.frames) {
             if (shallow) {
                 frames = rhs.frames;
                 const_cast<LottieGenericProperty<T>&>(rhs).frames = nullptr;
+                rhs.frames = nullptr;
             } else {
                 frames = new Array<LottieScalarFrame<T>>;
                 *frames = *rhs.frames;
@@ -517,8 +548,7 @@ struct LottieColorStop : LottieProperty
 
     LottieColorStop(const LottieColorStop& rhs)
     {
-        copy(rhs);
-        type = rhs.type;
+        copy(const_cast<LottieColorStop&>(rhs));
     }
 
     ~LottieColorStop()
@@ -627,19 +657,21 @@ struct LottieColorStop : LottieProperty
         return fill->colorStops(result.data, count);
     }
 
-    void copy(const LottieColorStop& rhs, bool shallow = true)
+    void copy(LottieColorStop& rhs, bool shallow = true)
     {
+        if (LottieProperty::copy(&rhs, shallow)) return;
+
         if (rhs.frames) {
             if (shallow) {
                 frames = rhs.frames;
-                const_cast<LottieColorStop&>(rhs).frames = nullptr;
+                rhs.frames = nullptr;
             } else {
                 frames = new Array<LottieScalarFrame<ColorStop>>;
                 *frames = *rhs.frames;
             }
         } else {
             value = rhs.value;
-            const_cast<LottieColorStop&>(rhs).value = ColorStop();
+            rhs.value = ColorStop();
         }
         populated = rhs.populated;
         count = rhs.count;
@@ -741,6 +773,19 @@ struct LottiePosition : LottieProperty
         return frame->angle(frame + 1, frameNo);
     }
 
+    void copy(const LottiePosition& rhs, bool shallow = true)
+    {
+        if (rhs.frames) {
+            if (shallow) {
+                frames = rhs.frames;
+                const_cast<LottiePosition&>(rhs).frames = nullptr;
+            } else {
+                frames = new Array<LottieVectorFrame<Point>>;
+                *frames = *rhs.frames;
+            }
+        } else value = rhs.value;
+    }
+
     void prepare()
     {
         if (!frames || frames->count < 2) return;
@@ -760,8 +805,7 @@ struct LottieTextDoc : LottieProperty
 
     LottieTextDoc(const LottieTextDoc& rhs)
     {
-        copy(rhs);
-        type = rhs.type;
+        copy(const_cast<LottieTextDoc&>(rhs));
     }
 
     ~LottieTextDoc()
@@ -837,20 +881,22 @@ struct LottieTextDoc : LottieProperty
         return frame->value;
     }
 
-    void copy(const LottieTextDoc& rhs, bool shallow = true)
+    void copy(LottieTextDoc& rhs, bool shallow = true)
     {
+        if (LottieProperty::copy(&rhs, shallow)) return;
+
         if (rhs.frames) {
             if (shallow) {
                 frames = rhs.frames;
-                const_cast<LottieTextDoc&>(rhs).frames = nullptr;
+                rhs.frames = nullptr;
             } else {
                 frames = new Array<LottieScalarFrame<TextDocument>>;
                 *frames = *rhs.frames;
             }
         } else {
             value = rhs.value;
-            const_cast<LottieTextDoc&>(rhs).value.text = nullptr;
-            const_cast<LottieTextDoc&>(rhs).value.name = nullptr;
+            rhs.value.text = nullptr;
+            rhs.value.name = nullptr;
         }
     }
 
@@ -873,8 +919,7 @@ struct LottieBitmap : LottieProperty
 
     LottieBitmap(const LottieBitmap& rhs)
     {
-        copy(rhs);
-        type = rhs.type;
+        copy(const_cast<LottieBitmap&>(rhs));
     }
 
     ~LottieBitmap()
@@ -895,23 +940,26 @@ struct LottieBitmap : LottieProperty
     uint32_t nearest(float time) override { return 0; }
     float frameNo(int32_t key) override { return 0; }
 
-    void copy(const LottieBitmap& rhs, bool shallow = true)
+    void copy(LottieBitmap& rhs, bool shallow = true)
     {
+        if (LottieProperty::copy(&rhs, shallow)) return;
+
         if (shallow) {
             b64Data = rhs.b64Data;
             mimeType = rhs.mimeType;
+
+            rhs.b64Data = nullptr;
+            rhs.mimeType = nullptr;
         } else {
             //TODO: optimize here by avoiding data copy
             TVGLOG("LOTTIE", "Shallow copy of the image data!");
             b64Data = strdup(rhs.b64Data);
             mimeType = strdup(rhs.mimeType);
         }
+
         size = rhs.size;
         width = rhs.width;
         height = rhs.height;
-
-        const_cast<LottieBitmap&>(rhs).b64Data = nullptr;
-        const_cast<LottieBitmap&>(rhs).mimeType = nullptr;
     }
 };
 
@@ -920,8 +968,6 @@ using LottiePoint = LottieGenericProperty<Point>;
 using LottieFloat = LottieGenericProperty<float>;
 using LottieOpacity = LottieGenericProperty<uint8_t>;
 using LottieColor = LottieGenericProperty<RGB24>;
-using LottieSlider = LottieFloat;
-using LottieAngle = LottieFloat;
-using LottieCheckbox = LottieGenericProperty<int8_t>;
+using LottieInteger = LottieGenericProperty<int8_t>;
 
 #endif //_TVG_LOTTIE_PROPERTY_H_

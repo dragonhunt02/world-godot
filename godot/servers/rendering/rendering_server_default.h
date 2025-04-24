@@ -28,8 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef RENDERING_SERVER_DEFAULT_H
-#define RENDERING_SERVER_DEFAULT_H
+#pragma once
 
 #include "core/object/worker_thread_pool.h"
 #include "core/os/thread.h"
@@ -618,6 +617,7 @@ public:
 	FUNC2(particles_collision_set_attractor_attenuation, RID, real_t)
 	FUNC2(particles_collision_set_field_texture, RID, RID)
 	FUNC1(particles_collision_height_field_update, RID)
+	FUNC2(particles_collision_set_height_field_mask, RID, uint32_t)
 	FUNC2(particles_collision_set_height_field_resolution, RID, ParticlesCollisionHeightfieldResolution)
 
 	/* FOG VOLUME */
@@ -658,6 +658,7 @@ public:
 	FUNC4(camera_set_perspective, RID, float, float, float)
 	FUNC4(camera_set_orthogonal, RID, float, float, float)
 	FUNC5(camera_set_frustum, RID, float, Vector2, float, float)
+	FUNC2(camera_set_override_projection, RID, const Projection &)
 	FUNC2(camera_set_transform, RID, const Transform3D &)
 	FUNC2(camera_set_cull_mask, RID, uint32_t)
 	FUNC2(camera_set_environment, RID, RID)
@@ -1186,5 +1187,3 @@ public:
 	RenderingServerDefault(bool p_create_thread = false);
 	~RenderingServerDefault();
 };
-
-#endif // RENDERING_SERVER_DEFAULT_H

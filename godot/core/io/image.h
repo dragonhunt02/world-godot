@@ -28,8 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef IMAGE_H
-#define IMAGE_H
+#pragma once
 
 #include "core/io/resource.h"
 #include "core/math/color.h"
@@ -257,7 +256,6 @@ private:
 	_FORCE_INLINE_ void _get_mipmap_offset_and_size(int p_mipmap, int64_t &r_offset, int &r_width, int &r_height) const; // Get where the mipmap begins in data.
 
 	static int64_t _get_dst_image_size(int p_width, int p_height, Format p_format, int &r_mipmaps, int p_mipmaps = -1, int *r_mm_width = nullptr, int *r_mm_height = nullptr);
-	bool _can_modify(Format p_format) const;
 
 	_FORCE_INLINE_ void _get_clipped_src_and_dest_rects(const Ref<Image> &p_src, const Rect2i &p_src_rect, const Point2i &p_dest, Rect2i &r_clipped_src_rect, Rect2i &r_clipped_dest_rect) const;
 
@@ -381,6 +379,8 @@ public:
 	bool is_compressed() const;
 	static bool is_format_compressed(Format p_format);
 
+	static bool can_decompress(const String &p_format_tag);
+
 	void fix_alpha_edges();
 	void premultiply_alpha();
 	void srgb_to_linear();
@@ -451,5 +451,3 @@ VARIANT_ENUM_CAST(Image::UsedChannels)
 VARIANT_ENUM_CAST(Image::AlphaMode)
 VARIANT_ENUM_CAST(Image::RoughnessChannel)
 VARIANT_ENUM_CAST(Image::ASTCFormat)
-
-#endif // IMAGE_H
