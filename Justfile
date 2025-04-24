@@ -349,10 +349,10 @@ all-build-platform-target:
 handle-special-cases platform target:
     #!/usr/bin/env bash
     case "{{platform}}" in \
-        android) \ 
+        android)
             just handle-android {{target}} \
             ;;
-        macos) \ 
+        macos)
             just handle-macos {{target}} \
             ;;
     esac
