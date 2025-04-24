@@ -352,6 +352,9 @@ handle-special-cases platform target:
         android) \ 
             just handle-android {{target}} \
             ;;
+        macos) \ 
+            just handle-macos {{target}} \
+            ;;
     esac
 
 handle-android target:
@@ -368,6 +371,13 @@ handle-android target:
         ./gradlew generateGodotTemplates
         cd ../../..
         ls -l bin/
+    fi
+
+handle-macos target:
+    #!/usr/bin/env bash
+    cd godot
+    if [ "{{target}}" = "editor" ]; then
+        chmod +x ./bin/*.app/Contents/MacOS/* || echo "Could not set exec permission on editor"
     fi
 
 package-tpz folder tpzname versionpy precision="double":
