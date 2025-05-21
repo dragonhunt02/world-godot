@@ -62,7 +62,7 @@ jobs:
             ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}-${{ github.sha }}-${{ matrix.platform }}-${{ matrix.target }}  
             ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}-${{ github.sha }}  
             ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}  
-            ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}2  
+            ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}2-f949604ab41e122e87a30b0817251cf62c7b830c-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}  
             ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-refs/heads/${{ env.GODOT_BASE_BRANCH }}  
             ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }} 
   
@@ -163,7 +163,7 @@ jobs:
             ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}-${{ github.sha }}-${{ matrix.platform }}-${{ matrix.target }}
             ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}-${{ github.sha }}  
             ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}  
-            ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}2  
+            ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-${{ github.ref }}2-f949604ab41e122e87a30b0817251cf62c7b830c-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}-${{ matrix.architecture }}
             ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }}-refs/heads/${{ env.GODOT_BASE_BRANCH }}  
             ${{ env.CACHE_NAME }}-${{ env.GODOT_BASE_BRANCH }} 
   
