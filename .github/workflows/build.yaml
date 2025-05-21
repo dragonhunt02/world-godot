@@ -2,7 +2,7 @@ name: Build Platform Target
 
 on:
   push:
-    branches: [main]
+    branches: [rpc-test]
   pull_request:
     branches: [main]
     types: [opened, reopened, edited, synchronize]
@@ -111,26 +111,11 @@ jobs:
       matrix:
         precision: [double]
         architecture: [x86_64, arm64, wasm32]
-        platform: [linuxbsd, windows, android, web]
+        platform: [linuxbsd]
         target: [editor, template_release, template_debug]
         exclude:
-            # Android templates step is combined
-            - platform: android
-              target: template_debug
-            - platform: android
-              architecture: x86_64
-            - platform: android
-              architecture: wasm32
             - platform: linuxbsd
               architecture: wasm32
-            - platform: windows
-              architecture: wasm32
-            - platform: windows
-              architecture: arm64
-            - platform: web
-              architecture: arm64
-            - platform: web
-              architecture: x86_64
 
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}-${{ matrix.architecture }}
@@ -292,7 +277,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [linuxbsd, windows, macos, android, web]
+        platform: [linuxbsd, macos]
     steps:
       - name: Merge Artifacts
         uses: actions/upload-artifact/merge@v4
@@ -370,7 +355,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [linuxbsd, windows, macos, android, web]
+        platform: [linuxbsd, macos]
     steps:
       - name: Download Artifacts
         uses: actions/download-artifact@v4
