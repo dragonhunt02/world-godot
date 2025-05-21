@@ -149,9 +149,7 @@ jobs:
         uses: actions/checkout@v4 
   
       - name: Cache SCons cache 
-        uses: actions/cache@v4 
-        # Skip cache on Linux, PR #12
-        if: ${{ matrix.platform != 'linuxbsd' }}
+        uses: actions/cache@v4
         with: 
           path: | 
             .scons_cache  
