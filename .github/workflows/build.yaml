@@ -1,4 +1,4 @@
-name: Build Platform Target
+name: Build Platform Target 
 
 on:
   push:
