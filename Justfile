@@ -193,6 +193,7 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
                     generate_bundle={{osx_bundle}} \
                     debug_symbols=yes \
                     separate_debug_symbols=yes \
+                    scu_build=yes \
                     {{extra_options}}
             ;;
         windows)
@@ -230,6 +231,7 @@ build-platform-target platform target arch="auto" precision="double" osx_bundle=
                     test=yes \
                     debug_symbols=yes \
                     separate_debug_symbols=yes \
+                    scu_build=yes \
                     {{extra_options}}
             ;;
         web)
