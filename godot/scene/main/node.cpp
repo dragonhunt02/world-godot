@@ -850,8 +850,8 @@ void Node::rpc_config(const StringName &p_method, const Variant &p_config) {
 }
 
 Variant Node::get_rpc_config() const {
-    if (this->get_script_instance()) {
-		const auto rpc_script_config = this->get_script_instance()->get_rpc_config();
+    if (get_script_instance()) {
+		const auto rpc_script_config = get_script_instance()->get_rpc_config();
 		return rpc_script_config;
 	}
 	//_get_node_config
