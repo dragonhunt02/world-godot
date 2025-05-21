@@ -851,7 +851,9 @@ void Node::rpc_config(const StringName &p_method, const Variant &p_config) {
 
 Variant Node::get_rpc_config(bool script_rpc_get) const {
     if (script_rpc_get && get_script_instance()) {
-		const auto node_config = data.rpc_config;
+		//ERR_FAIL_COND(data.rpc_config.get_type() != Variant::DICTIONARY);
+		const Dictionary node_config = data.rpc_config;
+		//const auto node_config = data.rpc_config;
 		const auto script_config = get_script_instance()->get_rpc_config();
 		Dictionary merged_config = Dictionary();
 		const Array node_names = node_config.keys();
