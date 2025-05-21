@@ -849,13 +849,26 @@ void Node::rpc_config(const StringName &p_method, const Variant &p_config) {
 	}
 }
 
-Variant Node::get_rpc_config() const {
-    if (this->get_script_instance()) {
-		const auto rpc_script_config = this->get_script_instance()->get_rpc_config();
-		return rpc_script_config;
+Variant Node::get_rpc_config(bool script_rpc_get) const {
+    if (script_rpc_get && get_script_instance()) {
+		const auto node_config = data.rpc_config;
+		const auto script_config = get_script_instance()->get_rpc_config();
+		Dictionary merged_config = Dictionary();
+		const Array node_names = node_config.keys();
+		for (int i = 0; i < node_names.size(); i++) {
+			const auto name = node_names[i];
+			merged_config[name] = node_config[name];
+		}
+		const Array script_names = script_config.keys();
+		for (int i = 0; i < script_names.size(); i++) {
+			//ERR_FAIL_COND(p_config.get_type() != Variant::DICTIONARY);
+			const auto name = script_names[i];
+			merged_config[name] = script_config[name];
+		}
+		return merged_config;
+	} else {
+		return data.rpc_config;
 	}
-	//_get_node_config
-	return data.rpc_config;
 }
 
 /***** RPC FUNCTIONS ********/
