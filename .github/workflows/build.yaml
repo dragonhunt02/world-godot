@@ -24,9 +24,6 @@ jobs:
         precision: [double]
         platform: [macos]
         target: [editor, templates]
-        exclude:
-          - platform: ios
-            target: editor
 
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.precision }}
