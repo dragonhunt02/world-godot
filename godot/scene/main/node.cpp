@@ -850,21 +850,21 @@ void Node::rpc_config(const StringName &p_method, const Variant &p_config) {
 }
 
 Variant Node::get_rpc_config(bool script_rpc_get) const {
+	const Dictionary node_config = data.rpc_config;
     if (script_rpc_get && get_script_instance()) { // return attached script rpc configs too
 		//ERR_FAIL_COND(data.rpc_config.get_type() != Variant::DICTIONARY);
-		const Dictionary node_config = data.rpc_config;
 		const Dictionary script_config = get_script_instance()->get_rpc_config();
 
 		Dictionary merged_config = node_config;
 		const Array script_names = script_config.keys();
 		for (int i = 0; i < script_names.size(); i++) {
 			const auto name = script_names[i];
-			ERR_FAIL_COND(merged_config.has(name) == true);
+			ERR_FAIL_COND_V_MSG(merged_config.has(name) == true, node_config, "Detected GDScript function RPC name collision. Only Node RPC configuration will be returned.");
 			merged_config[name] = script_config[name];
 		}
 		return merged_config;
 	} else {
-		return data.rpc_config;
+		return node_config;
 	}
 }
 
