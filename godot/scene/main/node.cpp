@@ -859,7 +859,7 @@ Variant Node::get_rpc_config(bool script_rpc_get) const {
 		const Array script_names = script_config.keys();
 		for (int i = 0; i < script_names.size(); i++) {
 			const auto name = script_names[i];
-			// ERR_FAIL_COND(merged_config.has(name) == true);
+			ERR_FAIL_COND(merged_config.has(name) == true);
 			merged_config[name] = script_config[name];
 		}
 		return merged_config;
