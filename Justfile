@@ -14,7 +14,7 @@ export GODOT_STATUS := "groups-4.3"
 export GIT_URL_DOCKER := "https://github.com/V-Sekai/docker-groups.git"
 export GIT_URL_VSEKAI := "https://github.com/V-Sekai/v-sekai-game.git"
 export WORLD_PWD := invocation_directory()
-export ANDROID_NDK_VERSION := "23.2.8568313"
+export ANDROID_NDK_VERSION := "28.1.13356709"
 export arm64toolchain := "https://github.com/godotengine/buildroot/releases/download/godot-2023.08.x-4/aarch64-godot-linux-gnu_sdk-buildroot.tar.bz2"
 export cmdlinetools := "commandlinetools-linux-11076708_latest.zip"
 
@@ -88,7 +88,7 @@ setup-android-sdk:
             cd {{WORLD_PWD}} && unzip -o {{WORLD_PWD}}/{{cmdlinetools}}
             rm {{WORLD_PWD}}/{{cmdlinetools}}
             yes | {{WORLD_PWD}}/cmdline-tools/bin/sdkmanager --sdk_root={{ANDROID_SDK_ROOT}} --licenses
-            yes | {{WORLD_PWD}}/cmdline-tools/bin/sdkmanager --sdk_root={{ANDROID_SDK_ROOT}} "ndk;{{ANDROID_NDK_VERSION}}" 'cmdline-tools;latest' 'build-tools;34.0.0' 'platforms;android-34' 'cmake;3.22.1'
+            yes | {{WORLD_PWD}}/cmdline-tools/bin/sdkmanager --sdk_root={{ANDROID_SDK_ROOT}} "ndk;{{ANDROID_NDK_VERSION}}" 'cmdline-tools;latest' 'build-tools;35.0.0' 'platforms;android-35' 'cmake;3.22.1'
         fi
     fi
 setup-rust:
