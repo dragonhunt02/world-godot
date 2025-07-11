@@ -145,7 +145,6 @@ void ENetMultiplayerPeer::_store_packet(int32_t p_source, ENetConnection::Event 
 }
 
 void ENetMultiplayerPeer::_disconnect_inactive_peers() {
-	print_verbose("Enet ENetMultiplayerPeer::_disconnect_inactive_peers()")
 	HashSet<int> to_drop;
 	for (const KeyValue<int, Ref<ENetPacketPeer>> &E : peers) {
 		if (E.value->is_active()) {
@@ -159,6 +158,7 @@ void ENetMultiplayerPeer::_disconnect_inactive_peers() {
 			hosts.erase(P);
 		}
 		ERR_CONTINUE(active_mode == MODE_CLIENT && P != TARGET_PEER_SERVER);
+        print_verbose("Enet ENetMultiplayerPeer::_disconnect_inactive_peers() peer_disconnected fired")
 		emit_signal(SNAME("peer_disconnected"), P);
 	}
 }
@@ -206,6 +206,11 @@ void ENetMultiplayerPeer::poll() {
 						event.peer->reset();
 						continue;
 					}
+					print_verbose("Enet ENetMultiplayerPeer::poll() event.data")
+					int id_test = event.data;
+					auto peers_test = peers.has((int)event.data);
+					print_verbose(vformat("event.data: %d", id_test));
+					print_verbose(vformat("has peers bool: %d", peers_test));
 					// Client joined with invalid ID, probably trying to exploit us.
 					if (event.data < 2 || peers.has((int)event.data)) {
 						print_verbose("Enet EVENT_CONNECT invalid ID")
