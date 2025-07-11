@@ -158,7 +158,7 @@ void ENetMultiplayerPeer::_disconnect_inactive_peers() {
 			hosts.erase(P);
 		}
 		ERR_CONTINUE(active_mode == MODE_CLIENT && P != TARGET_PEER_SERVER);
-        print_verbose("Enet ENetMultiplayerPeer::_disconnect_inactive_peers() peer_disconnected fired")
+        print_verbose("Enet ENetMultiplayerPeer::_disconnect_inactive_peers() peer_disconnected fired");
 		emit_signal(SNAME("peer_disconnected"), P);
 	}
 }
@@ -200,20 +200,20 @@ void ENetMultiplayerPeer::poll() {
 			ENetConnection::EventType ret = hosts[0]->service(0, event);
 			do {
 				if (ret == ENetConnection::EVENT_CONNECT) {
-					print_verbose("Enet EVENT_CONNECT fired")
+					print_verbose("Enet EVENT_CONNECT fired");
 					if (is_refusing_new_connections()) {
-					print_verbose("Enet EVENT_CONNECT fired")
+					    print_verbose("Enet EVENT_CONNECT refusing conns fired");
 						event.peer->reset();
 						continue;
 					}
-					print_verbose("Enet ENetMultiplayerPeer::poll() event.data")
+					print_verbose("Enet ENetMultiplayerPeer::poll() event.data");
 					int id_test = event.data;
 					auto peers_test = peers.has((int)event.data);
 					print_verbose(vformat("event.data: %d", id_test));
 					print_verbose(vformat("has peers bool: %d", peers_test));
 					// Client joined with invalid ID, probably trying to exploit us.
 					if (event.data < 2 || peers.has((int)event.data)) {
-						print_verbose("Enet EVENT_CONNECT invalid ID")
+						print_verbose("Enet EVENT_CONNECT invalid ID");
 						event.peer->reset();
 						continue;
 					}
@@ -222,21 +222,21 @@ void ENetMultiplayerPeer::poll() {
 					peers[id] = event.peer;
 					emit_signal(SNAME("peer_connected"), id);
 				} else if (ret == ENetConnection::EVENT_DISCONNECT) {
-					print_verbose("Enet EVENT_DISCONNECT fired")
+					print_verbose("Enet EVENT_DISCONNECT fired");
 					int id = event.peer->get_meta(SNAME("_net_id"));
 					if (!peers.has(id)) {
-						print_verbose("Enet EVENT_DISCONNECT never fully connected")
+						print_verbose("Enet EVENT_DISCONNECT never fully connected");
 						// Never fully connected.
 						continue;
 					}
 					emit_signal(SNAME("peer_disconnected"), id);
 					peers.erase(id);
 				} else if (ret == ENetConnection::EVENT_RECEIVE) {
-					print_verbose("Enet EVENT_RECEIVE fired")
+					print_verbose("Enet EVENT_RECEIVE fired");
 					int32_t source = event.peer->get_meta(SNAME("_net_id"));
 					_store_packet(source, event);
 				} else if (ret != ENetConnection::EVENT_NONE) {
-					print_verbose("Enet EVENT_NONE fired")
+					print_verbose("Enet EVENT_NONE fired");
 					close(); // Error
 				}
 			} while (hosts.has(0) && hosts[0]->check_events(ret, event) > 0);
