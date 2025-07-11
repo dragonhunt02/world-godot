@@ -58,6 +58,7 @@ int ENetMultiplayerPeer::get_packet_channel() const {
 }
 
 Error ENetMultiplayerPeer::create_server(int p_port, int p_max_clients, int p_max_channels, int p_in_bandwidth, int p_out_bandwidth) {
+	print_verbose("Enet ENetMultiplayerPeer::create_server()")
 	ERR_FAIL_COND_V_MSG(_is_active(), ERR_ALREADY_IN_USE, "The multiplayer instance is already active.");
 	set_refuse_new_connections(false);
 	Ref<ENetConnection> host;
@@ -144,6 +145,7 @@ void ENetMultiplayerPeer::_store_packet(int32_t p_source, ENetConnection::Event 
 }
 
 void ENetMultiplayerPeer::_disconnect_inactive_peers() {
+	print_verbose("Enet ENetMultiplayerPeer::_disconnect_inactive_peers()")
 	HashSet<int> to_drop;
 	for (const KeyValue<int, Ref<ENetPacketPeer>> &E : peers) {
 		if (E.value->is_active()) {
@@ -198,12 +200,15 @@ void ENetMultiplayerPeer::poll() {
 			ENetConnection::EventType ret = hosts[0]->service(0, event);
 			do {
 				if (ret == ENetConnection::EVENT_CONNECT) {
+					print_verbose("Enet EVENT_CONNECT fired")
 					if (is_refusing_new_connections()) {
+					print_verbose("Enet EVENT_CONNECT fired")
 						event.peer->reset();
 						continue;
 					}
 					// Client joined with invalid ID, probably trying to exploit us.
 					if (event.data < 2 || peers.has((int)event.data)) {
+						print_verbose("Enet EVENT_CONNECT invalid ID")
 						event.peer->reset();
 						continue;
 					}
@@ -212,17 +217,21 @@ void ENetMultiplayerPeer::poll() {
 					peers[id] = event.peer;
 					emit_signal(SNAME("peer_connected"), id);
 				} else if (ret == ENetConnection::EVENT_DISCONNECT) {
+					print_verbose("Enet EVENT_DISCONNECT fired")
 					int id = event.peer->get_meta(SNAME("_net_id"));
 					if (!peers.has(id)) {
+						print_verbose("Enet EVENT_DISCONNECT never fully connected")
 						// Never fully connected.
 						continue;
 					}
 					emit_signal(SNAME("peer_disconnected"), id);
 					peers.erase(id);
 				} else if (ret == ENetConnection::EVENT_RECEIVE) {
+					print_verbose("Enet EVENT_RECEIVE fired")
 					int32_t source = event.peer->get_meta(SNAME("_net_id"));
 					_store_packet(source, event);
 				} else if (ret != ENetConnection::EVENT_NONE) {
+					print_verbose("Enet EVENT_NONE fired")
 					close(); // Error
 				}
 			} while (hosts.has(0) && hosts[0]->check_events(ret, event) > 0);
@@ -267,6 +276,7 @@ bool ENetMultiplayerPeer::is_server_relay_supported() const {
 }
 
 void ENetMultiplayerPeer::disconnect_peer(int p_peer, bool p_force) {
+	print_verbose("Enet ENetMultiplayerPeer::disconnect_peer()")
 	ERR_FAIL_COND(!_is_active() || !peers.has(p_peer));
 	peers[p_peer]->peer_disconnect(0); // Will be removed during next poll.
 	if (active_mode == MODE_CLIENT || active_mode == MODE_SERVER) {
@@ -288,6 +298,7 @@ void ENetMultiplayerPeer::disconnect_peer(int p_peer, bool p_force) {
 }
 
 void ENetMultiplayerPeer::close() {
+	print_verbose("Enet ENetMultiplayerPeer::close()")
 	if (!_is_active()) {
 		return;
 	}
