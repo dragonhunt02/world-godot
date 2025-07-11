@@ -349,6 +349,43 @@ enet_protocol_handle_connect (ENetHost * host, ENetProtocolHeader * header, ENet
     peer -> packetThrottleDeceleration = ENET_NET_TO_HOST_32 (command -> connect.packetThrottleDeceleration);
     peer -> eventData = ENET_NET_TO_HOST_32 (command -> connect.data);
 
+	print_verbose(
+        vformat("peer->channelCount           = {}\n",
+                     fmt::make_format_args(peer->channelCount)));
+    print_verbose(
+        vformat("peer->state                  = {}\n",
+                     fmt::make_format_args(peer->state)));
+    print_verbose(
+        vformat("peer->connectID              = {}\n",
+                     fmt::make_format_args(peer->connectID)));
+    print_verbose(
+        vformat("peer->address                = {}\n",
+                     fmt::make_format_args(peer->address)));
+    print_verbose(
+        vformat("peer->mtu                    = {}\n",
+                     fmt::make_format_args(peer->mtu)));
+    print_verbose(
+        vformat("peer->outgoingPeerID         = {}\n",
+                     fmt::make_format_args(peer->outgoingPeerID)));
+    print_verbose(
+        vformat("peer->incomingBandwidth      = {}\n",
+                     fmt::make_format_args(peer->incomingBandwidth)));
+    print_verbose(
+        vformat("peer->outgoingBandwidth      = {}\n",
+                     fmt::make_format_args(peer->outgoingBandwidth)));
+    print_verbose(
+        vformat("peer->packetThrottleInterval = {}\n",
+                     fmt::make_format_args(peer->packetThrottleInterval)));
+    print_verbose(
+        vformat("peer->packetThrottleAcceleration = {}\n",
+                     fmt::make_format_args(peer->packetThrottleAcceleration)));
+    print_verbose(
+        vformat("peer->packetThrottleDeceleration = {}\n",
+                     fmt::make_format_args(peer->packetThrottleDeceleration)));
+    print_verbose(
+        vformat("peer->eventData              = {}\n",
+                     fmt::make_format_args(peer->eventData)));
+
     incomingSessionID = command -> connect.incomingSessionID == 0xFF ? peer -> outgoingSessionID : command -> connect.incomingSessionID;
     incomingSessionID = (incomingSessionID + 1) & (ENET_PROTOCOL_HEADER_SESSION_MASK >> ENET_PROTOCOL_HEADER_SESSION_SHIFT);
     if (incomingSessionID == peer -> outgoingSessionID)
